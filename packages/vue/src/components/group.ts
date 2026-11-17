@@ -7,18 +7,10 @@ import type {
     SplitterRef,
     SplitterTypes,
 } from "@fragiola/splitter";
-import {
-    computed,
-    defineComponent,
-    h,
-    inject,
-    provide,
-    toRaw,
-    useId,
-} from "vue";
+import { defineComponent, h, provide, toRaw, useId } from "vue";
 import { useGroupRoot } from "../composables/internal";
 import { type GroupPartState, useGroupPart } from "../composables/use-group";
-import { eraseModel, GroupKey, PanelKey } from "../context";
+import { eraseModel, GroupKey } from "../context";
 import {
     definePrimitive,
     type PrimitiveProps,
@@ -111,7 +103,10 @@ function keyOfModel(model: object): number {
     return key;
 }
 
-/** One mounted group: its id, its model and its parent panel never change (they remount it). */
+/**
+ * One mounted group: its id and its model never change (they remount it); a new parent panel id
+ * moves it in place.
+ */
 const GroupRoot = definePrimitive<GroupProps & { id: string }, GroupSlots>(
     "GroupRoot",
     PROPS,
@@ -168,19 +163,12 @@ export const Group: SplitterComponent<GroupProps, GroupSlots> = defineComponent(
         // a bare boolean attribute reaches GroupRoot as it came, which casts it
         props: [...PROPS],
         setup(props, { attrs, slots }) {
-            const parent = inject(PanelKey, null);
             // the default id: unique on the page, and the same on the server and the client
             const generatedId = useId();
-            // the parent panel's id only: its state changes on every resize
-            const parentPanelId = computed(() => parent?.panelId() ?? "");
             return () => {
                 const id = (props.id as string | undefined) ?? generatedId;
                 const model = props.model as object | undefined;
-                const key = [
-                    id,
-                    model ? keyOfModel(toRaw(model)) : "",
-                    parentPanelId.value,
-                ].join("\n");
+                const key = `${id}\n${model ? keyOfModel(toRaw(model)) : ""}`;
                 return h(GroupRoot, { ...attrs, ...props, id, key }, slots);
             };
         },

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
     defineComponent,
     h,
+    onMounted,
     shallowRef,
     type VNode,
     type VNodeChild,
@@ -15,7 +16,7 @@ import {
     useSplitter,
     useSplitterRef,
 } from "../src";
-import { at, press, render, settle } from "./helpers";
+import { at, grows, press, render, settle } from "./helpers";
 
 // Nested groups (D3): a group inside a panel joins its parent's model, so one model holds the whole
 // layout, and code outside the root reaches it through a splitterRef.
@@ -204,6 +205,66 @@ describe("nested groups", () => {
         }
         expect(at(container, "/g0/p0").style.flexGrow).toBe("75");
         expect(renders - before).toBe(0);
+    });
+
+    it("a new parent panel id moves the nested group in place, without remounting it", async () => {
+        let mounts = 0;
+        const Content = defineComponent({
+            setup() {
+                onMounted(() => mounts++);
+                return () => h("i");
+            },
+        });
+        const model = createSplitterModel();
+        const parentId = shallowRef("a");
+        const extra = shallowRef(false);
+        const { container } = await render(() =>
+            h(Splitter.Group, { id: "outer", model }, () => [
+                h(Splitter.Panel, { id: parentId.value }, () => [
+                    h(Splitter.Group, { id: "inner" }, () => [
+                        h(Splitter.Panel, { id: "x" }, () => h(Content)),
+                        h(Splitter.Separator),
+                        h(Splitter.Panel, { id: "y" }),
+                        ...(extra.value
+                            ? [
+                                  h(Splitter.Separator),
+                                  h(Splitter.Panel, { id: "z" }),
+                              ]
+                            : []),
+                    ]),
+                ]),
+                h(Splitter.Separator),
+                h(Splitter.Panel, { id: "b" }),
+            ]),
+        );
+        await press(at(container, "/g0/p0/g0/s0"), "ArrowRight");
+        // another set of panels remembers the layout the user gave x and y
+        extra.value = true;
+        await settle();
+        const inner = model.get("group-by", { id: "inner" });
+        expect(Object.values(inner?.layoutMemory ?? {})).toEqual([
+            { x: 55, y: 45 },
+        ]);
+        const grown = grows(container);
+        expect(mounts).toBe(1);
+
+        parentId.value = "a2";
+        await settle();
+        expect(mounts).toBe(1);
+        expect(grows(container)).toEqual(grown);
+        const moved = model.get("group-by", { id: "inner" });
+        expect(moved?.parentPanelId).toBe("a2");
+        expect(moved?.panelIds).toEqual(["x", "y", "z"]);
+        expect(moved?.layout).toEqual(inner?.layout);
+        expect(moved?.layoutMemory).toEqual(inner?.layoutMemory);
+        // and it comes back
+        extra.value = false;
+        await settle();
+        expect(model.get("layout-by", { groupId: "inner" })).toEqual({
+            x: 55,
+            y: 45,
+        });
+        expect(at(container, "/g0/p0/g0/p1").id).toBe("y");
     });
 });
 

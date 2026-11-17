@@ -156,7 +156,10 @@ export function useGroupRoot(read: () => GroupRootOptions): GroupContextValue {
               keyboardStep: first.keyboardStep,
               resetOnDoubleClick: first.resetOnDoubleClick,
           });
-    const parentPanelId = joins ? parent.panelId() : undefined;
+    // the panel the group sits in: a new id moves the group in place (`group.update`)
+    const parentPanelIdOf = (): string | undefined =>
+        joins ? parent.panelId() : undefined;
+    let parentPanelId = parentPanelIdOf();
     const registry = new GroupRegistry(model, engine, groupId);
     const handle: SplitterHandle = { model, engine, groupId };
 
@@ -236,6 +239,7 @@ export function useGroupRoot(read: () => GroupRootOptions): GroupContextValue {
 
         const options = read();
         const { orientation, disabled } = options;
+        parentPanelId = parentPanelIdOf();
         const layout = plainLayout(options.layout);
         const commands: BatchEntry[] = [
             {
@@ -323,6 +327,24 @@ export function useGroupRoot(read: () => GroupRootOptions): GroupContextValue {
         registry.setRegistered(false);
         registry.sync();
     });
+
+    // a new parent panel id (the panel the group sits in got another id) moves the group in place,
+    // with its panels, its layout and its layout memory: nothing remounts
+    watch(
+        parentPanelIdOf,
+        (next) => {
+            if (!sent || !registry.registered() || next === parentPanelId) {
+                return;
+            }
+            parentPanelId = next;
+            model.run(
+                "group.update",
+                { groupId, parentPanelId: next ?? null },
+                ADAPTER_RUN,
+            );
+        },
+        { flush: "post" },
+    );
 
     // props that changed since they were sent
     watch(

@@ -95,7 +95,8 @@ their slots `GroupSlots`, `PanelSlots` and `SeparatorSlots`. Each part is a
 | `children` | `RenderSlotProps` | the part's content, as one stable component: `<component :is="children" />` |
 
 A slot is a `SlotFunction<Scope>`. Another `id` or `model` on a group remounts it (its panels
-register again); another `id` on a panel moves it to the new id without remounting its content.
+register again); another `id` on a panel moves it to the new id without remounting its content,
+and a group nested in that panel follows it in place, with its layout.
 
 ## Composables
 

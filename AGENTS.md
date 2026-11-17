@@ -503,10 +503,18 @@ copyright line and the MIT licence, and the guard test lists it.
     the `data-*` attributes or the `render` slot's `state` (no `(state) => value` form). A template
     `ref` on a part is its component (`$el` is the element), as in any Vue component. The default
     slots get `{ state }`.
-  - **A new `id` or `model` remounts the group** (a wrapper keys the group on its id, its model
-    and its parent panel's id, as Dockable keys its Root on the model): the group's context then
-    never changes, and the panels register again with the new group. A panel's new `id` removes it
-    under the old one and adds it under the new one, without remounting its content.
+  - **A new `id` or `model` remounts the group** (a wrapper keys the group on its id and its
+    model, as Dockable keys its Root on the model): the group's context then never changes, and
+    the panels register again with the new group. A panel's new `id` removes it under the old one
+    and adds it under the new one, without remounting its content; a group nested in it stays
+    mounted and runs `group.update` with the new `parentPanelId` (its panels, layout and layout
+    memory stay). React re-registers the nested group instead (its registration effect depends on
+    the parent panel id), and that re-registration leaves the nested group without its panels in
+    the model (`panelIds: []`; observed while fixing this, not changed in React). The wrapper read
+    the parent panel id in its render, so every resize of the parent panel rendered the nested
+    group again: it reads nothing of the parent now. Its slots are passed as they come (not forced
+    `$stable`): the wrapper renders again only for new props, attributes or slots, which the group
+    must see.
   - **Lifecycle.** Vue runs a child's `onMounted` before its parent's and a parent's
     `onBeforeUnmount` before its children's, as React runs effects and cleanups, so registration is
     React's: panels wait in the registry, the group registers in one `batch` in its `onMounted`
