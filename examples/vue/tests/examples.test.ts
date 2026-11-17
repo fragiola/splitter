@@ -52,10 +52,10 @@ describe("the Vue examples", () => {
         expect(examples.map((e) => e.slug).sort()).toEqual(slugs);
     });
 
-    it("keep the ids of examples/react", () => {
-        const react = listExampleSlugs(examplesApp("react"));
+    it("are every example of examples/react, with the same ids", () => {
+        // Vue is a complete framework (examples/shared/e2e/available.ts): it ships every example
         expect(slugs.length).toBeGreaterThan(0);
-        for (const slug of slugs) expect(react, slug).toContain(slug);
+        expect(slugs).toEqual(listExampleSlugs(examplesApp("react")));
     });
 
     it("import only what a consumer can copy", () => {

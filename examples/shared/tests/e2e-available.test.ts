@@ -45,22 +45,25 @@ describe("a spec's examples", () => {
 describe("a complete framework", () => {
     const available = ["basic-horizontal"];
 
-    it("is React today: the Vue and Angular apps may still ship a subset", () => {
-        expect([...COMPLETE_FRAMEWORKS]).toEqual(["react"]);
+    it("is React and Vue today: the Angular app may still ship a subset", () => {
+        expect([...COMPLETE_FRAMEWORKS]).toEqual(["react", "vue"]);
         for (const framework of COMPLETE_FRAMEWORKS) {
             expect(FRAMEWORKS).toContain(framework);
         }
     });
 
     it("skips, instead of failing, in a framework still being written", () => {
-        expect(skipOrFail("vue", available, ["ide-layout"])).toBe(
-            "vue has no ide-layout example",
+        expect(skipOrFail("angular", available, ["ide-layout"])).toBe(
+            "angular has no ide-layout example",
         );
     });
 
     it("fails a spec whose example it lacks, instead of skipping it", () => {
         expect(() => skipOrFail("react", available, ["ide-layout"])).toThrow(
             /react has no ide-layout example, but every react example is required/,
+        );
+        expect(() => skipOrFail("vue", available, ["ide-layout"])).toThrow(
+            /vue has no ide-layout example, but every vue example is required/,
         );
         expect(
             skipOrFail("react", available, ["basic-horizontal"]),
