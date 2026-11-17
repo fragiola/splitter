@@ -128,8 +128,9 @@ breaks one is a decision for the maintainer, not an implementation detail.
 | command | does |
 |---|---|
 | `pnpm install` | install dependencies (CI: `--frozen-lockfile`) |
-| `pnpm check` | Biome lint + format + assist (non-mutating), then `check:layout` |
+| `pnpm check` | Biome lint + format + assist (non-mutating), then `check:layout` and `check:commands` |
 | `pnpm check:layout` | the source layout check (`scripts/check-layout.ts`, from Dockable): every tracked name kebab-case, a package's `src/` root holds only its entries |
+| `pnpm check:commands` | builds the core and fails when `site/docs/api/commands.mdx` differs from the registry (`packages/core/scripts/generate-command-docs.ts`; `pnpm --filter @fragiola/splitter generate:commands` rewrites it) |
 | `pnpm check:fix` | Biome check with auto-fix |
 | `pnpm typecheck` | `pnpm -r typecheck` (TypeScript 7, no emit) |
 | `pnpm test` | Vitest across the projects that exist: `core` (node), `react` (jsdom), `site` |
@@ -138,8 +139,7 @@ breaks one is a decision for the maintainer, not an implementation detail.
 Coming with the later Issues of Epic #7: `pnpm e2e` (Playwright: the playground and the examples
 app), `pnpm dev` (the playground), `pnpm site:export --base /splitter --out <dir>` and
 `pnpm site:dev --base /splitter --port 5184` (contract v1.2, `../www/CONTRACT.md`),
-`pnpm check:package`, `pnpm changeset` / `release:version`, and the generated-commands drift check
-in `pnpm check`.
+`pnpm check:package`, `pnpm changeset` / `release:version`.
 
 ## Repository layout
 
@@ -150,6 +150,7 @@ apps/playground/    (coming)                  the dev app: scenarios, unstyled f
 examples/shared/    (coming)                  every example's metadata, themes, embed protocol, manifest builder, the Playwright specs
 examples/react/     (coming)                  the site's React examples, vendored Fragiola UI
 site/               tests/                    the repository checks' tests; later docs/, export.ts, contract.ts, dev.ts
+site/docs/api/      commands.mdx              generated from the command registry (do not edit)
 scripts/                                      check-layout.ts, check-dts.ts, source-condition.ts
 .github/workflows/  ci.yml                    check, typecheck, test, build on pull requests and pushes to main
 ```
@@ -193,3 +194,62 @@ copyright line and the MIT licence, and the guard test lists it.
   24.13.6), unchanged. The root Vitest config lists `apps/*` (not `apps/playground`) so it runs
   before the playground exists. The React package re-exports the core from day one
   (`export * from "@fragiola/splitter"`), which exercises the source condition and the build.
+- **Issue #2 (core):**
+  - **Surface.** `createSplitterModel<Types>(json?, { createId? })`, `createSplitterEngine(model,
+    { keyboardStep?, resetOnDoubleClick? })`, `validateSplitter`, `SplitterValidationError`, `veto`,
+    the pure rules (`adjustLayoutByDelta`, `validateLayout`, `defaultLayout`, `normalizeLayout`,
+    `resizePanel`, `preservePixelSizes`, `separatorValues`, `validatePanelSize`,
+    `resolveConstraints`), the units (`parseSize`, `sizeToPercentage`, `sizeToPixels`) and
+    `separatorKeyIntent`. The model has no `state` property (unlike Dockable): the state is
+    `model.get("state")`, so the surface is exactly the eight verbs.
+  - **Types registry** is ids only: `SplitterTypes { groupId; panelId }` narrows every id field of
+    payloads and keys. Panels carry no app data.
+  - **Commands:** `group.add|update|remove|set-layout|reset|measure`,
+    `panel.add|update|remove|resize|collapse|expand`, `separator.move|update`, `batch`. Transient-capable:
+    `group.set-layout`, `group.measure`, `panel.resize`, `separator.move`, `batch`.
+    `group.update`, `panel.update` and `separator.update` exist because markup props change.
+  - **Separators are derived**, never registered: one between each pair of neighbouring panels,
+    id `` `${beforePanelId}:${afterPanelId}` `` (a lookup tries every colon, so ids may hold one).
+    What a separator's markup declares (`disabled`, `resetOnDoubleClick`) is stored on its group by
+    `separator.update` and forgotten when the separator disappears.
+  - **Order:** `panel.add { order }` (default: after the others); panels sort by `order`, ties keep
+    registration order. `engine.adapter.syncOrder(groupId)` sorts the bound panel elements by
+    `compareDocumentPosition` and runs one batch of `panel.update { order }`.
+  - **Registration needs the group first:** `panel.add` on a missing group is `not_found`. An adapter
+    registers a group and its panels in one `batch` (effects run child first). `parentPanelId` is
+    recorded but not checked, and `group.remove` does not cascade to nested groups.
+  - **Layout on structural change** (panel added or removed): the default layout of the new panel
+    set (RRP's behaviour without its in-memory per-set cache), or the saved layout once the group
+    holds exactly the saved panels. A group remembers whether its layout is still the default
+    (`pristine`); a pristine layout is derived again when constraints or the measure change.
+  - **Document v1:** `{ version: 1, groups: [{ id, panels: [{ id, size, collapsed?, restoreSize? }] }] }`,
+    ids required (they must match the markup, so none is generated at load). A loaded group is
+    pending until its panels register; `splitter-json` writes registered groups, then pending ones
+    as loaded (stable round trip). A collapsed saved panel comes back at its current collapsed size.
+    `__proto__` is refused as an id.
+  - **Units:** a percentage resolves with no measure; px, em, rem, vh and vw need `group.measure`
+    (axis size = sum of the panels' layout sizes, the group's font size for `em`, the root's for
+    `rem`, the viewport). Until then they count as absent (min 0, max 100, no default) and
+    `panel.resize` with such a size is `refused`. `em` uses the group's font size, not the panel's.
+  - **Disabled:** a disabled panel never moves through `separator.move`; code (`panel.resize`,
+    `panel.collapse`/`expand`, `group.set-layout`) may resize it, as RRP's imperative API does. A
+    disabled separator or group makes `separator.move` `refused`.
+  - **Collapse:** `panel.collapse` / `panel.expand` are `refused` on a non-collapsible panel and
+    when the other panels cannot make room; the restore size is recorded whenever a change
+    collapses a panel, and expanding falls back to the minimum (1% when it is 0).
+  - **Engine:** one engine binds any number of groups of a model. A drag sends
+    `separator.move { delta, origin, source: "pointer" }` transient steps measured from the drag's
+    start, then one non-transient move (none for a click without movement); when that commit is
+    refused, a transient `group.set-layout` with `meta.restore` puts the origin back.
+    `pointercancel` / `lostpointercapture` commit the last step, as RRP does. Keyboard step 5% by
+    default; only handled keys are `preventDefault`ed; Enter runs `panel.collapse` / `panel.expand`
+    on the panel before the separator; F6 cycles focus. A double click resizes the panel before the
+    separator (else after) that declares a `defaultSize` back to it. The engine writes nothing to
+    the DOM besides pointer capture and focus; ARIA comes from `engine.get("separator-aria-by")`
+    (`aria-orientation` is across the group's). `engine.use` / `subscribe` / `dispatch` wrap the
+    engine actions (`measure`, `focus-separator`) and its view events.
+  - **Provenance:** the layout files listed in the guard test, and three test files ported from
+    RRP's own tests (`adjustLayoutByDelta`, `validateAxisLayout`, `getImperativeItemMethods`), carry
+    RRP's MIT header; the root and package `LICENSE` files carry its notice.
+  - The core's tsconfig loads `@types/node` (for the tests and the generator); the guard test fails
+    on any Node-only API in `src/`.
