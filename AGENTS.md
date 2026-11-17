@@ -24,9 +24,11 @@ wiring.
 | `packages/vue` | `@fragiola/splitter-vue` | planned (Epic #10) | the core |
 | `packages/angular` | `@fragiola/splitter-angular` | planned (Epic #13) | the core |
 
-Coming in Epic #7: `apps/playground` (private dev app: scenarios, unstyled fixtures),
-`examples/shared` and `examples/react` (the site's examples), and `site` (the export for
-fragiola.com/splitter). Today `site/` holds only the repository checks' tests.
+Private, never published: `apps/playground` (the dev app: the examples in place, scenarios,
+unstyled fixtures for Playwright), `examples/shared` (`examples-shared`: what every framework's
+examples share, framework-free) and `examples/react` (`examples-react`: the site's React examples
+and their embed). Coming in Epic #7: `site` (the export for fragiola.com/splitter); today `site/`
+holds only the repository checks' tests.
 
 ## Non-negotiable rules
 
@@ -133,11 +135,13 @@ breaks one is a decision for the maintainer, not an implementation detail.
 | `pnpm check:commands` | builds the core and fails when `site/docs/api/commands.mdx` differs from the registry (`packages/core/scripts/generate-command-docs.ts`; `pnpm --filter @fragiola/splitter generate:commands` rewrites it) |
 | `pnpm check:fix` | Biome check with auto-fix |
 | `pnpm typecheck` | `pnpm -r typecheck` (TypeScript 7, no emit) |
-| `pnpm test` | Vitest across the projects that exist: `core` (node), `react` (jsdom), `site` |
-| `pnpm build` | `pnpm -r build` (tsdown for the packages), then the `.d.ts` check (`scripts/check-dts.ts`) |
+| `pnpm test` | Vitest across the projects: `core` (node), `react` (jsdom), `playground`, `examples-shared`, `examples-react`, `site` |
+| `pnpm build` | `pnpm -r build` (tsdown for the packages, Vite for the playground and the embed), then the `.d.ts` check (`scripts/check-dts.ts`) |
+| `pnpm e2e` | Playwright, one app after the other: the playground (Chromium and Firefox, its dev server on 5173, `PLAYGROUND_PORT` moves it), then each examples app's shared suite (`examples/shared/e2e`) against a production build of its embed (on 4340 + the framework's index, `EXAMPLES_E2E_PORT` moves it). The examples suite builds against the packages' `dist`: run `pnpm build` first. `pnpm exec playwright install chromium firefox` once |
+| `pnpm dev` | the playground on 5173 (`PLAYGROUND_PORT`): every example with its themes and source, the scenarios, the fixtures. The embed alone: `pnpm --filter examples-react dev` on 5184 (`PORT`) |
+| `pnpm --filter examples-react vendor` | vendors Fragiola UI into `examples/react/src` (`scripts/vendor-fragiola.ts`; `FRAGIOLA_REGISTRY` points it at a registry URL or a local `public/r` directory); the copies are committed |
 
-Coming with the later Issues of Epic #7: `pnpm e2e` (Playwright: the playground and the examples
-app), `pnpm dev` (the playground), `pnpm site:export --base /splitter --out <dir>` and
+Coming with the later Issues of Epic #7: `pnpm site:export --base /splitter --out <dir>` and
 `pnpm site:dev --base /splitter --port 5184` (contract v1.2, `../www/CONTRACT.md`),
 `pnpm check:package`, `pnpm changeset` / `release:version`.
 
@@ -146,13 +150,13 @@ app), `pnpm dev` (the playground), `pnpm site:export --base /splitter --out <dir
 ```
 packages/core/      @fragiola/splitter        src/<domain>/ (state, commands, schema, layout, units, engine, keyboard), tests/ mirroring it, tests/types/
 packages/react/     @fragiola/splitter-react  src/components/, hooks/, utils/; entries index.ts, parts.ts, context.ts
-apps/playground/    (coming)                  the dev app: scenarios, unstyled fixtures for Playwright
-examples/shared/    (coming)                  every example's metadata, themes, embed protocol, manifest builder, the Playwright specs
-examples/react/     (coming)                  the site's React examples, vendored Fragiola UI
+apps/playground/    playground                src/shell/ (catalog, stage, source), src/scenarios/<area>/<id>.tsx (dev-only), src/fixture/ + fixtures/<name>/index.html (unstyled, for Playwright), e2e/, tests/
+examples/shared/    examples-shared           src/meta/<slug>.ts, src/themes/, src/embed/, src/framework.ts, scripts/ (examples-lib, generate, manifest), e2e/ (every spec, every framework), tests/
+examples/react/     examples-react            src/examples/<slug>/ (index.tsx, styles.ts), src/examples/_kit/ (persistence.ts, undo.ts), src/embed/, vendored Fragiola UI (src/components, lib, styles), scripts/vendor-fragiola.ts, tests/
 site/               tests/                    the repository checks' tests; later docs/, export.ts, contract.ts, dev.ts
 site/docs/api/      commands.mdx              generated from the command registry (do not edit)
 scripts/                                      check-layout.ts, check-dts.ts, source-condition.ts
-.github/workflows/  ci.yml                    check, typecheck, test, build on pull requests and pushes to main
+.github/workflows/  ci.yml                    check, typecheck, test, build; the playground's e2e; one e2e job per examples app
 ```
 
 ## Provenance: React Resizable Panels
@@ -297,3 +301,54 @@ copyright line and the MIT licence, and the guard test lists it.
   - **Ids:** default ids come from `useId`. A panel's DOM `id` is its panel id (the separators'
     `aria-controls` points at it). A separator's `data-orientation` is its own (`aria-orientation`),
     as Dockable's splitter.
+- **Issue #4 (examples and playground):**
+  - **Imitated** grid-layout's `examples/shared`, `examples/react` and `apps/playground` (its
+    cleanest copies of Dockable's), plus Dockable's scenarios (`src/scenarios/<area>/<id>.tsx`, areas
+    `layout` and `api`). Copied files keep a "From Grid Layout / From Dockable" header.
+  - **Frameworks:** `examples/shared/src/framework.ts` lists react, vue and angular with their entry
+    files, adapter packages and icon packages; `COMPLETE_FRAMEWORKS` (`e2e/available.ts`) is
+    `["react"]` only, so a Vue or Angular app may ship a subset while it is written (a spec for an
+    example it lacks is skipped); each joins the list when it has every example.
+  - **Examples (15):** `basic-horizontal`, `vertical` (getting started); `nested-groups`,
+    `conditional-panels` (layouts); `size-constraints`, `fixed-size-panels`, `disabled-panels`
+    (constraints); `collapsible-sidebar` (collapsing); `keyboard`; `rtl-layout`,
+    `styling-showcase` (styling); `controlled-from-code`, `persistent-layout`, `undo-redo`
+    (model API); `ide-layout` (apps). The categories are `CATEGORIES` in `meta-types.ts`. Their
+    `docs` links name the pages Issue #5 writes; the site export's link check settles them.
+  - **Themes:** two, `light` and `dark` (the minimum), with grid-layout's palette values and the
+    splitter tokens `--sp-font`, `--sp-font-size`, `--sp-panel-padding`, `--sp-radius`,
+    `--sp-border`, `--sp-shadow`, `--sp-separator-size`, `--sp-separator-line`, `--sp-focus-width`,
+    `--sp-title-weight`, `--sp-motion`, and per palette `--sp-canvas-bg`, `--sp-panel-line`,
+    `--sp-separator-color`, `--sp-separator-hover`, `--sp-separator-active`, `--sp-focus-line`
+    (`tests/themes.test.ts` holds the list).
+  - **Styling rules enforced by `examples/react/tests/examples.test.ts`:** no class string or
+    `cn()` in a `.tsx`, `#/` and the listed packages only (`@/` refused), no fixed colour in a
+    `styles.ts`, and every resize cursor behind a `data-` variant. State is styled with data
+    variants only (`data-dragging:`, `in-data-collapsed:`, `not-data-disabled:hover:`), never a
+    `className` function of the part state, so the markup ports to Vue and Angular unchanged.
+  - **Specs reach the examples through** `data-splitter-path`, `data-splitter-part`, roles,
+    accessible names and test ids. `openExample` waits for `/g0` (a part has a path once it
+    registered). Every example has a smoke spec in both themes, an iframe spec (`host.html`, ready
+    once) and a dedicated spec in `e2e/examples/<slug>.spec.ts`.
+  - **Kit:** `_kit/persistence.ts` (guarded `localStorage` load/save/forget) and `_kit/undo.ts`
+    (a history over `model.subscribe`: a whole drag is one step, measured from the last committed
+    layouts; registration batches are not steps; undo and redo run one `batch` of
+    `group.set-layout`). The kit describes the model structurally and never imports the package.
+    `persistent-layout` validates the saved document with `validateSplitter` before
+    `createSplitterModel(json)`, so a corrupt entry falls back to the defaults.
+  - **Fragiola UI** vendored from the local `../ui` checkout (d859caa), its registry built with
+    `packages/registry/scripts/build-registry.ts --out <tmp>` and passed as `FRAGIOLA_REGISTRY`;
+    the headers name `https://fragiola.com/r/<item>.json`, the same as grid-layout's copies
+    (`clickable` is byte-identical). Items: theme, eight palettes, badge, clickable, switch, text
+    (with their dependencies cn, choice, field).
+  - **Ports and versions:** examples dev 5184 (`PORT`), playground 5173 (`PLAYGROUND_PORT`), the
+    examples e2e server 4340 (grid-layout uses 4320: both can run at once). Playwright 1.63.0,
+    Tailwind 4.3.3, `@vitejs/plugin-react` 6.1.1, `@base-ui/react` 1.8.0, `lucide-react` 1.48.0,
+    `tw-animate-css` 1.4.0, `clsx` 2.1.1, `tailwind-merge` 3.7.0, `tailwind-variants` 3.3.1:
+    grid-layout's pins. The examples' Playwright project is Chromium only (no touch examples);
+    the playground runs Chromium and Firefox.
+  - **Fixtures:** one unstyled page, `fixtures/basic` (ltr) and `fixtures/rtl`, configured by the
+    query (`orientation=vertical`, `veto=1` for a vetoing middleware), 600px of panels so 1% is
+    6px. Its specs cover drags (transient steps, one commit, veto puts the origin back),
+    the keyboard in both directions, collapse thresholds, conditional order and the part
+    contract. `site/tests/noindex.test.ts` checks every HTML page for `robots: noindex`.
