@@ -12,6 +12,7 @@ import {
 } from "@fragiola/splitter";
 import * as React from "react";
 import { type GroupContextValue, PanelContext } from "../context";
+import { ADAPTER_RUN } from "../utils/adapter-run";
 import { GroupRegistry } from "../utils/group-registry";
 import { shallowEqual } from "../utils/shallow-equal";
 
@@ -206,11 +207,15 @@ export function useGroupRoot(options: GroupRootOptions): GroupContextValue {
                   },
               ]
             : commands;
-        const result = model.run("batch", {
-            commands: model.can("batch", { commands: withLayout })
-                ? withLayout
-                : commands,
-        });
+        const result = model.run(
+            "batch",
+            {
+                commands: model.can("batch", { commands: withLayout })
+                    ? withLayout
+                    : commands,
+            },
+            ADAPTER_RUN,
+        );
         registry.setRegistered(result.ok);
         if (!result.ok) {
             console.error(
@@ -237,7 +242,11 @@ export function useGroupRoot(options: GroupRootOptions): GroupContextValue {
             sent.current = undefined;
             if (registry.registered()) {
                 // a layout the user changed comes back when the group mounts again
-                model.run("group.remove", { groupId, keepLayout: true });
+                model.run(
+                    "group.remove",
+                    { groupId, keepLayout: true },
+                    ADAPTER_RUN,
+                );
             }
             registry.setRegistered(false);
             registry.sync();
@@ -255,12 +264,16 @@ export function useGroupRoot(options: GroupRootOptions): GroupContextValue {
             orientation !== previous.orientation ||
             disabled !== previous.disabled
         ) {
-            model.run("group.update", { groupId, orientation, disabled });
+            model.run(
+                "group.update",
+                { groupId, orientation, disabled },
+                ADAPTER_RUN,
+            );
             previous.orientation = orientation;
             previous.disabled = disabled;
         }
         if (layout && !shallowEqual(layout, previous.layout)) {
-            model.run("group.set-layout", { groupId, layout });
+            model.run("group.set-layout", { groupId, layout }, ADAPTER_RUN);
             previous.layout = layout;
         }
     });

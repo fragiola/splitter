@@ -186,6 +186,50 @@ describe("prop changes become commands", () => {
     });
 });
 
+describe("the adapter's commands", () => {
+    it("carry meta.source adapter, so a listener tells them from the user's steps", () => {
+        const model = createSplitterModel();
+        const events: CommandEvent[] = [];
+        model.subscribe((event) => events.push(event));
+        function App(props: {
+            third?: boolean;
+            min?: string;
+            layout?: Layout;
+        }) {
+            return (
+                <Splitter.Group id="g" model={model} layout={props.layout}>
+                    <Splitter.Panel id="a" minSize={props.min} />
+                    <Splitter.Separator disabled={props.third === true} />
+                    <Splitter.Panel id="b" />
+                    {props.third && (
+                        <>
+                            <Splitter.Separator />
+                            <Splitter.Panel id="c" />
+                        </>
+                    )}
+                </Splitter.Group>
+            );
+        }
+        const { container, rerender, unmount } = render(<App />);
+        rerender(<App third min="10%" layout={{ a: 20, b: 40, c: 40 }} />);
+        rerender(<App min="10%" />);
+        const sources = () =>
+            events
+                .filter(({ transient }) => !transient)
+                .map(({ command, meta }) => [command, meta?.source]);
+        expect(sources().length).toBeGreaterThan(3);
+        expect(sources().filter(([, source]) => source !== "adapter")).toEqual(
+            [],
+        );
+        events.length = 0;
+        act(() => press(at(container, "/g0/s0"), "ArrowRight"));
+        expect(sources()).toEqual([["separator.move", undefined]]);
+        events.length = 0;
+        unmount();
+        expect(sources()).toEqual([["group.remove", "adapter"]]);
+    });
+});
+
 describe("panel callbacks", () => {
     it("onResize gets the size, and the previous one (none the first time)", () => {
         const onResize = vi.fn();

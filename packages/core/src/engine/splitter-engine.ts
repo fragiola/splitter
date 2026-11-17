@@ -656,7 +656,12 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
         if (updates.length === 0) {
             return ok({ results: [] });
         }
-        return this.model.run("batch", { commands: updates });
+        // what the markup's order says, as the adapter's registration: `meta.source` tells it
+        return this.model.run(
+            "batch",
+            { commands: updates },
+            { meta: { source: "adapter" } },
+        );
     }
 
     private syncSeparators(

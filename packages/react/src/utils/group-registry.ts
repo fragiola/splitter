@@ -3,6 +3,7 @@ import type {
     SplitterEngine,
     SplitterModel,
 } from "@fragiola/splitter";
+import { ADAPTER_RUN } from "./adapter-run";
 
 /**
  * What one mounted `Splitter.Group` keeps for its parts: the panels waiting for the group to
@@ -46,7 +47,7 @@ export class GroupRegistry {
             this.queue.set(String(payload.id), payload);
             return;
         }
-        this.model.run("panel.add", payload);
+        this.model.run("panel.add", payload, ADAPTER_RUN);
         this.engine.adapter.syncOrder(this.groupId);
         this.sync();
     }
@@ -67,7 +68,7 @@ export class GroupRegistry {
             this.model.get("panel-by", { id: panelId })?.groupId ===
             this.groupId
         ) {
-            this.model.run("panel.remove", { panelId });
+            this.model.run("panel.remove", { panelId }, ADAPTER_RUN);
         }
     }
 

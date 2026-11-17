@@ -628,7 +628,7 @@ describe("double click", () => {
 
 describe("panel order from the document", () => {
     it("sorts a conditional panel by its document position", () => {
-        const { model, engine, root, panels } = render([
+        const { model, engine, root, panels, events } = render([
             { id: "a" },
             { id: "c" },
         ]);
@@ -648,6 +648,11 @@ describe("panel order from the document", () => {
             "b",
             "c",
         ]);
+        // the adapter's own step: a listener tells it from the user's
+        expect(events.at(-1)).toMatchObject({
+            command: "batch",
+            meta: { source: "adapter" },
+        });
         expect(
             model.get("separators-by", { groupId: "g" }).map(({ id }) => id),
         ).toEqual(["a:b", "b:c"]);

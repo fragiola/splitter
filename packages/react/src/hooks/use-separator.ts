@@ -1,6 +1,7 @@
 import type { SeparatorAria } from "@fragiola/splitter";
 import * as React from "react";
 import { useGroupContext } from "../context";
+import { ADAPTER_RUN } from "../utils/adapter-run";
 import { shallowEqual } from "../utils/shallow-equal";
 import { dataAttributes } from "../utils/use-render";
 import { useEngineValue, useModelValue } from "./internal";
@@ -78,11 +79,17 @@ export function useSeparator(
         ) {
             return;
         }
-        model.run("separator.update", {
-            separatorId,
-            ...(disabled === undefined ? {} : { disabled }),
-            ...(resetOnDoubleClick === undefined ? {} : { resetOnDoubleClick }),
-        });
+        model.run(
+            "separator.update",
+            {
+                separatorId,
+                ...(disabled === undefined ? {} : { disabled }),
+                ...(resetOnDoubleClick === undefined
+                    ? {}
+                    : { resetOnDoubleClick }),
+            },
+            ADAPTER_RUN,
+        );
     }, [model, separatorId, disabled, resetOnDoubleClick]);
 
     const selected = useModelValue(

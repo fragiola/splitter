@@ -10,6 +10,7 @@ import type {
 } from "@fragiola/splitter";
 import * as React from "react";
 import { useGroupContext } from "../context";
+import { ADAPTER_RUN } from "../utils/adapter-run";
 import { panelStyle } from "../utils/panel-style";
 import { shallowEqual } from "../utils/shallow-equal";
 import { dataAttributes } from "../utils/use-render";
@@ -183,7 +184,7 @@ export function usePanel<T extends SplitterTypes = AnyTypes>(
         }
         sent.current = constraints;
         if (!registry.updateQueued({ id: panelId, groupId, ...constraints })) {
-            model.run("panel.update", { panelId, ...changes });
+            model.run("panel.update", { panelId, ...changes }, ADAPTER_RUN);
         }
     });
 
