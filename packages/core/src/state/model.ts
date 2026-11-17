@@ -313,7 +313,7 @@ class Model<T extends SplitterTypes> implements SplitterModel<T> {
     ): CommandResult<unknown> {
         // a dry run commits nothing, not even the ids it generated
         const ids = dryRun ? this.ids.clone() : this.ids;
-        const draft = new Draft(this.state, ids);
+        const draft = new Draft(this.state, ids, options.transient === true);
         const execution: Execution = {
             draft,
             dryRun,

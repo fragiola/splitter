@@ -95,7 +95,8 @@ export function Workbench() {
 ## The size it comes back to
 
 Whenever a change collapses a panel, the model records its size before as its restore size
-(`restoreSize` in the state and in the saved document). `panel.expand` gives it back, as far as
+(`restoreSize` in the state and in the saved document). A drag records it on release, from where
+the drag started: its transient steps record nothing, so a vetoed drag leaves it as it was. `panel.expand` gives it back, as far as
 the other panels can make room; with no restore size, the panel expands to its minimum (1% when
 its minimum is 0). A collapsed panel saved in the JSON document comes back collapsed, and still
 expands to the size it had.

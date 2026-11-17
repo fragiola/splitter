@@ -61,34 +61,46 @@ export function layoutsEqual(a: Layout, b: Layout): boolean {
 }
 
 /**
- * Sets a group's layout. A panel this change collapses remembers the size it had, to return to
- * it on expand (`trackRestore`, default true).
+ * Sets a group's layout. A panel this change collapses remembers the size it had (in `from`,
+ * default the layout now), to return to it on expand (`trackRestore`, default true); a transient
+ * step records none, the final commit does. The layout is the default one (`pristine`) when the
+ * caller says so, or when it equals the default layout. So a gesture that ends refused (a vetoed
+ * drag, whose origin is set back) leaves the group as it was.
  */
 export function commitLayout(
     draft: Draft,
     group: GroupState,
     next: Layout,
-    options: { pristine?: boolean; trackRestore?: boolean } = {},
+    options: {
+        pristine?: boolean;
+        trackRestore?: boolean;
+        from?: Readonly<Layout>;
+    } = {},
 ): GroupState {
     const { pristine = false, trackRestore = true } = options;
-    if (trackRestore) {
+    const from = options.from ?? group.layout;
+    if (trackRestore && !draft.transient) {
         for (const item of constraintsOf(draft, group)) {
             if (
                 item.collapsible &&
-                !isCollapsedIn(item, group.layout) &&
+                !isCollapsedIn(item, from) &&
                 isCollapsedIn(item, next)
             ) {
                 const panel = draft.panel(item.panelId);
-                const size = group.layout[item.panelId];
+                const size = from[item.panelId];
                 if (panel && size !== undefined) {
                     draft.setPanel({ ...panel, restoreSize: size });
                 }
             }
         }
     }
-    // an unchanged layout keeps its object (and a default layout stays the default)
     const unchanged = layoutsEqual(group.layout, next);
-    const nextPristine = unchanged ? group.pristine || pristine : pristine;
+    // a layout equal to the default one is the default one: a drag step leaves it, the origin
+    // a vetoed drag goes back to is it again
+    const nextPristine =
+        pristine ||
+        layoutsEqual(next, defaultLayout(constraintsOf(draft, group)));
+    // an unchanged layout keeps its object
     if (unchanged && nextPristine === group.pristine) {
         return group;
     }

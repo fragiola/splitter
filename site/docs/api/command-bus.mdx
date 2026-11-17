@@ -143,7 +143,9 @@ A `CommandListener` receives one `CommandEvent` per commit:
 
 A drag runs `separator.move` with `{ transient: true }` on every pointer move, measured from where
 it started, then one final non-transient commit that middleware can veto (a veto puts the panels
-back where the drag started). `batch` (`{ commands: BatchEntry[] }`) runs several commands as one
+back where the drag started). Restore sizes are settled by the final commit, not by the steps,
+and a layout equal to the default one is the default one (`pristine`), so a vetoed drag leaves
+the group, and `splitter-json`, as they were. `batch` (`{ commands: BatchEntry[] }`) runs several commands as one
 atomic step: all apply, or none does. Listeners get one event.
 
 ## The registry

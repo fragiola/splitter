@@ -80,10 +80,12 @@ export const separatorMove = defineCommand({
             pivotIndices: [separator.index, separator.index + 1],
             trigger: payload.source ?? "pointer",
         });
+        // a drag's commit compares with where it started: its steps settled nothing
         const next = commitLayout(
             draft,
             group,
             validateLayout(moved, constraints),
+            { from: origin },
         );
         return ok({ layout: { ...next.layout } });
     },

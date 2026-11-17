@@ -54,9 +54,12 @@ export class Draft {
     private readonly pending: Record<string, Readonly<GroupJson>>;
     private changed = false;
     readonly ids: IdSource;
+    /** the command runs as a transient step: restore sizes wait for the final commit */
+    readonly transient: boolean;
 
-    constructor(base: SplitterState, ids: IdSource) {
+    constructor(base: SplitterState, ids: IdSource, transient = false) {
         this.base = base;
+        this.transient = transient;
         this.groups = { ...base.groups };
         this.panels = { ...base.panels };
         this.pending = { ...base.pending };

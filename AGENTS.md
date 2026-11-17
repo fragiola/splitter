@@ -441,3 +441,16 @@ copyright line and the MIT licence, and the guard test lists it.
   - **`useSeparator`** sends only the props that changed since it last sent them, and the default
     (`disabled: false`, `resetOnDoubleClick: true`) for one that went back to `undefined`; it used
     to send nothing when both were `undefined`, so a separator stayed disabled.
+- **Review fixes (after Issue #6):**
+  - **Controlled `layout`** fed back by `onLayoutChange` runs nothing when it equals the model's
+    layout (see Issue #3, *Controlled layout*).
+  - **A vetoed drag leaves the group as it was** (D8). A layout is `pristine` when the caller
+    says so or when it equals the group's default layout (it used to stay pristine only while
+    unchanged), so the engine's restore after a veto, still one transient `group.set-layout` of
+    the origin, makes a default layout pristine again. Transient steps record no restore size:
+    the `Draft` knows whether its command is transient, and a drag's commit (`separator.move`
+    with `origin`) records it from the origin, so a panel a drag collapses comes back to its size
+    when the drag started (it used to be the size at the step before the collapse; React
+    Resizable Panels records none for a drag). Keeping `pristine` through transient steps was
+    tried and dropped: the engine measures the group again mid-drag (the panels resize), and a
+    pristine layout is derived again on a measure, which reset the drag.

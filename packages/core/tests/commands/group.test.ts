@@ -523,9 +523,72 @@ describe("separator.move", () => {
         step(-21);
         expect(sizes(model)).toEqual([0, 100]);
         expect(model.is("panel-collapsed", { panelId: "a" })).toBe(true);
-        expect(model.get("panel-by", { id: "a" })?.restoreSize).toBe(20);
+        // a transient step settles no restore size: the commit does
+        expect(model.get("panel-by", { id: "a" })?.restoreSize).toBeUndefined();
         step(-5);
         expect(sizes(model)).toEqual([25, 75]);
+    });
+
+    it("leaves the group as it was before a drag whose commit is vetoed (D8)", () => {
+        const model = group([
+            { id: "a", collapsible: true, minSize: "20%" },
+            { id: "b" },
+        ]);
+        const before = model.get("splitter-json");
+        const origin = { ...model.get("layout-by", { groupId: "g" }) };
+        model.use((ctx, next) =>
+            ctx.command === "separator.move" && !ctx.transient && !ctx.dryRun
+                ? { ok: false, error: { code: "vetoed", message: "no" } }
+                : next(),
+        );
+        const move = { separatorId: "a:b", delta: -45, origin };
+        model.run("separator.move", move, { transient: true });
+        expect(sizes(model)).toEqual([0, 100]);
+        expect(model.run("separator.move", move).ok).toBe(false);
+        // what the engine runs when the commit is refused
+        model.run(
+            "group.set-layout",
+            { groupId: "g", layout: origin },
+            { transient: true, meta: { restore: true } },
+        );
+        expect(sizes(model)).toEqual([50, 50]);
+        expect(model.get("group-by", { id: "g" })?.pristine).toBe(true);
+        expect(model.get("panel-by", { id: "a" })?.restoreSize).toBeUndefined();
+        expect(model.get("splitter-json")).toEqual(before);
+    });
+
+    it("keeps a drag step of a default layout when the group is measured again", () => {
+        const model = group([{ id: "a", defaultSize: "30%" }, { id: "b" }], {
+            axisSize: 1000,
+        });
+        model.run(
+            "separator.move",
+            { separatorId: "a:b", delta: 10, origin: { a: 30, b: 70 } },
+            { transient: true },
+        );
+        // the panels resized on screen: the engine measures again mid-drag
+        model.run(
+            "group.measure",
+            { groupId: "g", axisSize: 1000, fontSize: 16 },
+            { transient: true },
+        );
+        expect(sizes(model)).toEqual([40, 60]);
+    });
+
+    it("records the restore size with the drag's commit, from its origin", () => {
+        const model = group([
+            { id: "a", collapsible: true, minSize: "20%" },
+            { id: "b" },
+        ]);
+        const origin = { a: 50, b: 50 };
+        const move = { separatorId: "a:b", delta: -45, origin };
+        model.run("separator.move", move, { transient: true });
+        expect(model.get("panel-by", { id: "a" })?.restoreSize).toBeUndefined();
+        model.run("separator.move", move);
+        expect(sizes(model)).toEqual([0, 100]);
+        expect(model.get("group-by", { id: "g" })?.pristine).toBe(false);
+        // the size it had when the drag started
+        expect(model.get("panel-by", { id: "a" })?.restoreSize).toBe(50);
     });
 
     it("collapses and expands in one keyboard step", () => {
