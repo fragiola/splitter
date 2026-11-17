@@ -617,14 +617,25 @@ copyright line and the MIT licence, and the guard test lists it.
     React and Vue. A panel binds its element and registers in its `ngOnInit`; a separator gives the
     registry its element there. Input changes are effects compared with what was last sent (Vue's
     watchers). Angular destroys a group's child views (an `@for` of panels) before the group, so a
-    destroyed panel's `panel.remove` waits for a microtask (`GroupRegistry.removePanelLater`); a
-    group destroyed meanwhile drops it and its `group.remove { keepLayout }` takes the panels with
-    their layout (React and Vue tear the parent down first). A panel created again under the same
-    id before that microtask removes the old one first.
+    destroyed panel's `panel.remove` waits (`GroupRegistry.removePanelLater`); a group destroyed
+    meanwhile drops it and its `group.remove { keepLayout }` takes the panels with their layout
+    (React and Vue tear the parent down first). A panel created again under the same id before
+    then removes the old one first.
+  - **Panel changes wait for the render** (review): an `@for` creates a new item's views before it
+    destroys the old ones, so replacing `b` by `d` in one tick passed through `[a, b, c, d]`, a
+    state React never has. A panel created in a registered group now waits as a removal does:
+    both run at `afterNextRender` or the next microtask, whichever comes first
+    (`GroupRegistry.flush`), removals first, so the sequence is React's (`[a, c]`, `[a, c, d]`,
+    `[a, d, c]`). A group nested in a new panel still registers in it: the parent's flush is
+    scheduled when the panel initializes, before the nested group's own `afterNextRender`
+    (tested). Pending changes carry their directive, so a panel destroyed before its add ran is
+    only forgotten, and an old panel's removal never drops its replacement's add. Tests:
+    `conditional.test.ts`, "a panel replaced in one tick never shares the group with the one it
+    replaces", "a group nested in a panel added later registers in it".
   - **A layout set with a panel shown or hidden** (review): `[layout]` / `[(layout)]` changed in
     the same tick as an `@if` that hides or shows a panel names the panels of after the render,
-    as React and Vue apply it. The group's layout effect first removes the panels waiting for
-    their microtask (`GroupRegistry.flushRemovals`); a layout the model cannot take yet
+    as React and Vue apply it. The group's layout effect first runs the pending panel changes
+    (`GroupRegistry.flush`); a layout the model cannot take yet
     (`model.can("group.set-layout")` false: a panel not created yet) waits for `afterNextRender`,
     then runs whatever its result. While a layout waits, the model's layout is not written back
     to the app's (`[(layout)]` would overwrite the app's signal). Tests: `props.test.ts`, "applies

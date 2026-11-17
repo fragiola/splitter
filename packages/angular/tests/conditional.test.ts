@@ -96,6 +96,62 @@ describe("conditional panels", () => {
         });
     }
 
+    it("a panel replaced in one tick never shares the group with the one it replaces", async () => {
+        const model = createSplitterModel();
+        const commits: (readonly string[])[] = [];
+        model.subscribe(({ after, transient }) => {
+            if (!transient) commits.push(after.groups.g?.panelIds ?? []);
+        });
+        const { app } = await conditional(model, ["a", "b", "c"]);
+        commits.length = 0;
+        // @for creates d before it destroys b: React's sequence is [a,c], [a,c,d], [a,d,c]
+        app.shown.set(["a", "c", "d"]);
+        await settle();
+        expect(panelIds(model)).toEqual(["a", "c", "d"]);
+        commits.length = 0;
+        app.shown.set(["a", "b", "c"]);
+        await settle();
+        expect(panelIds(model)).toEqual(["a", "b", "c"]);
+        expect(commits.length).toBeGreaterThan(0);
+        expect(commits.filter((ids) => ids.length > 3)).toEqual([]);
+    });
+
+    it("a group nested in a panel added later registers in it", async () => {
+        const model = createSplitterModel();
+        @Component({
+            selector: "test-nested-later",
+            imports: [SPLITTER],
+            template: `
+                <div splitterGroup id="g" [model]="model">
+                    <div splitterPanel id="a"></div>
+                    @if (shown()) {
+                        <div splitterSeparator></div>
+                        <div splitterPanel id="b">
+                            <div splitterGroup id="inner">
+                                <div splitterPanel id="x"></div>
+                                <div splitterSeparator></div>
+                                <div splitterPanel id="y"></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            `,
+        })
+        class NestedLater {
+            readonly model = model;
+            readonly shown = signal(false);
+        }
+        const { app, container } = await render(NestedLater);
+        app.shown.set(true);
+        await settle();
+        expect(panelIds(model)).toEqual(["a", "b"]);
+        expect(model.get("group-by", { id: "inner" })?.parentPanelId).toBe("b");
+        expect(at(container, "/g0/p1/g0/s0")).toHaveAttribute(
+            "aria-controls",
+            "x",
+        );
+    });
+
     it("the separator before a panel added in the middle moves it", async () => {
         const model = createSplitterModel();
         const { container, app } = await conditional(model, ["a", "c"]);

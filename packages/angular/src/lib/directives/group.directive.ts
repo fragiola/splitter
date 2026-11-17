@@ -186,6 +186,7 @@ export class SplitterGroup<T extends SplitterTypes = AnyTypes>
     private created: { id: string; model: SplitterModel | undefined } | null =
         null;
     private mounted = false;
+    private destroyed = false;
     private readonly stops: (() => void)[] = [];
     /** what the group last sent to the model: later changes send only what changed */
     private sent:
@@ -369,7 +370,10 @@ export class SplitterGroup<T extends SplitterTypes = AnyTypes>
             untracked(() => this.applyLayout(layout, false));
         });
 
-        onDestroy(() => this.unregister());
+        onDestroy(() => {
+            this.destroyed = true;
+            this.unregister();
+        });
     }
 
     ngOnInit(): void {
@@ -391,7 +395,11 @@ export class SplitterGroup<T extends SplitterTypes = AnyTypes>
                   resetOnDoubleClick: this.resetOnDoubleClick(),
               });
         this.joins = joins;
-        const registry = new GroupRegistry(model, engine, id);
+        const registry = new GroupRegistry(model, engine, id, (flush) => {
+            if (!this.destroyed) {
+                afterNextRender(flush, { injector: this.injector });
+            }
+        });
         this.stops.push(engine.adapter.bindGroup(id, this.host));
         this.runtime.set({ model, engine, groupId: id, registry });
         // after the first render, once the panels inside it (an `@for`, a child component) are
@@ -401,10 +409,10 @@ export class SplitterGroup<T extends SplitterTypes = AnyTypes>
 
     /**
      * Sets a layout the app changed. A layout set in the same tick as an `@if` that shows or hides
-     * a panel names the panels of after the render: the destroyed panels go first, and a layout
-     * the model cannot take yet (a panel not created yet) waits for the render, then applies
-     * (`afterNextRender`, whether it applies then or not). Meanwhile the model's layout is not
-     * written back to the app's.
+     * a panel names the panels of after the render: the pending panel changes run first, and a
+     * layout the model cannot take yet (a panel not created yet) waits for the render, then
+     * applies (`afterNextRender`, whether it applies then or not). Meanwhile the model's layout is
+     * not written back to the app's.
      */
     private applyLayout(layout: Layout | undefined, rendered: boolean): void {
         const runtime = this.runtime();
@@ -418,10 +426,10 @@ export class SplitterGroup<T extends SplitterTypes = AnyTypes>
             return;
         }
         const { model, groupId, registry } = runtime;
-        // the panels removed now do not write their layout back to the app's either
+        // the panels removed and added now do not write their layout back to the app's either
         const scheduled = this.waiting !== undefined;
         this.waiting = layout;
-        registry.flushRemovals();
+        registry.flush();
         // a layout that comes back from layoutChange is the model's layout already: setting it
         // again would turn each transient drag step into a commit
         if (!shallowEqual(layout, model.get("layout-by", { groupId }))) {
@@ -603,7 +611,7 @@ export class SplitterGroup<T extends SplitterTypes = AnyTypes>
         const { model, groupId, registry } = runtime;
         if (registry.registered()) {
             // its panels go with it: a layout the user changed comes back when it is created again
-            registry.cancelRemovals();
+            registry.cancel();
             model.run(
                 "group.remove",
                 { groupId, keepLayout: true },

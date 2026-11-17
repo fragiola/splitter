@@ -346,11 +346,14 @@ export class SplitterPanel<T extends SplitterTypes = AnyTypes>
         const constraints = untracked(this.constraints);
         // bound before it registers: its group sorts its panels by their elements
         this.unbind = runtime.engine.adapter.bindPanel(id, this.host);
-        runtime.registry.addPanel({
-            id,
-            groupId: runtime.groupId,
-            ...constraints,
-        });
+        runtime.registry.addPanel(
+            {
+                id,
+                groupId: runtime.groupId,
+                ...constraints,
+            },
+            this,
+        );
         this.registered = id;
         this.sent = constraints;
     }
@@ -362,9 +365,9 @@ export class SplitterPanel<T extends SplitterTypes = AnyTypes>
         this.unbind = undefined;
         if (runtime && this.registered !== undefined) {
             if (destroyed) {
-                runtime.registry.removePanelLater(this.registered);
+                runtime.registry.removePanelLater(this.registered, this);
             } else {
-                runtime.registry.removePanel(this.registered);
+                runtime.registry.removePanel(this.registered, this);
             }
         }
         this.registered = undefined;
