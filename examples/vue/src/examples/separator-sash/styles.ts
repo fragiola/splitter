@@ -42,7 +42,8 @@ export const separator = cn(
     // hovered, after a short delay
     "not-data-disabled:hover:after:bg-(--sp-separator-active) not-data-disabled:hover:after:delay-300",
     "not-data-disabled:hover:data-[orientation=vertical]:after:w-1 not-data-disabled:hover:data-[orientation=horizontal]:after:h-1",
-    // dragged or focused: at once
+    // dragged or focused: at once, even when the pointer hovered it a moment ago
+    "data-dragging:after:delay-0! focus-visible:after:delay-0!",
     "data-dragging:after:bg-(--sp-separator-active) data-dragging:data-[orientation=vertical]:after:w-1 data-dragging:data-[orientation=horizontal]:after:h-1",
     "focus-visible:after:bg-(--sp-focus-line) focus-visible:data-[orientation=vertical]:after:w-1 focus-visible:data-[orientation=horizontal]:after:h-1",
     "data-disabled:cursor-not-allowed",
