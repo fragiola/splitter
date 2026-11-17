@@ -45,9 +45,14 @@ test("the arrows resize by 5%, Home and End go to the limits", async ({
     await page.keyboard.press("ArrowDown");
     await expect(separator).toHaveAttribute("aria-valuenow", "50");
     await page.keyboard.press("Home");
-    expect(await valueNow(separator)).toBe(
-        Number(await separator.getAttribute("aria-valuemin")),
-    );
+    // polled: a framework may render after the key (Angular, zoneless)
+    await expect
+        .poll(
+            async () =>
+                (await valueNow(separator)) ===
+                Number(await separator.getAttribute("aria-valuemin")),
+        )
+        .toBe(true);
 });
 
 test("Enter collapses the panel before the separator and expands it back", async ({

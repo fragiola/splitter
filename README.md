@@ -23,9 +23,10 @@ Documentation, guides and live examples: **<https://fragiola.com/splitter>**
 | [`@fragiola/splitter`](packages/core) | framework-free core: layout rules and units, typed model and commands, the JSON document, the engine |
 | [`@fragiola/splitter-react`](packages/react) | composable React 19 primitives over the core, and the core re-exported: what a React app installs |
 | [`@fragiola/splitter-vue`](packages/vue) | the same primitives and the hooks as composables for Vue 3.5, and the core re-exported: what a Vue app installs |
+| [`@fragiola/splitter-angular`](packages/angular) | the same primitives as standalone directives on your own elements and the hooks as injection functions for Angular 22 (signals, zoneless), and the core re-exported: what an Angular app installs |
 
-An Angular adapter (`@fragiola/splitter-angular`) is planned. Every example of the site exists in
-React and in Vue (`examples/react`, `examples/vue`).
+Every example of the site exists in React, Vue and Angular (`examples/react`, `examples/vue`,
+`examples/angular`).
 
 ## Install
 

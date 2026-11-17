@@ -4,8 +4,8 @@
 
 **The maintainer's npm account is suspended, so nothing of Splitter is on npm.** Everything in the
 repository is ready: the changesets of the first release (`.changeset/splitter-core.md`,
-`.changeset/splitter-react.md`, `.changeset/splitter-vue.md`, a `minor` each: `0.0.0` to
-`0.1.0`), the release workflow, the
+`.changeset/splitter-react.md`, `.changeset/splitter-vue.md`, `.changeset/splitter-angular.md`, a
+`minor` each: `0.0.0` to `0.1.0`), the release workflow, the
 package check and the CI jobs. Until the steps below are done, nothing can publish:
 
 - the pending changesets only make the release workflow open (or update) the **Version Packages**
@@ -20,8 +20,8 @@ the repository changes.
 ## How a release works
 
 Releasing is a merge. [Changesets](https://changesets.dev) versions every package under
-`packages/` (`@fragiola/splitter`, `@fragiola/splitter-react` and `@fragiola/splitter-vue` today;
-`@fragiola/splitter-angular` with Epic #13) together (one `fixed` group,
+`packages/` (`@fragiola/splitter`, `@fragiola/splitter-react`, `@fragiola/splitter-vue` and
+`@fragiola/splitter-angular`) together (one `fixed` group,
 `@fragiola/*`, so they always share a version) and writes their changelogs. The release workflow,
 [`.github/workflows/release.yml`](../.github/workflows/release.yml), publishes them with pnpm
 through npm **trusted publishing** (OIDC, with provenance): there is no npm token anywhere.
@@ -49,7 +49,8 @@ before that.
 
 1. **The scope.** Make sure the npm scope `@fragiola` exists and that your npm account owns it
    (`npm org ls fragiola`, or <https://www.npmjs.com/settings/fragiola/members>), and that the
-   names `@fragiola/splitter`, `@fragiola/splitter-react` and `@fragiola/splitter-vue` are free
+   names `@fragiola/splitter`, `@fragiola/splitter-react`, `@fragiola/splitter-vue` and
+   `@fragiola/splitter-angular` are free
    (`npm view @fragiola/splitter` answers `E404`). Your account has 2FA enabled.
 
 2. **Let the workflow open PRs.** First in the **organization**: *Settings → Actions → General →
@@ -76,8 +77,10 @@ before that.
    pnpm build && pnpm --filter "./packages/*" publish --access public
    ```
 
-   pnpm asks for your 2FA code. It publishes the core first, then the React and Vue packages,
-   which depend on the core at exactly `0.0.0`.
+   pnpm asks for your 2FA code. It publishes the core first, then the React, Vue and Angular
+   packages, which depend on the core at exactly `0.0.0`. The Angular package is published from
+   its build output (`publishConfig.directory`: `dist`, with the manifest its build writes there),
+   so `pnpm build` must come first, as above.
 
 5. **The trusted publisher.** With npm 11.15 or later (`npm --version`; `npm install -g
    npm@latest` updates it) and your account's 2FA, for each package:
@@ -86,6 +89,7 @@ before that.
    npm trust github @fragiola/splitter --file release.yml --repo fragiola/splitter --environment npm --allow-publish
    npm trust github @fragiola/splitter-react --file release.yml --repo fragiola/splitter --environment npm --allow-publish
    npm trust github @fragiola/splitter-vue --file release.yml --repo fragiola/splitter --environment npm --allow-publish
+   npm trust github @fragiola/splitter-angular --file release.yml --repo fragiola/splitter --environment npm --allow-publish
    ```
 
    `--allow-publish` is required: since 2026-09-03 a trusted publisher only gets staged publishing
@@ -179,6 +183,33 @@ for it alone:
 pnpm --filter @fragiola/splitter-vue publish --access public --dry-run   # what would be published
 pnpm --filter @fragiola/splitter-vue build && pnpm --filter @fragiola/splitter-vue publish --access public
 npm trust github @fragiola/splitter-vue --file release.yml --repo fragiola/splitter --environment npm --allow-publish
+```
+
+### The Angular package (`@fragiola/splitter-angular`)
+
+Added by Epic #13, before anything was published: like the Vue package, it is one of the packages
+of [The first release](#the-first-release-010) (steps 4, 5 and 9). Its changeset is
+`.changeset/splitter-angular.md`. It differs from the others in how it is built and packed:
+
+- **ng-packagr** builds it (Angular Package Format, partial compilation, ESM only) on TypeScript
+  6.0.3, pinned in `packages/angular` only (the Angular compiler supports `>=6.0 <6.1`; the rest
+  of the repository is on TypeScript 7). `scripts/publish-manifest.ts` then rewrites
+  `dist/package.json`: the repo's `exports` without the source condition, the core as its only
+  dependency (no `tslib`).
+- **It is published from `dist`** (`publishConfig.directory`), so it must be built before it is
+  packed or published; the release workflow builds every package first.
+- **Its smoke app** in `ADAPTERS` is a Vite app with `@analogjs/vite-plugin-angular` and a
+  standalone component, checked by `ngc` with strict templates, at the versions
+  `packages/angular` pins. `scripts/check-dts.ts` ignores the Angular compiler's own `ɵ`
+  metadata (`static ɵdir`, `static ɵfac`), which names a generic directive with `any`.
+
+Only if the first release ever goes out without it:
+
+```sh
+pnpm --filter @fragiola/splitter-angular build
+pnpm --filter @fragiola/splitter-angular publish --access public --dry-run   # what would be published
+pnpm --filter @fragiola/splitter-angular publish --access public
+npm trust github @fragiola/splitter-angular --file release.yml --repo fragiola/splitter --environment npm --allow-publish
 ```
 
 ## While a release runs

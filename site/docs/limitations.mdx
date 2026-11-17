@@ -38,8 +38,9 @@ or cosmetic, or another library's job), some not yet. Each comes with what to do
 - **A direction set through CSS alone** (a class that sets `direction`, no `dir` attribute) is read
   when the engine measures: run `engine.run("measure", {})` after it. A `dir` attribute switched at
   runtime is followed (see [Right-to-left](/docs/guides/rtl#changing-the-direction-at-runtime)).
-- **React and Vue, for now.** An Angular adapter is planned; the core is framework-free, so an
-  adapter is only rendering and wiring.
+- **Angular on the server.** An Angular group registers after its first render in the browser
+  (`afterNextRender`): the server HTML has the structural style, so nothing shifts, but no paths
+  until the browser takes over. Angular server rendering has no test of its own yet.
 - **Separators are matched by order**, not by declaration: the n-th separator element of a group
   is the one after its n-th panel. Render one between each pair of panels.
 

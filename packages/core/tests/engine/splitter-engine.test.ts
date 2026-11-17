@@ -563,15 +563,14 @@ describe("the keyboard (Window Splitter)", () => {
     });
 
     it("ignores a disabled separator and an event already handled", () => {
-        const { model, separators, sizes } = render([{ id: "a" }, { id: "b" }]);
+        const { model, root, separators, sizes } = render([
+            { id: "a" },
+            { id: "b" },
+        ]);
         const separator = element(separators, "a:b");
-        separator.addEventListener(
-            "keydown",
-            (event) => event.preventDefault(),
-            {
-                capture: true,
-            },
-        );
+        root.addEventListener("keydown", (event) => event.preventDefault(), {
+            capture: true,
+        });
         key(separator, "ArrowRight");
         expect(sizes()).toEqual([50, 50]);
         const other = render([{ id: "c" }, { id: "d" }]);
@@ -733,6 +732,83 @@ describe("panel order from the document", () => {
             value: { results: [] },
         });
         expect(engine.adapter.syncOrder("nope").ok).toBe(false);
+    });
+
+    it("runs before the separator element's own listeners, even those added before it bound", () => {
+        const model = createSplitterModel();
+        const engine = createSplitterEngine(model);
+        cleanup.push(() => engine.adapter.destroy());
+        const root = document.createElement("div");
+        const separator = document.createElement("div");
+        const seen: string[] = [];
+        // a framework that attaches the element's listeners as it creates it (Angular)
+        separator.addEventListener("keydown", (event) =>
+            seen.push(`own:${event.defaultPrevented}`),
+        );
+        separator.addEventListener("dblclick", (event) =>
+            seen.push(`own:${event.defaultPrevented}`),
+        );
+        root.append(
+            sized(document.createElement("div"), 250),
+            separator,
+            sized(document.createElement("div"), 250),
+        );
+        document.body.append(root);
+        model.run("batch", {
+            commands: [
+                { command: "group.add", payload: { id: "g" } },
+                {
+                    command: "panel.add",
+                    payload: { id: "a", groupId: "g", defaultSize: "30%" },
+                },
+                { command: "panel.add", payload: { id: "b", groupId: "g" } },
+            ],
+        });
+        engine.adapter.bindGroup("g", root);
+        engine.adapter.syncSeparators("g", [separator]);
+        model.subscribe(({ after }) =>
+            seen.push(`layout:${after.groups.g?.layout.a}`),
+        );
+        key(separator, "ArrowRight");
+        separator.dispatchEvent(
+            new MouseEvent("dblclick", { bubbles: true, cancelable: true }),
+        );
+        expect(seen).toEqual([
+            "layout:35",
+            "own:true",
+            "layout:30",
+            "own:true",
+        ]);
+    });
+
+    it("lets content inside a separator stop or prevent its events, and handles the others", () => {
+        const { engine, separators, sizes } = render([
+            { id: "a", defaultSize: "30%" },
+            { id: "b" },
+        ]);
+        const separator = element(separators, "a:b");
+        const stopped = document.createElement("button");
+        const prevented = document.createElement("button");
+        const plain = document.createElement("span");
+        separator.append(stopped, prevented, plain);
+        for (const type of ["pointerdown", "keydown", "dblclick"]) {
+            stopped.addEventListener(type, (event) => event.stopPropagation());
+            prevented.addEventListener(type, (event) => event.preventDefault());
+        }
+        for (const content of [stopped, prevented]) {
+            pointer(content, "pointerdown", { clientX: 150 });
+            expect(engine.get("dragging-separator-id")).toBeUndefined();
+            key(content, "ArrowRight");
+            content.dispatchEvent(
+                new MouseEvent("dblclick", { bubbles: true, cancelable: true }),
+            );
+            expect(sizes()).toEqual([30, 70]);
+        }
+        // an event from content that lets it through reaches the engine, as on the separator
+        key(plain, "ArrowRight");
+        expect(sizes()).toEqual([35, 65]);
+        pointer(plain, "pointerdown", { clientX: 150 });
+        expect(engine.get("dragging-separator-id")).toBe("a:b");
     });
 
     it("keeps a separator element's listeners when it is rebound under a new id", () => {

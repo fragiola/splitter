@@ -47,6 +47,34 @@ never changes for a mounted group), `useSplitter(splitterRef)` a computed ref of
 
 </Framework>
 
+<Framework name="angular">
+
+```ts title="reset-button.ts"
+import { Component } from "@angular/core";
+import { injectSplitter } from "@fragiola/splitter-angular";
+
+// rendered inside a [splitterGroup]
+@Component({
+    selector: "app-reset-button",
+    template: `<button type="button" (click)="reset()">Reset</button>`,
+})
+export class ResetButton {
+    private readonly splitter = injectSplitter();
+
+    reset() {
+        const { model, groupId } = this.splitter();
+        model.run("group.reset", { groupId });
+    }
+}
+```
+
+In Angular these are injection functions, called in an injection context (a field initializer):
+`injectSplitter()` returns a signal of the enclosing group's splitter, to read once the group has
+its inputs (in a template, a handler, an effect), and `injectSplitter(splitterRef)` a signal that
+is `null` while no root group holds the ref.
+
+</Framework>
+
 - `useSplitter<T>()`: inside a `Splitter.Group`, its model and engine, and the enclosing group's
   id. It throws outside a group.
 - `useSplitter<T>(splitterRef)`: the root group's that holds the ref, from anywhere, or `null`
@@ -101,6 +129,28 @@ the selector runs again when a reactive value it reads changes too.
 
 </Framework>
 
+<Framework name="angular">
+
+```ts title="sidebar-status.ts"
+import { Component } from "@angular/core";
+import { injectSplitterState } from "@fragiola/splitter-angular";
+
+@Component({
+    selector: "app-sidebar-status",
+    template: `<p>{{ collapsed() ? "Sidebar hidden" : "Sidebar shown" }}</p>`,
+})
+export class SidebarStatus {
+    readonly collapsed = injectSplitterState(({ model }) =>
+        model.is("panel-collapsed", { panelId: "sidebar" }),
+    );
+}
+```
+
+In Angular the answer is a signal: it changes only when the answer changes, and the selector runs
+again when a signal it reads changes too.
+
+</Framework>
+
 `useSplitterState<T, S>(selector, options?)` answers `selector(splitter, state)` and re-renders
 the component only when that answer changes. `splitter` is what `useSplitter` returns (`model`,
 `engine`, `groupId`) and `state` the model's state. The selector runs once per model state (and
@@ -149,6 +199,31 @@ const { state } = useGroup();
     <p v-if="state.dragging" role="status">Release to apply the new size</p>
 </template>
 ```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts title="drag-hint.ts"
+import { Component } from "@angular/core";
+import { injectGroup } from "@fragiola/splitter-angular";
+
+@Component({
+    selector: "app-drag-hint",
+    template: `
+        @if (group.state().dragging) {
+            <p role="status">Release to apply the new size</p>
+        }
+    `,
+})
+export class DragHint {
+    protected readonly group = injectGroup();
+}
+```
+
+In Angular, `injectGroup()`, `injectPanel()` and `injectSeparator()` return `{ state }` (a
+signal) of the enclosing part: the directive on the element is the lower layer, so they register
+nothing and return no props.
 
 </Framework>
 
@@ -209,6 +284,17 @@ const { props } = useSeparator();
 
 In Vue, `state` and `props` are computed refs, the options a value, a ref or a getter, and
 `props` holds `tabindex` (the DOM name) for `tabIndex`.
+
+</Framework>
+
+<Framework name="angular">
+
+In Angular the directive is the hook: put `splitterSeparator` on any element of your own, and
+its state is the directive's (`#rule="splitterSeparator"`, `rule.state()`):
+
+```html
+<hr splitterSeparator aria-label="Resize" />
+```
 
 </Framework>
 

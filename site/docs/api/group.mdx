@@ -55,6 +55,36 @@ In Vue, `layout` and `onLayoutChange` are `v-model:layout`; `@layout-change` and
 kebab-case in a template (`:default-layout`, `:splitter-ref`). [Vue](/docs/api/vue) maps the rest.
 
 </Framework>
+
+<Framework name="angular">
+
+```ts
+import { Component, signal } from "@angular/core";
+import { type Layout, SPLITTER } from "@fragiola/splitter-angular";
+
+@Component({
+    selector: "app-main",
+    imports: [SPLITTER],
+    template: `
+        <div splitterGroup id="main" [(layout)]="layout" class="h-80">
+            <div splitterPanel id="left">…</div>
+            <div splitterSeparator aria-label="Resize left" class="w-1"></div>
+            <div splitterPanel id="right">…</div>
+        </div>
+    `,
+})
+export class Main {
+    readonly layout = signal<Readonly<Layout> | undefined>({ left: 30, right: 70 });
+}
+```
+
+In Angular, `[splitterGroup]` is a directive on your element: `layout` and `onLayoutChange` are
+`[(layout)]` (its `layoutChange` output is `onLayoutChange`), `onLayoutCommit` is the
+`(layoutCommit)` output. Every prop of the table below is an input of the same name
+(`[defaultLayout]`, `[splitterRef]`); `id` and `model` are read once. [Angular](/docs/api/angular)
+maps the rest.
+
+</Framework>
 ## Props
 
 `GroupProps<T>` extends the [common primitive props](/docs/api/group#common-props) and every

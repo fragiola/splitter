@@ -25,6 +25,7 @@ import { describe, expect, it } from "vitest";
 const ROOT = join(import.meta.dirname, "../..");
 const REACT_SRC = join(ROOT, "packages/react/src");
 const VUE_SRC = join(ROOT, "packages/vue/src");
+const ANGULAR_SRC = join(ROOT, "packages/angular/src");
 const CORE_SRC = join(ROOT, "packages/core/src");
 const API = join(import.meta.dirname, "../docs/api");
 
@@ -122,6 +123,7 @@ function sourceFiles(dir: string): string[] {
 
 const REACT_FILES = sourceFiles(REACT_SRC).map(read);
 const VUE_FILES = sourceFiles(VUE_SRC).map(read);
+const ANGULAR_FILES = sourceFiles(ANGULAR_SRC).map(read);
 const CORE_FILES = sourceFiles(CORE_SRC).map(read);
 
 /**
@@ -396,6 +398,122 @@ describe("the Vue reference", () => {
             expect(read(join(API, "..", `${slug}.mdx`)), slug).toContain(
                 '<Framework name="vue">',
             );
+        }
+    });
+});
+
+describe("the Angular reference", () => {
+    const publicApi = read(join(ANGULAR_SRC, "public-api.ts"));
+    const angularPage = page("angular");
+    const directive = (part: string) =>
+        read(join(ANGULAR_SRC, `lib/directives/${part}.directive.ts`));
+    /** The inputs and outputs of a directive: its `readonly x = input(…)` / `output` fields. */
+    const bindings = (source: string, kinds: string) =>
+        [
+            ...source.matchAll(
+                new RegExp(`^ {4}readonly (\\w+) = (?:${kinds})\\b`, "gm"),
+            ),
+        ].map((match) => match[1] ?? "");
+    const PARTS = [
+        { part: "group", reactPage: "group", state: "GroupPartState" },
+        { part: "panel", reactPage: "panel", state: "PanelPartState" },
+        {
+            part: "separator",
+            reactPage: "separator",
+            state: "SeparatorPartState",
+        },
+    ];
+
+    it("re-exports the core and lists the three directives in SPLITTER", () => {
+        expect(publicApi).toMatch(/^export \* from "@fragiola\/splitter";$/m);
+        const splitter = read(join(ANGULAR_SRC, "lib/splitter.ts"));
+        for (const name of [
+            "SplitterGroup",
+            "SplitterPanel",
+            "SplitterSeparator",
+        ]) {
+            expect(splitter, name).toContain(`    ${name},`);
+        }
+    });
+
+    it("mentions every named export of the Angular package on api/angular.mdx", () => {
+        const exports = namedExports(publicApi);
+        expect(exports.length).toBeGreaterThan(12);
+        for (const { name } of exports) {
+            expect(
+                mentions(angularPage, name),
+                `${name} on api/angular.mdx`,
+            ).toBe(true);
+        }
+    });
+
+    it("has a row for every input of every directive: on api/angular.mdx, or on the part's React page", () => {
+        let checked = 0;
+        for (const { part, reactPage } of PARTS) {
+            const rows = new Set([
+                ...tableRowNames(angularPage),
+                ...tableRowNames(page(reactPage)),
+            ]);
+            for (const input of bindings(directive(part), "input|modelInput")) {
+                checked++;
+                expect(rows.has(input), `Angular ${part}.${input}`).toBe(true);
+            }
+        }
+        expect(checked).toBeGreaterThanOrEqual(20);
+    });
+
+    it("has a row on api/angular.mdx for every output, layoutChange and PanelResizeEvent's fields", () => {
+        const rows = tableRowNames(angularPage);
+        const outputs = PARTS.flatMap(({ part }) =>
+            bindings(directive(part), "output"),
+        );
+        expect(outputs).toEqual([
+            "layoutCommit",
+            "resize",
+            "collapse",
+            "expand",
+        ]);
+        for (const name of [
+            ...outputs,
+            "layoutChange",
+            "state",
+            ...allFields(directive("panel"), "PanelResizeEvent", ANGULAR_FILES),
+        ]) {
+            expect(rows.has(name), name).toBe(true);
+        }
+    });
+
+    it("has the fields of every part state on the part's React page", () => {
+        for (const { part, reactPage, state } of PARTS) {
+            const rows = tableRowNames(page(reactPage));
+            const fields = allFields(directive(part), state, ANGULAR_FILES);
+            expect(fields.length, state).toBeGreaterThan(3);
+            for (const field of fields) {
+                expect(rows.has(field), `${state}.${field}`).toBe(true);
+            }
+        }
+    });
+
+    it("is in the sidebar, and the pages with code show it in Angular too", () => {
+        expect(read(join(API, "../config.json"))).toContain(
+            '"path": "api/angular"',
+        );
+        for (const slug of [
+            "index",
+            "getting-started/introduction",
+            "getting-started/installation",
+            "getting-started/first-split-view",
+            "api/group",
+            "api/hooks",
+            "api/external-ref",
+            "concepts/composition",
+        ]) {
+            const mdx = read(join(API, "..", `${slug}.mdx`));
+            // an Angular block wherever there is a Vue one
+            expect(mdx.split('<Framework name="angular">').length, slug).toBe(
+                mdx.split('<Framework name="vue">').length,
+            );
+            expect(mdx, slug).toContain('<Framework name="angular">');
         }
     });
 });

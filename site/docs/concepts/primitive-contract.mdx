@@ -64,6 +64,16 @@ handlers. (A group's and a panel's `id` is their model id; a panel's element tak
 `id`.) A handler you pass runs after the part's own, so the part's behaviour
 comes first and yours still sees the event.
 
+A separator's pointer, key and double-click handling runs before the handlers you give the
+separator itself, whichever was attached first: your handler sees `event.defaultPrevented` once
+the separator has used the key. An event from content inside the separator (a button) reaches
+the separator only as it bubbles, after that content's own listeners, so the content can keep a
+press from starting a drag, moving the separator or resetting it: stop the event there
+(`stopPropagation()`) or prevent it (`preventDefault()`). In Vue and Angular the content's
+ordinary listeners do it (`@pointerdown.stop`, `(pointerdown)="$event.stopPropagation()"`). React
+runs its handlers at the root, after the separator's: use the content's capture handlers
+(`onPointerDownCapture`, `onKeyDownCapture`, `onDoubleClickCapture`).
+
 ## State through `data-*` and ARIA only
 
 A part never adds a class name. Its state is `data-*` (present or absent, never `"false"`) and

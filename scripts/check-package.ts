@@ -6,18 +6,20 @@
 // - its packed `exports` (from `publishConfig.exports`) are the repo's `exports` without the source
 //   condition, and use only the `types`, `import` and `default` conditions, with targets in `dist`.
 //   A package published from its build output (`publishConfig.directory`: the Angular adapter's,
-//   when it comes, as Dockable's, which ng-packagr builds into `dist` with a manifest of its own)
+//   as Dockable's, which ng-packagr builds into `dist` with a manifest of its own)
 //   is packed from that directory: its packed `exports` are the repo's without the source
 //   condition, relative to it (`./dist/x` is `./x`), and every target is a file of the tarball;
 // - publint (strict) and attw (`esm-only` profile) pass on the tarball;
-// - every adapter (`ADAPTERS`: each package under packages/ but the core; React and Vue today,
-//   Angular with its Epic) depends on the core at its exact version;
+// - every adapter (`ADAPTERS`: each package under packages/ but the core: React, Vue, Angular)
+//   depends on the core at its exact version;
 // - each adapter's smoke test: a scratch app outside the workspace installs that adapter's tarball
 //   (the core tarball comes as its dependency) and imports from it, typechecks with the repo's
 //   TypeScript, builds, and its dev server serves the entry with every import resolved. For
 //   React, a Vite + React app; for Vue, a Vite + Vue app with a single-file component, checked by
 //   vue-tsc on TypeScript 6 (vue-tsc does not run on TypeScript 7 yet), each at the pins of its
-//   framework's examples app (examples/react, examples/vue). A consumer's dev server
+//   framework's examples app (examples/react, examples/vue); for Angular, a Vite app with
+//   @analogjs/vite-plugin-angular and a standalone component, checked by ngc (strict templates)
+//   on packages/angular's TypeScript 6.0 (the Angular compiler's). A consumer's dev server
 //   adds the `development` condition, which once pointed Dockable's published `exports` at
 //   sources that are not in the tarball.
 //
@@ -606,6 +608,198 @@ async function vueSmoke(
     await loadThroughDevServer(app, "/src/main.ts");
 }
 
+/** The versions packages/angular pins (its Angular tools and TypeScript 6.0), for its smoke app. */
+function angularVersion(name: string): string {
+    const manifest = JSON.parse(
+        readFileSync(join(root, "packages/angular/package.json"), "utf8"),
+    ) as { devDependencies?: Record<string, string> };
+    const version = manifest.devDependencies?.[name];
+    if (version === undefined) {
+        throw new Error(`packages/angular does not pin ${name}`);
+    }
+    return version;
+}
+
+// The Angular smoke app: one standalone component with the directives on its own elements, typed
+// by its model's registry (a nested group, `[(layout)]`, `(layoutCommit)`), bootstrapped
+// zoneless. Everything comes from the Angular package.
+const ANGULAR_SMOKE_MAIN = `import {
+    Component,
+    provideZonelessChangeDetection,
+    signal,
+} from "@angular/core";
+import { bootstrapApplication } from "@angular/platform-browser";
+import {
+    createSplitterModel,
+    injectSplitterState,
+    type Layout,
+    SPLITTER,
+    type SplitterJson,
+    type SplitterTypes,
+} from "@fragiola/splitter-angular";
+
+interface Types extends SplitterTypes {
+    readonly groupId: "main" | "side";
+    readonly panelId: "left" | "right" | "top" | "bottom";
+}
+
+const json: SplitterJson = {
+    version: 1,
+    groups: [{ id: "main", panels: [{ id: "left", size: 30 }, { id: "right", size: 70 }] }],
+};
+
+@Component({
+    selector: "app-root",
+    imports: [SPLITTER],
+    template: \`
+        <div splitterGroup id="main" [model]="model" style="height: 100vh" (layoutCommit)="save()">
+            <div splitterPanel id="left" defaultSize="30%" [minSize]="120">
+                <button type="button" (click)="save()">Save</button>
+            </div>
+            <div splitterSeparator aria-label="Resize left"></div>
+            <div splitterPanel id="right">
+                <div splitterGroup id="side" orientation="vertical" [(layout)]="side">
+                    <div splitterPanel id="top" collapsible></div>
+                    <div splitterSeparator aria-label="Resize top"></div>
+                    <div splitterPanel id="bottom" #bottom="splitterPanel">
+                        {{ bottom.state().collapsed ? "collapsed" : "" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    \`,
+})
+class App {
+    readonly model = createSplitterModel<Types>(json);
+    readonly side = signal<Readonly<Layout> | undefined>({ top: 50, bottom: 50 });
+
+    save(): void {
+        console.log(JSON.stringify(this.model.get("splitter-json")));
+    }
+}
+
+@Component({
+    selector: "app-status",
+    template: "{{ collapsed() }}",
+})
+export class Status {
+    readonly collapsed = injectSplitterState<Types, boolean>(({ model }) =>
+        model.is("panel-collapsed", { panelId: "top" }),
+    );
+}
+
+bootstrapApplication(App, {
+    providers: [provideZonelessChangeDetection()],
+}).catch((error: unknown) => console.error(error));
+`;
+
+/**
+ * A scratch Vite + Angular app in `dir` (@analogjs/vite-plugin-angular) that depends on the
+ * Angular tarball only (the core tarball comes as its dependency), on the Angular tools and the
+ * TypeScript 6.0 packages/angular pins.
+ */
+function writeAngularSmokeApp(
+    dir: string,
+    core: string,
+    angular: string,
+): void {
+    const version = angularVersion;
+    const manifest = {
+        name: "splitter-smoke",
+        private: true,
+        type: "module",
+        dependencies: {
+            "@angular/common": version("@angular/common"),
+            "@angular/compiler": version("@angular/compiler"),
+            "@angular/core": version("@angular/core"),
+            "@angular/platform-browser": version("@angular/platform-browser"),
+            "@fragiola/splitter-angular": `file:${angular}`,
+            rxjs: version("rxjs"),
+        },
+        devDependencies: {
+            "@analogjs/vite-plugin-angular": version(
+                "@analogjs/vite-plugin-angular",
+            ),
+            "@angular/build": version("@angular/build"),
+            "@angular/compiler-cli": version("@angular/compiler-cli"),
+            typescript: version("typescript"),
+            vite: version("vite"),
+        },
+    };
+    writeFileSync(
+        join(dir, "package.json"),
+        `${JSON.stringify(manifest, null, 4)}\n`,
+    );
+    // the core tarball for the version the Angular tarball pins; the Analog plugin's TypeScript is
+    // the app's (6.0), and @angular/build's native helpers keep their prebuilt binaries
+    writeFileSync(
+        join(dir, "pnpm-workspace.yaml"),
+        [
+            "overrides:",
+            `  "@fragiola/splitter": "file:${core}"`,
+            "packageExtensions:",
+            '  "@analogjs/vite-plugin-angular":',
+            "    peerDependencies:",
+            '      typescript: "*"',
+            "allowBuilds:",
+            "  esbuild: true",
+            '  "@parcel/watcher": false',
+            "  lmdb: false",
+            "  msgpackr-extract: false",
+            "",
+        ].join("\n"),
+    );
+    writeFileSync(
+        join(dir, "vite.config.js"),
+        `import angular from "@analogjs/vite-plugin-angular";\nimport { defineConfig } from "vite";\n\nexport default defineConfig({ plugins: [angular({ tsconfig: "tsconfig.json" })] });\n`,
+    );
+    writeFileSync(
+        join(dir, "index.html"),
+        `<!doctype html>\n<html lang="en">\n<body>\n<app-root></app-root>\n<script type="module" src="/src/main.ts"></script>\n</body>\n</html>\n`,
+    );
+    // strict, strict templates, with the published declarations checked too (no skipLibCheck)
+    const tsconfig = {
+        compilerOptions: {
+            target: "ES2022",
+            lib: ["ES2022", "DOM", "DOM.Iterable"],
+            module: "ESNext",
+            moduleResolution: "bundler",
+            strict: true,
+            noUncheckedIndexedAccess: true,
+            verbatimModuleSyntax: true,
+            useDefineForClassFields: false,
+            types: [],
+        },
+        angularCompilerOptions: {
+            strictTemplates: true,
+            strictInjectionParameters: true,
+            strictInputAccessModifiers: true,
+        },
+        include: ["src"],
+    };
+    writeFileSync(
+        join(dir, "tsconfig.json"),
+        `${JSON.stringify(tsconfig, null, 4)}\n`,
+    );
+    mkdirSync(join(dir, "src"));
+    writeFileSync(join(dir, "src/main.ts"), ANGULAR_SMOKE_MAIN);
+}
+
+/**
+ * The Angular smoke test: the scratch Vite + Angular app installs the Angular tarball, typechecks
+ * (ngc, strict templates), builds and loads its dev server.
+ */
+async function angularSmoke(
+    app: string,
+    tarballs: { core: string; adapter: string },
+): Promise<void> {
+    writeAngularSmokeApp(app, tarballs.core, tarballs.adapter);
+    run("pnpm", ["install", "--no-frozen-lockfile"], app);
+    run("pnpm", ["exec", "ngc", "-p", "tsconfig.json", "--noEmit"], app);
+    run("pnpm", ["exec", "vite", "build"], app);
+    await loadThroughDevServer(app, "/src/main.ts");
+}
+
 /** What `check:package` checks of an adapter, besides what every package gets. */
 export interface AdapterCheck {
     /** its directory, `packages/<dir>` */
@@ -627,6 +821,7 @@ export interface AdapterCheck {
 export const ADAPTERS: readonly AdapterCheck[] = [
     { dir: "react", framework: "react", smoke: reactSmoke },
     { dir: "vue", framework: "vue", smoke: vueSmoke },
+    { dir: "angular", framework: "angular", smoke: angularSmoke },
 ];
 
 /** The packages/ directories that are neither the core nor an adapter of `adapters`. */

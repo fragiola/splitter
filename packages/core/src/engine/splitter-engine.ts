@@ -759,29 +759,43 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
                     this.onDoubleClick(id, event);
                 }
             };
-            element.addEventListener("pointerdown", onPointerDown);
-            element.addEventListener("pointermove", onPointerMove);
-            element.addEventListener("pointerup", onPointerUp);
-            element.addEventListener("pointercancel", onPointerCancel);
-            element.addEventListener("lostpointercapture", onPointerCancel);
-            element.addEventListener("keydown", onKeyDown);
-            element.addEventListener("dblclick", onDoubleClick);
+            const listeners: [string, (event: never) => void][] = [
+                ["pointerdown", onPointerDown],
+                ["pointermove", onPointerMove],
+                ["pointerup", onPointerUp],
+                ["pointercancel", onPointerCancel],
+                ["lostpointercapture", onPointerCancel],
+                ["keydown", onKeyDown],
+                ["dblclick", onDoubleClick],
+            ];
+            // an event aimed at the separator itself is handled in the capture phase: on the
+            // target, capture listeners run before the others, so the element's own listeners
+            // run after the engine's (its key handled, `defaultPrevented` set) even when a
+            // framework added them first, as Angular does. An event from content inside the
+            // separator (a button) is handled as it bubbles, after that content's listeners, so
+            // the content can still stop or prevent it
+            const bound: [string, EventListener, boolean][] = [];
+            for (const [type, listener] of listeners) {
+                const handle = listener as EventListener;
+                const onTarget: EventListener = (event) => {
+                    if (event.target === element) handle(event);
+                };
+                const fromContent: EventListener = (event) => {
+                    if (event.target !== element) handle(event);
+                };
+                bound.push([type, onTarget, true], [type, fromContent, false]);
+            }
+            for (const [type, listener, capture] of bound) {
+                element.addEventListener(type, listener, { capture });
+            }
             this.separatorElements.set(element, {
                 id: separatorId,
                 remove: () => {
-                    element.removeEventListener("pointerdown", onPointerDown);
-                    element.removeEventListener("pointermove", onPointerMove);
-                    element.removeEventListener("pointerup", onPointerUp);
-                    element.removeEventListener(
-                        "pointercancel",
-                        onPointerCancel,
-                    );
-                    element.removeEventListener(
-                        "lostpointercapture",
-                        onPointerCancel,
-                    );
-                    element.removeEventListener("keydown", onKeyDown);
-                    element.removeEventListener("dblclick", onDoubleClick);
+                    for (const [type, listener, capture] of bound) {
+                        element.removeEventListener(type, listener, {
+                            capture,
+                        });
+                    }
                 },
             });
         }

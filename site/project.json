@@ -3,7 +3,7 @@
     "slug": "splitter",
     "title": "Splitter",
     "description": "Headless resizable panel groups: drag, keyboard and collapse, nested groups, a saved JSON layout, RTL ready and styled by you.",
-    "frameworks": ["react", "vue"],
+    "frameworks": ["react", "vue", "angular"],
     "defaultFramework": "react",
     "repository": "https://github.com/fragiola/splitter",
     "keywords": [
@@ -13,7 +13,7 @@
         "headless ui",
         "react",
         "vue",
-        "window splitter",
+        "angular",
         "accessibility"
     ]
 }

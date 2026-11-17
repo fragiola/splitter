@@ -112,6 +112,12 @@
             "pages": [{ "label": "Vue components", "path": "api/vue" }]
         },
         {
+            "label": "API: Angular (@fragiola/splitter-angular)",
+            "collapsible": true,
+            "defaultOpen": false,
+            "pages": [{ "label": "Angular directives", "path": "api/angular" }]
+        },
+        {
             "label": "API: core (@fragiola/splitter)",
             "collapsible": true,
             "defaultOpen": false,

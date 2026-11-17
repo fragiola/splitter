@@ -31,6 +31,22 @@ export async function dragBy(
     if (options.release !== false) await page.mouse.up();
 }
 
+/**
+ * Waits for two animation frames: whatever the last event scheduled has rendered (Angular,
+ * zoneless, renders after the event), so a value read next that must not have changed is not
+ * read before a change could show.
+ */
+export async function rendered(page: Page) {
+    await page.evaluate(
+        () =>
+            new Promise<void>((resolve) =>
+                requestAnimationFrame(() =>
+                    requestAnimationFrame(() => resolve()),
+                ),
+            ),
+    );
+}
+
 /** A separator's `aria-valuenow`: the size of the panel before it, in percent. */
 export async function valueNow(separator: Locator): Promise<number> {
     return Number(await separator.getAttribute("aria-valuenow"));

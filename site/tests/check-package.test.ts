@@ -169,6 +169,7 @@ describe("the adapters the package check covers", () => {
         expect(ADAPTERS.map(({ dir, framework }) => [dir, framework])).toEqual([
             ["react", "react"],
             ["vue", "vue"],
+            ["angular", "angular"],
         ]);
     });
 

@@ -82,6 +82,53 @@ import Pane from "./pane.vue";
 
 </Framework>
 
+<Framework name="angular">
+
+```ts title="pane.ts"
+import { Component, input } from "@angular/core";
+import { SPLITTER } from "@fragiola/splitter-angular";
+
+// `display: contents`: the panel, not this element, is the group's flex item
+@Component({
+    selector: "app-pane",
+    imports: [SPLITTER],
+    host: { class: "contents" },
+    template: `
+        <div splitterPanel [id]="panelId()" minSize="15%">
+            <section [attr.aria-label]="heading()" class="h-full overflow-auto p-3">
+                <h2>{{ heading() }}</h2>
+                <ng-content />
+            </section>
+        </div>
+    `,
+})
+export class Pane {
+    readonly panelId = input.required<string>();
+    readonly heading = input.required<string>();
+}
+```
+
+```ts title="mail.ts"
+import { Component } from "@angular/core";
+import { SPLITTER } from "@fragiola/splitter-angular";
+import { Pane } from "./pane";
+
+@Component({
+    selector: "app-mail",
+    imports: [SPLITTER, Pane],
+    template: `
+        <div splitterGroup class="h-full">
+            <app-pane panelId="folders" heading="Folders">…</app-pane>
+            <div splitterSeparator aria-label="Resize folders" class="w-1"></div>
+            <app-pane panelId="messages" heading="Messages">…</app-pane>
+        </div>
+    `,
+})
+export class Mail {}
+```
+
+</Framework>
+
 ## Nesting
 
 A `Splitter.Group` inside a `Splitter.Panel` nests in it: it joins the outer group's model and
@@ -127,6 +174,25 @@ The slot also gets `children`, the part's default slot, to render inside your el
 
 </Framework>
 
+<Framework name="angular">
+
+There is nothing to swap: the directives go on your own elements, whatever their tag, and
+`exportAs` hands the part's state to the template:
+
+```html
+<main splitterGroup>
+    <nav splitterPanel id="nav" aria-label="Main">…</nav>
+    <div
+        splitterSeparator
+        #separator="splitterSeparator"
+        aria-label="Resize"
+        [attr.title]="separator.state().dragging ? 'Release to drop' : null"
+    ></div>
+</main>
+```
+
+</Framework>
+
 There is no `asChild`. The rules every primitive follows are on
 [The primitive contract](/docs/concepts/primitive-contract).
 
@@ -164,6 +230,22 @@ const { state, props } = useSeparator();
 <template>
     <hr v-bind="props" :aria-label="label" :data-active="state.dragging ? '' : undefined" />
 </template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+In Angular there is no lower layer to drop to: the directive is the part, on any element.
+
+```html
+<!-- a separator drawn as a native <hr>, focusable and resizable like any other -->
+<hr
+    splitterSeparator
+    #rule="splitterSeparator"
+    aria-label="Resize"
+    [attr.data-active]="rule.state().dragging ? '' : null"
+/>
 ```
 
 </Framework>
