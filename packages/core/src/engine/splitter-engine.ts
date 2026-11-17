@@ -62,6 +62,17 @@ export interface SplitterEngineAdapter {
      * panel rendered conditionally lands where it is in the markup
      */
     syncOrder(groupId: string): CommandResult<unknown>;
+    /**
+     * binds a group's separator elements, given in any order: sorted by document position, the
+     * n-th is the group's n-th separator (`model.get("separators-by")`); an element beyond the
+     * group's separators, or no longer given, is unbound. Returns each element's separator id, in
+     * the order given (undefined for an unbound one). Call it again whenever the elements or the
+     * group's panels change; `syncSeparators(groupId, [])` unbinds them all
+     */
+    syncSeparators(
+        groupId: string,
+        elements: readonly HTMLElement[],
+    ): (string | undefined)[];
     /** unbinds everything and stops observing */
     destroy(): void;
 }
@@ -168,9 +179,17 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
     >();
     private readonly middleware: EngineMiddleware[] = [];
     private readonly listeners = new Set<EngineListener>();
+    /** the separator elements `syncSeparators` bound, by group, with their unbinders */
+    private readonly groupSeparators = new Map<
+        string,
+        Map<HTMLElement, () => void>
+    >();
     private drag: Drag | undefined;
-    /** the engine's own listener on the model (not a verb: kept in a record) */
-    private readonly modelListener: { readonly remove: () => void };
+    /**
+     * the engine's own listener on the model, while a group is bound: creating an engine has no
+     * side effect, so a framework may create one during render and drop it
+     */
+    private modelListener: (() => void) | undefined;
     readonly adapter: SplitterEngineAdapter;
 
     constructor(model: SplitterModel<T>, options: SplitterEngineOptions) {
@@ -185,27 +204,14 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
         this.use = this.use.bind(this);
         this.subscribe = this.subscribe.bind(this);
         this.dispatch = this.dispatch.bind(this);
-        // a bound group whose panels changed is measured again (a panel bound before it registered)
-        const remove = model.subscribe(({ before, after }) => {
-            for (const groupId of this.groups.keys()) {
-                const prev = Object.hasOwn(before.groups, groupId)
-                    ? before.groups[groupId]?.panelIds
-                    : undefined;
-                const next = Object.hasOwn(after.groups, groupId)
-                    ? after.groups[groupId]?.panelIds
-                    : undefined;
-                if (next !== undefined && prev !== next) {
-                    this.measure(groupId, false);
-                }
-            }
-        });
-        this.modelListener = { remove };
         this.adapter = {
             bindGroup: (groupId, element) => this.bindGroup(groupId, element),
             bindPanel: (panelId, element) => this.bindPanel(panelId, element),
             bindSeparator: (separatorId, element) =>
                 this.bindSeparator(separatorId, element),
             syncOrder: (groupId) => this.syncOrder(groupId),
+            syncSeparators: (groupId, elements) =>
+                this.syncSeparators(groupId, elements),
             destroy: () => this.destroy(),
         };
     }
@@ -474,8 +480,30 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
     // binding and measuring
     // ---------------------------------------------------------------------------------------------
 
+    /** listens to the model while a group is bound */
+    private listenModel(): void {
+        if (this.modelListener) {
+            return;
+        }
+        // a bound group whose panels changed is measured again (a panel bound before it registered)
+        this.modelListener = this.model.subscribe(({ before, after }) => {
+            for (const groupId of this.groups.keys()) {
+                const prev = Object.hasOwn(before.groups, groupId)
+                    ? before.groups[groupId]?.panelIds
+                    : undefined;
+                const next = Object.hasOwn(after.groups, groupId)
+                    ? after.groups[groupId]?.panelIds
+                    : undefined;
+                if (next !== undefined && prev !== next) {
+                    this.measure(groupId, false);
+                }
+            }
+        });
+    }
+
     private bindGroup(groupId: string, element: HTMLElement): () => void {
         this.unbindGroup(groupId);
+        this.listenModel();
         const view = viewOf(element);
         const Observer = (view as ObservingView | undefined)?.ResizeObserver;
         const observer = Observer
@@ -509,6 +537,10 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
         if (bound) {
             bound.observer?.disconnect();
             this.groups.delete(groupId);
+        }
+        if (this.groups.size === 0) {
+            this.modelListener?.();
+            this.modelListener = undefined;
         }
     }
 
@@ -595,8 +627,44 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
         return this.model.run("batch", { commands: updates });
     }
 
+    private syncSeparators(
+        groupId: string,
+        elements: readonly HTMLElement[],
+    ): (string | undefined)[] {
+        const separators = this.groupOf(groupId)
+            ? this.model.get("separators-by", { groupId })
+            : [];
+        const ids = new Map<HTMLElement, string | undefined>();
+        [...elements]
+            .sort((a, b) => {
+                const position = a.compareDocumentPosition(b);
+                // DOCUMENT_POSITION_FOLLOWING (4): b comes after a
+                return position & 4 ? -1 : position & 2 ? 1 : 0;
+            })
+            .forEach((element, index) => {
+                ids.set(element, separators[index]?.id);
+            });
+        const previous = this.groupSeparators.get(groupId) ?? new Map();
+        for (const [element, unbind] of previous) {
+            if (ids.get(element) === undefined) {
+                unbind();
+            }
+        }
+        const next = new Map<HTMLElement, () => void>();
+        for (const [element, id] of ids) {
+            if (id !== undefined) {
+                next.set(element, this.bindSeparator(id, element));
+            }
+        }
+        if (next.size > 0) {
+            this.groupSeparators.set(groupId, next);
+        } else {
+            this.groupSeparators.delete(groupId);
+        }
+        return elements.map((element) => ids.get(element));
+    }
+
     private destroy(): void {
-        this.modelListener.remove();
         for (const groupId of [...this.groups.keys()]) {
             this.unbindGroup(groupId);
         }
@@ -604,6 +672,7 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
             remove();
         }
         this.separatorElements.clear();
+        this.groupSeparators.clear();
         this.separators.clear();
         this.panels.clear();
         this.drag = undefined;

@@ -277,6 +277,7 @@ describe("core package guard", () => {
             "bindSeparator",
             "destroy",
             "syncOrder",
+            "syncSeparators",
         ]);
     });
 });

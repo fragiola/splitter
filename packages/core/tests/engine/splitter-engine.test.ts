@@ -710,3 +710,51 @@ describe("the engine's verbs", () => {
         });
     });
 });
+
+describe("separators bound by document position", () => {
+    it("gives the n-th separator element the group's n-th separator, in any order given", () => {
+        const { model, engine, root, separators, sizes } = render([
+            { id: "a" },
+            { id: "b" },
+            { id: "c" },
+        ]);
+        const first = element(separators, "a:b");
+        const second = element(separators, "b:c");
+        const extra = document.createElement("div");
+        root.append(extra);
+        expect(
+            engine.adapter.syncSeparators("g", [extra, second, first]),
+        ).toEqual([undefined, "b:c", "a:b"]);
+        key(second, "ArrowRight");
+        expect(sizes()).toEqual([33.334, 38.333, 28.333]);
+        // a panel removed: the second element has no separator any more, and is unbound
+        model.run("panel.remove", { panelId: "c" });
+        expect(engine.adapter.syncSeparators("g", [first, second])).toEqual([
+            "a:b",
+            undefined,
+        ]);
+        const before = sizes();
+        key(second, "ArrowRight");
+        expect(sizes()).toEqual(before);
+        expect(engine.adapter.syncSeparators("g", [])).toEqual([]);
+        expect(engine.adapter.syncSeparators("nope", [first])).toEqual([
+            undefined,
+        ]);
+    });
+
+    it("has no side effect until a group binds, and stops listening to the model once none is", () => {
+        const model = createSplitterModel();
+        const subscribe = vi.spyOn(model, "subscribe");
+        const engine = createSplitterEngine(model);
+        expect(subscribe).not.toHaveBeenCalled();
+        const root = document.createElement("div");
+        document.body.append(root);
+        const unbind = engine.adapter.bindGroup("g", root);
+        expect(subscribe).toHaveBeenCalledTimes(1);
+        unbind();
+        // bound again after being unbound (a React StrictMode remount): it listens again
+        engine.adapter.bindGroup("g", root);
+        expect(subscribe).toHaveBeenCalledTimes(2);
+        engine.adapter.destroy();
+    });
+});
