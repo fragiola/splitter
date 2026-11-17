@@ -253,3 +253,47 @@ copyright line and the MIT licence, and the guard test lists it.
     RRP's MIT header; the root and package `LICENSE` files carry its notice.
   - The core's tsconfig loads `@types/node` (for the tests and the generator); the guard test fails
     on any Node-only API in `src/`.
+- **Issue #3 (React adapter):**
+  - **Surface.** `Splitter.Group` (`id`, `orientation`, `disabled`, `model`, `layout`,
+    `defaultLayout`, `onLayoutChange`, `onLayoutCommit`, `splitterRef`, and, read once by a root
+    group, `keyboardStep` and `resetOnDoubleClick`), `Splitter.Panel` (`id`, the eight constraints,
+    `onResize(size, previous)`, `onCollapse`, `onExpand`), `Splitter.Separator` (`disabled`,
+    `resetOnDoubleClick`); hooks `useSplitter()` / `useSplitter(splitterRef)`, `useGroup()`,
+    `usePanel(options)`, `useSeparator(options)`, `useSplitterRef()`. Part states are
+    `GroupPartState`, `PanelPartState`, `SeparatorPartState` (the core already exports
+    `GroupState`, `PanelState`, `SeparatorState`). `useGroup()` reads the enclosing group (the
+    group's registration needs its context, so it lives in `Splitter.Group`); `usePanel` and
+    `useSeparator` register their part.
+  - **Core keys added for the adapter:** `engine.adapter.syncSeparators(groupId, elements)` (the
+    n-th separator element of a group in document order is its n-th separator: the markup does not
+    say which panels a separator sits between); `group.remove { keepLayout }` (a layout the user
+    changed becomes a saved group until the group registers again, so a StrictMode double mount or
+    a remount keeps it; it stays in `splitter-json`); `group-path-by`, `panel-path-by`,
+    `separator-path-by`; `createSplitterRef` / `attachSplitterRef` in the core, as Grid Layout's
+    ref. The engine listens to the model only while a group is bound, so creating one has no side
+    effect and React may create it during render; React never calls `destroy`, it unbinds.
+  - **Paths:** `/g<n>` for the n-th root group of a model, `<panel path>/g<n>` for a group nested in
+    a panel, `<group>/p<index>` and `<group>/s<index>` by model order; n counts registration order
+    (document order at mount). A part has no path (nor a separator its ARIA values) until it
+    registers, which happens before the first paint; the server HTML has none.
+  - **Registration:** panels register in their layout effects; while their group is not registered
+    (React runs child effects first) they wait in the group's registry, and the group runs one
+    `batch` (`group.add`, the waiting `panel.add`s, and `group.set-layout` for `layout`, else
+    `defaultLayout` when the model has no saved layout for the group, only when `model.can` accepts
+    it). Then `syncOrder` and `syncSeparators`. A second group with a taken id is reported in the
+    console and does not register. Unmount undoes every step (React tears a parent down before its
+    children, so `group.remove` takes the panels with it).
+  - **Controlled layout:** `layout` is applied when the group registers and whenever its values
+    change; the adapter does not snap the model back when the parent ignores `onLayoutChange`
+    (that would fight a drag mid-gesture). A middleware vetoes changes the app refuses.
+    `onLayoutChange` fires on every commit that changes the layout (drag steps and the registration
+    included), `onLayoutCommit` on every non-transient commit that leaves a layout other than the
+    last one committed.
+  - **Structural style:** group `display: flex`, `flex-direction`, `flex-wrap: nowrap`; panel
+    `flex: <size> 1 0`, `overflow: hidden`; separator `flex-grow: 0`, `flex-shrink: 0`,
+    `touch-action: none` (pointer drags on touch screens need it). Before a panel's size is known
+    (no `layout`, `defaultLayout` or saved layout), it renders `flex: 0 1 <defaultSize>` when it
+    declares one, else `flex: 1 1 0`, the same on the server and in the hydration render.
+  - **Ids:** default ids come from `useId`. A panel's DOM `id` is its panel id (the separators'
+    `aria-controls` points at it). A separator's `data-orientation` is its own (`aria-orientation`),
+    as Dockable's splitter.
