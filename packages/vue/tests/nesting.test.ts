@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { defineComponent, h, shallowRef, type VNodeChild } from "vue";
+import {
+    defineComponent,
+    h,
+    shallowRef,
+    type VNode,
+    type VNodeChild,
+} from "vue";
 import {
     createSplitterModel,
     createSplitterRef,
@@ -153,6 +159,51 @@ describe("nested groups", () => {
         expect(other.get("group-by", { id: "own" })?.parentPanelId).toBe(
             undefined,
         );
+    });
+
+    it("a nested group does not render again when its parent panel resizes", async () => {
+        let renders = 0;
+        // the slots are $stable, as a template's are
+        const Inner = defineComponent({
+            setup: () => () =>
+                h(Splitter.Group, { id: "inner", orientation: "vertical" }, {
+                    $stable: true,
+                    render: ({
+                        props,
+                        children,
+                    }: {
+                        props: Record<string, unknown>;
+                        children: VNode;
+                    }) => {
+                        renders++;
+                        return h("div", props, [children]);
+                    },
+                    default: () => [
+                        h(Splitter.Panel, { id: "x" }),
+                        h(Splitter.Separator),
+                        h(Splitter.Panel, { id: "y" }),
+                    ],
+                } as never),
+        });
+        const { container } = await render(() =>
+            h(Splitter.Group, { id: "outer" }, {
+                $stable: true,
+                default: () => [
+                    h(Splitter.Panel, { id: "a" }, {
+                        $stable: true,
+                        default: () => h(Inner),
+                    } as never),
+                    h(Splitter.Separator),
+                    h(Splitter.Panel, { id: "b" }),
+                ],
+            } as never),
+        );
+        const before = renders;
+        for (let i = 0; i < 5; i++) {
+            await press(at(container, "/g0/s0"), "ArrowRight");
+        }
+        expect(at(container, "/g0/p0").style.flexGrow).toBe("75");
+        expect(renders - before).toBe(0);
     });
 });
 

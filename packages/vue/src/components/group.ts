@@ -7,7 +7,15 @@ import type {
     SplitterRef,
     SplitterTypes,
 } from "@fragiola/splitter";
-import { defineComponent, h, inject, provide, toRaw, useId } from "vue";
+import {
+    computed,
+    defineComponent,
+    h,
+    inject,
+    provide,
+    toRaw,
+    useId,
+} from "vue";
 import { useGroupRoot } from "../composables/internal";
 import { type GroupPartState, useGroupPart } from "../composables/use-group";
 import { eraseModel, GroupKey, PanelKey } from "../context";
@@ -163,13 +171,15 @@ export const Group: SplitterComponent<GroupProps, GroupSlots> = defineComponent(
             const parent = inject(PanelKey, null);
             // the default id: unique on the page, and the same on the server and the client
             const generatedId = useId();
+            // the parent panel's id only: its state changes on every resize
+            const parentPanelId = computed(() => parent?.panelId() ?? "");
             return () => {
                 const id = (props.id as string | undefined) ?? generatedId;
                 const model = props.model as object | undefined;
                 const key = [
                     id,
                     model ? keyOfModel(toRaw(model)) : "",
-                    parent?.panelId() ?? "",
+                    parentPanelId.value,
                 ].join("\n");
                 return h(GroupRoot, { ...attrs, ...props, id, key }, slots);
             };
