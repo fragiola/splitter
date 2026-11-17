@@ -113,8 +113,9 @@ Its size is yours: see [Sizing the group](/docs/getting-started/sizing).
 
 Registering runs one `batch`: `group.add`, a `panel.add` per panel, and `group.set-layout` for
 `layout` (else `defaultLayout` when the model saved no layout for the group). Changing
-`orientation` or `disabled` runs `group.update`; unmounting runs `group.remove` (keeping a layout
-the user changed, so a remount restores it).
+`orientation` or `disabled` runs `group.update`, and so does a nested group whose panel gets
+another `id` (its new `parentPanelId`: the group stays where it is, with its layout); unmounting
+runs `group.remove` (keeping a layout the user changed, so a remount restores it).
 
 ## Common props
 

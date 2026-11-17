@@ -508,9 +508,9 @@ copyright line and the MIT licence, and the guard test lists it.
     the panels register again with the new group. A panel's new `id` removes it under the old one
     and adds it under the new one, without remounting its content; a group nested in it stays
     mounted and runs `group.update` with the new `parentPanelId` (its panels, layout and layout
-    memory stay). React re-registers the nested group instead (its registration effect depends on
-    the parent panel id), and that re-registration leaves the nested group without its panels in
-    the model (`panelIds: []`; observed while fixing this, not changed in React). The wrapper read
+    memory stay). React does the same: its registration effect no longer depends on the parent
+    panel id (it re-registered the nested group, which came back without its panels in the model,
+    `panelIds: []`); a separate layout effect runs the `group.update`. The wrapper read
     the parent panel id in its render, so every resize of the parent panel rendered the nested
     group again: it reads nothing of the parent now. Its slots are passed as they come (not forced
     `$stable`): the wrapper renders again only for new props, attributes or slots, which the group
