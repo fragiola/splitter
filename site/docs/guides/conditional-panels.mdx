@@ -1,0 +1,108 @@
+---
+title: Conditional panels
+description: Show and hide panels by rendering them conditionally. Each lands where the markup puts it, with its separator; the group remembers each set's sizes.
+---
+
+A panel rendered conditionally registers when it mounts and leaves the model when it unmounts.
+The package keeps the order right and gives the room to the others; whether a panel is shown is
+your state.
+
+## Rendering a panel conditionally
+
+Render the panel and its separator together:
+
+```tsx
+"use client";
+
+import { Splitter } from "@fragiola/splitter-react";
+
+export function Editor({ sidebar, inspector }: { sidebar: boolean; inspector: boolean }) {
+    return (
+        <Splitter.Group className="h-96">
+            {sidebar && (
+                <>
+                    <Splitter.Panel id="sidebar" defaultSize="25%" minSize="10%">
+                        …
+                    </Splitter.Panel>
+                    <Splitter.Separator aria-label="Resize sidebar" className="w-1" />
+                </>
+            )}
+            <Splitter.Panel id="editor" minSize="20%">
+                …
+            </Splitter.Panel>
+            {inspector && (
+                <>
+                    <Splitter.Separator aria-label="Resize inspector" className="w-1" />
+                    <Splitter.Panel id="inspector" defaultSize="25%" minSize="10%">
+                        …
+                    </Splitter.Panel>
+                </>
+            )}
+        </Splitter.Group>
+    );
+}
+```
+
+- **Order comes from the document.** The inspector shown again is the last panel, because it is
+  last in the markup, however late it mounts.
+- **Separators follow the panels.** The n-th separator element is the one after the n-th panel,
+  so a separator that goes with its panel keeps every other separator in its place.
+- **Ids matter.** Give conditional panels explicit ids, so a saved layout and your code name
+  the same panel every time it mounts.
+
+<Example id="conditional-panels" />
+
+## What happens to the sizes
+
+The group **remembers a layout per set of panels**, as React Resizable Panels does. When the set
+changes, the layout the user gave the set it leaves is kept, and the set it enters takes the
+layout it last had: hide the inspector and show it again, and every panel comes back at its size.
+A set the group has never had takes its **default layout**: each panel with a `defaultSize` takes
+it, and the others share the rest. A remembered layout is clamped to the panels' current
+constraints when it comes back.
+
+The memory is in the model's state (`GroupState.layoutMemory`), not in the saved document: it
+lasts while the group is mounted. A saved document's layout applies again once the group holds
+exactly the panels it saved.
+
+## Keeping the panel's place: collapse instead
+
+A panel that the user hides and shows again can also be a collapsible panel collapsed to 0: it
+stays registered (and saved in the document), its separator stays so the user can drag it back
+open, and expanding gives it back the size it had.
+
+```tsx
+"use client";
+
+import { Splitter, useSplitter, useSplitterRef } from "@fragiola/splitter-react";
+
+export function Editor() {
+    const splitterRef = useSplitterRef();
+    const splitter = useSplitter(splitterRef);
+    function toggleInspector() {
+        if (!splitter) return;
+        const { model } = splitter;
+        const hidden = model.is("panel-collapsed", { panelId: "inspector" });
+        model.run(hidden ? "panel.expand" : "panel.collapse", { panelId: "inspector" });
+    }
+    return (
+        <>
+            <button type="button" onClick={toggleInspector}>
+                Inspector
+            </button>
+            <Splitter.Group splitterRef={splitterRef} className="h-96">
+                <Splitter.Panel id="editor" minSize="20%">
+                    …
+                </Splitter.Panel>
+                <Splitter.Separator aria-label="Resize inspector" className="w-1" />
+                <Splitter.Panel id="inspector" defaultSize="25%" minSize="10%" collapsible>
+                    <div className="h-full in-data-collapsed:hidden">…</div>
+                </Splitter.Panel>
+            </Splitter.Group>
+        </>
+    );
+}
+```
+
+The collapsed panel's content is hidden from its own `data-collapsed`, so assistive technology
+does not reach it either. Its separator stays, so the user can drag the panel back open.

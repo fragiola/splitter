@@ -1,0 +1,68 @@
+---
+title: Accessible names
+description: The primitives render no text and set no aria-label. Name every separator, and the panels that are regions, with your own words in your own language.
+---
+
+The package sets roles and values: each separator has `role="separator"`, its `aria-orientation`,
+`aria-valuenow`, `aria-valuemin`, `aria-valuemax` and `aria-controls`. It never sets a name,
+because a name is text, and text is yours: your words, your language, your translations.
+
+## Name every separator
+
+A focusable separator without a name is announced as "separator" and nothing else. Give each one
+an `aria-label` (or an `aria-labelledby`) that says what it resizes:
+
+```tsx
+<Splitter.Separator aria-label="Resize the file tree" />
+```
+
+With translations, it is a string like any other: `aria-label={t("resize.files")}`.
+
+## The value it announces
+
+`aria-valuenow` is the size of the panel before the separator, in percent of its group, between
+`aria-valuemin` and `aria-valuemax` (the smallest and largest that panel can reach by moving this
+separator). `aria-controls` is that panel's DOM id, which is its panel id. To announce something
+else, add an `aria-valuetext` from the `render` function, which receives the ARIA values:
+
+```tsx
+<Splitter.Separator
+    aria-label="Resize the file tree"
+    render={(props) => (
+        <div {...props} aria-valuetext={`${Math.round(props["aria-valuenow"] ?? 0)} percent`} />
+    )}
+/>
+```
+
+## Name the panels that are regions
+
+A panel is a plain `div` with no role. When its content is a landmark or a region the user moves
+between, name the content, not the panel:
+
+```tsx
+<Splitter.Panel id="files">
+    <nav aria-label="Files">…</nav>
+</Splitter.Panel>
+```
+
+or turn the panel itself into the region with `render`:
+
+```tsx
+<Splitter.Panel id="preview" render={<section aria-label="Preview" />}>
+    …
+</Splitter.Panel>
+```
+
+## Collapsed content
+
+A collapsed panel is still in the document, at its collapsed size (0 by default). Hide what the
+user cannot see from assistive technology too: style the content from the panel's
+`data-collapsed` (`in-data-collapsed:hidden` in Tailwind), or render it conditionally from
+`onCollapse` / `onExpand`. A rail that keeps its icons keeps their names: an icon-only link needs
+its `aria-label`.
+
+## The keyboard
+
+Every separator that is not disabled is in the tab order (`tabIndex={0}`). The keys are listed in
+the [keyboard guide](/docs/guides/keyboard); a disabled separator leaves the tab order and carries
+`aria-disabled`.

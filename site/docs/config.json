@@ -1,0 +1,132 @@
+{
+    "sections": [
+        {
+            "label": "Getting started",
+            "pages": [
+                {
+                    "label": "Introduction",
+                    "path": "getting-started/introduction"
+                },
+                {
+                    "label": "Installation",
+                    "path": "getting-started/installation"
+                },
+                {
+                    "label": "Your first split view",
+                    "path": "getting-started/first-split-view"
+                },
+                {
+                    "label": "Sizing the group",
+                    "path": "getting-started/sizing"
+                },
+                {
+                    "label": "Accessible names",
+                    "path": "getting-started/accessible-names"
+                }
+            ]
+        },
+        {
+            "label": "Concepts",
+            "collapsible": true,
+            "defaultOpen": true,
+            "pages": [
+                {
+                    "label": "Model and engine",
+                    "path": "concepts/model-and-engine"
+                },
+                {
+                    "label": "The model and commands",
+                    "path": "concepts/model-and-commands"
+                },
+                { "label": "Typed data", "path": "concepts/typed-data" },
+                {
+                    "label": "Geometry and units",
+                    "path": "concepts/geometry-and-units"
+                },
+                { "label": "Composition", "path": "concepts/composition" },
+                {
+                    "label": "The primitive contract",
+                    "path": "concepts/primitive-contract"
+                },
+                {
+                    "label": "State attributes",
+                    "path": "concepts/state-attributes"
+                },
+                { "label": "Paths", "path": "concepts/paths" }
+            ]
+        },
+        {
+            "label": "Guides",
+            "collapsible": true,
+            "defaultOpen": true,
+            "pages": [
+                { "label": "Styling with CSS", "path": "guides/styling-css" },
+                {
+                    "label": "Styling with Tailwind",
+                    "path": "guides/styling-tailwind"
+                },
+                {
+                    "label": "Collapsible panels",
+                    "path": "guides/collapsible-panels"
+                },
+                {
+                    "label": "Size constraints and units",
+                    "path": "guides/size-constraints"
+                },
+                { "label": "Nested groups", "path": "guides/nested-groups" },
+                {
+                    "label": "Conditional panels",
+                    "path": "guides/conditional-panels"
+                },
+                { "label": "Persistence", "path": "guides/persistence" },
+                { "label": "Undo and redo", "path": "guides/undo-redo" },
+                { "label": "Keyboard", "path": "guides/keyboard" },
+                { "label": "Right-to-left", "path": "guides/rtl" },
+                {
+                    "label": "Server rendering",
+                    "path": "guides/server-rendering"
+                },
+                { "label": "Testing", "path": "guides/testing" },
+                {
+                    "label": "AI and automation",
+                    "path": "guides/ai-and-automation"
+                }
+            ]
+        },
+        {
+            "label": "API: primitives (@fragiola/splitter-react)",
+            "collapsible": true,
+            "defaultOpen": false,
+            "pages": [
+                { "label": "Splitter.Group", "path": "api/group" },
+                { "label": "Splitter.Panel", "path": "api/panel" },
+                { "label": "Splitter.Separator", "path": "api/separator" },
+                { "label": "Hooks", "path": "api/hooks" },
+                { "label": "External ref", "path": "api/external-ref" }
+            ]
+        },
+        {
+            "label": "API: core (@fragiola/splitter)",
+            "collapsible": true,
+            "defaultOpen": false,
+            "pages": [
+                { "label": "Model", "path": "api/model" },
+                { "label": "The command bus", "path": "api/command-bus" },
+                { "label": "Commands", "path": "api/commands" },
+                { "label": "The JSON document", "path": "api/json-document" },
+                { "label": "Engine", "path": "api/engine" }
+            ]
+        },
+        {
+            "label": "More",
+            "pages": [
+                { "label": "Limitations", "path": "limitations" },
+                {
+                    "label": "Found a problem?",
+                    "href": "https://github.com/fragiola/splitter/issues",
+                    "external": true
+                }
+            ]
+        }
+    ]
+}

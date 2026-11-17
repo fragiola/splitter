@@ -1,0 +1,75 @@
+---
+title: The primitive contract
+description: The rules every part follows, from render instead of asChild to className and style as functions of the state, a merged ref, forwarded props and no text.
+---
+
+`Splitter.Group`, `Splitter.Panel` and `Splitter.Separator` follow the same rules, shared with
+every Fragiola library. The package's tests enforce each one.
+
+## `render`, never `asChild`
+
+A part renders a `div` by default. `render` replaces the element: an element, whose props are
+merged with the part's, or a function of the props and the state, which must spread the props
+(they carry the ref, the ARIA, the `data-*`, the handlers and the structural style).
+
+```tsx
+<Splitter.Panel id="preview" render={<section aria-label="Preview" />} />
+
+<Splitter.Panel
+    id="preview"
+    render={(props, state) => <section {...props} aria-label="Preview" aria-hidden={state.collapsed || undefined} />}
+/>
+```
+
+`props.ref` is a callback ref, so it fits any element: `render={(props) => <hr {...props} />}`
+needs no cast.
+
+## `className` and `style`: a value or a function
+
+Both take a value, or a function of the part's state:
+
+```tsx
+<Splitter.Separator
+    aria-label="Resize"
+    className={(state) => (state.dragging ? "separator separator-active" : "separator")}
+    style={(state) => ({ opacity: state.disabled ? 0.4 : 1 })}
+/>
+```
+
+The state is `GroupPartState`, `PanelPartState` or `SeparatorPartState` (listed on each API
+page). For styles that only follow state, prefer the `data-*` attributes from a stylesheet: the
+same CSS then works for every framework's adapter.
+
+## Inline style is structural only
+
+The package writes the flex sizing (and `overflow: hidden` on panels, `touch-action: none` on
+separators), and nothing cosmetic: no colour, no cursor, no size for a separator. Your `style` is
+merged under it, so a structural key always keeps the package's value. See
+[Geometry and units](/docs/concepts/geometry-and-units).
+
+## `ref` is a plain prop
+
+`ref` is merged with the part's own callback ref (which binds the element to the engine), so
+yours receives the element too:
+
+```tsx
+const panelRef = useRef<HTMLElement>(null);
+<Splitter.Panel id="chart" ref={panelRef} />;
+```
+
+## Props are forwarded, handlers composed
+
+Every prop a part does not know goes to its element: `aria-*`, `data-*`, `title`, `lang`, event
+handlers. (A group's and a panel's `id` is their model id; a panel's element takes it as its DOM
+`id`.) A handler you pass runs after the part's own, so the part's behaviour
+comes first and yours still sees the event.
+
+## State through `data-*` and ARIA only
+
+A part never adds a class name. Its state is `data-*` (present or absent, never `"false"`) and
+ARIA. See [State attributes](/docs/concepts/state-attributes).
+
+## No text, no names
+
+The parts render only your children and set no `aria-label`. Every name comes from you: see
+[Accessible names](/docs/getting-started/accessible-names).

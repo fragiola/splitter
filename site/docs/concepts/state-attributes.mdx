@@ -1,0 +1,77 @@
+---
+title: State attributes
+description: Every data-* attribute and ARIA value each part carries, what sets it, and how to style from it in CSS or Tailwind without a className function.
+---
+
+Everything a part shows about its state is an attribute on its element, so you style it from a
+stylesheet, a Tailwind variant or a CSS-in-JS selector. A boolean attribute is present (an empty
+string) or absent, never `"false"`.
+
+## Group
+
+| attribute | value |
+| --- | --- |
+| `data-splitter-part` | `"group"` |
+| `data-splitter-path` | its path: `/g0`, or `/g0/p1/g0` nested (see [Paths](/docs/concepts/paths)) |
+| `data-orientation` | `"horizontal"` or `"vertical"`: how its panels are laid out |
+| `data-disabled` | present when the group is disabled |
+| `data-dragging` | present while a pointer drags one of its separators |
+
+## Panel
+
+| attribute | value |
+| --- | --- |
+| `data-splitter-part` | `"panel"` |
+| `data-splitter-path` | `<group path>/p<index>`: `/g0/p1` |
+| `data-collapsed` | present while it is collapsed |
+| `data-collapsible` | present when it can collapse |
+| `data-disabled` | present when no separator resizes it |
+| `id` | its panel id (the separators' `aria-controls` points at it) |
+
+## Separator
+
+| attribute | value |
+| --- | --- |
+| `data-splitter-part` | `"separator"` |
+| `data-splitter-path` | `<group path>/s<index>`: `/g0/s0` |
+| `data-orientation` | its **own** orientation: `"vertical"` between side by side panels, `"horizontal"` between stacked ones |
+| `data-disabled` | present when it, or its group, is disabled |
+| `data-dragging` | present while a pointer drags it |
+| `role` | `"separator"` |
+| `aria-orientation` | same as `data-orientation` |
+| `aria-valuenow` | the size of the panel before it, in percent |
+| `aria-valuemin` / `aria-valuemax` | the smallest and largest size that panel can reach through this separator |
+| `aria-controls` | the DOM id of the panel before it |
+| `aria-disabled` | `true` when it cannot be used |
+| `tabIndex` | `0`, none while disabled |
+
+A part has no path (and a separator no ARIA values) until it registers, which happens before the
+first paint; the server HTML has neither.
+
+## Styling from them
+
+```css title="splitter.css"
+[data-splitter-part="separator"] {
+    background: #e5e7eb;
+}
+[data-splitter-part="separator"][data-orientation="vertical"] {
+    width: 6px;
+    cursor: col-resize;
+}
+[data-splitter-part="separator"][data-orientation="horizontal"] {
+    height: 6px;
+    cursor: row-resize;
+}
+[data-splitter-part="separator"]:not([data-disabled]):hover,
+[data-splitter-part="separator"][data-dragging] {
+    background: #3b82f6;
+}
+[data-splitter-part="panel"][data-collapsed] .label {
+    display: none;
+}
+```
+
+In Tailwind, the same with variants: `data-[orientation=vertical]:w-1.5`, `data-dragging:bg-blue-500`,
+`not-data-disabled:hover:bg-blue-500`, and `in-data-collapsed:hidden` on an element inside a
+collapsed panel. See [Styling with CSS](/docs/guides/styling-css) and
+[Styling with Tailwind](/docs/guides/styling-tailwind).

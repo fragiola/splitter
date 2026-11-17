@@ -1,0 +1,105 @@
+---
+title: Styling with Tailwind
+description: Style every part with Tailwind data variants (orientation, dragging, collapsed, disabled), keep class strings out of the markup, and theme with tokens.
+---
+
+Tailwind's data variants read the parts' attributes directly, so a part's look is one class
+string, with no `className` function. The package ships no class and assumes no Tailwind; the
+examples on this site use Tailwind v4 and Fragiola UI palettes, and this page follows them.
+
+## The variants you need
+
+| state | variant |
+| --- | --- |
+| a separator between side by side panels | `data-[orientation=vertical]:` |
+| a separator between stacked panels | `data-[orientation=horizontal]:` |
+| a separator, or a group, being dragged | `data-dragging:` |
+| hovered, unless disabled | `not-data-disabled:hover:` |
+| disabled | `data-disabled:` |
+| inside a collapsed panel | `in-data-collapsed:` |
+| a collapsed panel itself | `data-collapsed:` |
+| anything while the group drags | `group-data-dragging/splitter:` (with `group/splitter` on the group) |
+
+## A separator
+
+```ts title="styles.ts"
+export const separator = [
+    "relative flex shrink-0 items-center justify-center outline-none select-none",
+    // the hit area, and the cursor from the separator's own orientation
+    "data-[orientation=vertical]:w-2 data-[orientation=vertical]:cursor-col-resize",
+    "data-[orientation=horizontal]:h-2 data-[orientation=horizontal]:cursor-row-resize",
+    // a hairline in its middle
+    "before:absolute before:bg-gray-200 before:transition-colors",
+    "data-[orientation=vertical]:before:inset-y-0 data-[orientation=vertical]:before:w-px",
+    "data-[orientation=horizontal]:before:inset-x-0 data-[orientation=horizontal]:before:h-px",
+    // its states
+    "not-data-disabled:hover:before:bg-blue-300 data-dragging:before:bg-blue-600",
+    "focus-visible:before:bg-blue-600 focus-visible:data-[orientation=vertical]:before:w-0.5",
+    "data-disabled:cursor-not-allowed",
+].join(" ");
+```
+
+```tsx title="layout.tsx"
+import { Splitter } from "@fragiola/splitter-react";
+import * as styles from "./styles";
+
+export function Layout() {
+    return (
+        <Splitter.Group className="h-full overflow-hidden rounded-lg border border-gray-200">
+            <Splitter.Panel id="files" defaultSize="25%" minSize="10%">
+                …
+            </Splitter.Panel>
+            <Splitter.Separator aria-label="Resize files" className={styles.separator} />
+            <Splitter.Panel id="editor">…</Splitter.Panel>
+        </Splitter.Group>
+    );
+}
+```
+
+Keeping the class strings in a `styles.ts` beside the component, one per part, leaves the markup
+readable and the same for every framework: the examples on this site never write a class string
+in their `.tsx`.
+
+## A collapsible rail
+
+A sidebar that keeps its icons when collapsed hides its labels from its own `data-collapsed`
+(`Folder` is an icon from `lucide-react`):
+
+```tsx
+<Splitter.Panel id="sidebar" defaultSize="25%" minSize="10rem" collapsible collapsedSize="3rem">
+    <nav aria-label="Sidebar" className="flex h-full flex-col gap-1 p-2">
+        <a href="#files" aria-label="Files" className="flex items-center gap-2 in-data-collapsed:justify-center">
+            <Folder aria-hidden="true" className="size-4" />
+            <span className="truncate in-data-collapsed:hidden">Files</span>
+        </a>
+    </nav>
+</Splitter.Panel>
+```
+
+<Example id="collapsible-sidebar" />
+
+## Dimming the panels during a drag
+
+Name the group's Tailwind group, then read its `data-dragging` from the panels:
+
+```tsx
+<Splitter.Group className="group/splitter h-full">
+    <Splitter.Panel id="a" className="transition-opacity group-data-dragging/splitter:opacity-70">
+        …
+    </Splitter.Panel>
+    …
+</Splitter.Group>
+```
+
+## Themes as tokens
+
+The examples read their values from custom properties (`--sp-separator-size`,
+`--sp-separator-color`, `--sp-focus-line`, …) through Tailwind's `(--token)` shorthand, so one
+theme file changes every example:
+
+```ts
+export const separator = "data-[orientation=vertical]:w-(--sp-separator-size) before:bg-(--sp-separator-color)";
+```
+
+Open any example's code panel in the [gallery](/examples) to see its `styles.ts` and its theme's
+CSS.

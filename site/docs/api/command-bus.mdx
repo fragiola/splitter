@@ -1,0 +1,166 @@
+---
+title: The command bus
+description: How the model runs commands, with run, can, check and dispatch, the result and its error codes, middleware that vetoes or rewrites, and listeners.
+---
+
+Every change to the model is a command run through one bus: a name, a JSON payload checked
+against the command's JSON Schema, a middleware chain, then one commit that every listener sees.
+The engine uses the same bus for drags and keys, so whatever you write here applies to the user's
+gestures too. The commands themselves are on [Commands](/docs/api/commands).
+
+## Running
+
+```ts
+const result = model.run("panel.resize", { panelId: "sidebar", size: "30%" });
+model.can("panel.expand", { panelId: "terminal" }); // boolean, nothing committed
+model.check("group.set-layout", { groupId: "main", layout: { a: 40, b: 60 } }); // the result, nothing committed
+model.dispatch({ command: "group.reset", payload: { groupId: "main" } }, { meta: { source: "assistant" } });
+```
+
+| member | signature | description |
+| --- | --- | --- |
+| `run` | `(command, payload, options?: RunOptions) => CommandResult<R>` | runs a command, typed by your registry |
+| `can` | `(command, payload, options?) => boolean` | whether `run` would succeed now, middleware included |
+| `check` | `(command, payload, options?) => CommandResult<R>` | what `run` would return, without committing or emitting |
+| `dispatch` | `(input: unknown, options?: DispatchOptions) => CommandResult<unknown>` | `run` for untrusted JSON `{ command, payload, transient? }`, validated first |
+| `use` | `(middleware: Middleware<T>) => () => void` | adds a middleware (the first added runs outermost) |
+| `subscribe` | `(listener: CommandListener) => () => void` | listens to every committed command |
+| `get` | `(key, payload?)` | reads; see [Model](/docs/api/model) |
+| `is` | `(key, payload)` | asks; see [Model](/docs/api/model) |
+
+`RunOptions`:
+
+| option | type | description |
+| --- | --- | --- |
+| `transient` | `boolean` | a step of a continuous gesture: listeners see it marked, so undo and persistence can skip it |
+| `meta` | `Record<string, unknown>` | free-form information for middleware and listeners |
+
+`DispatchOptions` has `meta` only: it comes from your code, never from the untrusted input.
+
+What the package runs carries a `meta` of its own. The adapter's commands for the markup (a
+group's registration `batch`, `panel.add` and `panel.remove` as panels mount and unmount,
+`group.update`, `panel.update` and `separator.update` when a prop changes, `group.set-layout` for a
+controlled `layout`, `group.remove` on unmount) and the engine's `syncOrder` batch carry
+`meta: { source: "adapter" }`. The engine marks the origin it puts back after a refused drag with
+`meta: { restore: true }`. A listener tells the user's steps and your code's commands (no `meta`,
+or yours) from them:
+
+```ts
+model.subscribe((event) => {
+    if (event.transient || event.meta?.source === "adapter") return; // a drag step, or the markup
+    console.log("a step:", event.command);
+});
+```
+
+The types: `CommandName` (every built-in command), `CommandMap<T>` (each one's payload and
+result), `PayloadOf<T, C>` and `ResultOf<T, C>`, `BatchEntry<T>` (one `{ command, payload }` of a
+`batch`), `Nullable<P>` (a payload whose fields may be `null` to clear them, as `panel.update`
+takes) and `PanelConstraintFields` (the constraint fields of `panel.add` and `panel.update`).
+Each payload type (`GroupAddPayload<T>`, `PanelAddPayload<T>`, `SeparatorMovePayload`, ...) is
+listed with its command.
+
+## The result
+
+`CommandResult<R>` is `{ ok: true, value: R }` or `{ ok: false, error }`, the error a
+`CommandError`. A command never throws on bad input.
+
+| field | type | description |
+| --- | --- | --- |
+| `code` | `CommandErrorCode` | why it did not apply (below) |
+| `message` | `string` | a sentence for a log or an assistant |
+| `path` | `string` | a JSON pointer into the payload (or the dispatched input) |
+| `issues` | `ValidationIssue[]` | every schema problem, for `invalid_payload` |
+
+| code | means |
+| --- | --- |
+| `unknown_command` | no command has this name (`dispatch`) |
+| `invalid_payload` | the payload does not match the command's schema |
+| `not_found` | a group, panel or separator the payload names does not exist |
+| `refused` | a rule of the splitter forbids it: a disabled separator, a panel that cannot collapse, a pixel size before the group is measured, a command issued during a dry run |
+| `vetoed` | a middleware vetoed it |
+| `queued` | it was issued from a middleware and will run after the current command |
+| `middleware_error` | a middleware threw |
+
+## Middleware
+
+A `Middleware<T>` is `(ctx, next) => CommandResult | undefined`. It runs around every command,
+whoever issued it (your code, a drag, a key, a prop that changed), and around each command inside
+a `batch` too (`ctx.inBatch`):
+
+- **veto**: return an error without calling `next`; `veto(message?)` builds a `vetoed` one;
+- **rewrite**: assign a new object to `ctx.payload` (it is validated again), then call `next`;
+- **observe**: call `next()` and look at its result; returning `undefined` passes it on.
+
+```ts
+import { veto } from "@fragiola/splitter-react";
+
+model.use((ctx, next) => {
+    // never let the sidebar go below 15%, from any source
+    if (ctx.command === "panel.resize" && ctx.payload.panelId === "sidebar") {
+        const size = ctx.payload.size;
+        if (typeof size === "string" && size.endsWith("%") && Number.parseFloat(size) < 15) {
+            ctx.payload = { ...ctx.payload, size: "15%" };
+        }
+    }
+    if (ctx.command === "group.reset" && ctx.meta?.source === "assistant") return veto();
+    return next();
+});
+```
+
+`CommandContext<T>` is a union discriminated by `command`, so checking it narrows `payload`. Every
+context has the fields of `CommandContextBase`:
+
+| field | type | description |
+| --- | --- | --- |
+| `command` | `CommandName` | the command |
+| `payload` | its payload | the validated payload; assign a new one to rewrite it |
+| `dryRun` | `boolean` | `can` / `check`: nothing will be committed; cause no side effect |
+| `transient` | `boolean` | a step of a gesture |
+| `inBatch` | `boolean` | a command inside a batch (the batch itself also passes the chain) |
+| `meta` | `Record<string, unknown> \| undefined` | the options' `meta` |
+| `state` | `SplitterState` | the committed state the command applies to |
+| `get` | `(key, payload)` | reads `"group-by"`, `"panel-by"` or `"layout-by"` as the command sees them (inside a batch: after its earlier commands); `CommandContextGetKey` and `CommandContextGetMap` type them |
+
+A command issued from inside a middleware does not run inside the current one: it is queued and
+returns `queued`, then runs after it. During a dry run (`can`, `check`), `run` and `dispatch` are
+`refused` instead, and never run: a dry run has no side effect, now or later. `can` and `check`
+themselves run immediately from anywhere.
+
+## Listeners
+
+A `CommandListener` receives one `CommandEvent` per commit:
+
+| field | type | description |
+| --- | --- | --- |
+| `command` | `CommandName` | the command |
+| `payload` | `unknown` | its payload |
+| `result` | `unknown` | its value |
+| `before` | `SplitterState` | the state before |
+| `after` | `SplitterState` | the state after; untouched entities keep their objects |
+| `transient` | `boolean` | a step of a gesture |
+| `meta` | `Record<string, unknown> \| undefined` | the options' `meta` |
+| `commands` | `BatchStep[]` | for a `batch`: each step's `command`, `payload` and `result` (a `BatchStep`) |
+
+## Transient steps and `batch`
+
+A drag runs `separator.move` with `{ transient: true }` on every pointer move, measured from where
+it started, then one final non-transient commit that middleware can veto (a veto puts the panels
+back where the drag started). Restore sizes are settled by the final commit, not by the steps,
+and a layout equal to the default one is the default one (`pristine`), so a vetoed drag leaves
+the group, and `splitter-json`, as they were. `batch` (`{ commands: BatchEntry[] }`) runs several commands as one
+atomic step: all apply, or none does. Listeners get one event.
+
+## The registry
+
+`model.get("commands")` lists every command as a `CommandInfo`:
+
+| field | type | description |
+| --- | --- | --- |
+| `name` | `CommandName` | its name |
+| `description` | `string` | what it does, written for an assistant choosing a tool |
+| `payloadSchema` | `JsonSchema` | the JSON Schema of its payload |
+| `resultSchema` | `JsonSchema` | the JSON Schema of its result |
+| `transient` | `boolean` | whether it may run as a transient step |
+
+Internally each one is a `CommandDefinition` (the same fields plus its reducer); the
+[Commands](/docs/api/commands) page is generated from them.

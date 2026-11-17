@@ -1,0 +1,80 @@
+---
+title: Geometry and units
+description: How panels share the group's room as flex items, how each unit resolves to a percentage, and what happens when the group itself resizes.
+---
+
+The layout of a group is a set of percentages, one per panel, that always sum to 100. Everything
+else (pixels, rems, the viewport) is converted to percentages with the group's measured size. The
+geometry is CSS flexbox, written as the only inline style the package sets.
+
+## Panels are flex items
+
+| element | structural style |
+| --- | --- |
+| group | `display: flex`, `flex-direction: row` (horizontal) or `column` (vertical), `flex-wrap: nowrap` |
+| panel | `flex: <size> 1 0` (its size in percent as the grow factor), `overflow: hidden` |
+| separator | `flex-grow: 0`, `flex-shrink: 0`, `touch-action: none` |
+
+Because a panel's grow factor is its size, the panels share what the separators leave in
+proportion to the layout. The server writes the same style, so hydration does not move anything.
+Before a panel's size is known (no saved layout, no `layout` or `defaultLayout` prop), it renders
+`flex: 0 1 <defaultSize>` when it declares one and `flex: 1 1 0` otherwise: the default layout,
+already in its own unit.
+
+Your `className` and `style` add anything else. The structural keys always win: a `style` that
+sets `flex` on a panel is ignored for that key.
+
+## Units
+
+`minSize`, `maxSize`, `defaultSize`, `collapsedSize` and `collapsedThreshold` take a size, read
+the way React Resizable Panels reads it:
+
+| written | means |
+| --- | --- |
+| `240` (a number) | 240 pixels |
+| `"240px"` | 240 pixels |
+| `"30%"` or `"30"` (a string without a unit) | 30 percent of the group |
+| `"15rem"` | 15 times the root element's font size |
+| `"2em"` | 2 times the **group** element's font size |
+| `"40vh"`, `"25vw"` | a share of the viewport's height or width |
+
+The model stores constraints as declared and resolves them with what the engine measured of the
+group: its size along its orientation (the sum of its panels, separators excluded), the group's
+and the root's font sizes and the viewport. `model.get("panel-constraints-by", { panelId })`
+returns them resolved, in percent.
+
+Until a group is measured (in Node, on the server, before the first measure), only percentages
+resolve: a `px` minimum counts as no minimum, and `panel.resize` to a pixel size is `refused`.
+`model.is("group-measured", { groupId })` says when every unit resolves.
+
+`parseSize`, `sizeToPixels` and `sizeToPercentage` are exported for your own code.
+
+## When the group resizes
+
+When the window or a container changes the group's size, each panel follows its
+`groupResizeBehavior`:
+
+- `preserve-relative-size` (the default): it keeps its percentage, so it grows and shrinks with
+  the group;
+- `preserve-pixel-size`: it keeps its size in pixels, and the relative panels share the change.
+
+```tsx
+<Splitter.Group className="h-80">
+    <Splitter.Panel id="sidebar" defaultSize={220} minSize={140} groupResizeBehavior="preserve-pixel-size">
+        …
+    </Splitter.Panel>
+    <Splitter.Separator aria-label="Resize sidebar" className="w-1" />
+    <Splitter.Panel id="editor" minSize="20%">…</Splitter.Panel>
+</Splitter.Group>
+```
+
+<Example id="fixed-size-panels" />
+
+Constraints in pixels stay pixels either way: a 200px minimum is a larger percentage of a
+narrower group, and the layout is clamped again on every measure.
+
+## Precision
+
+Layout numbers are rounded to a fixed precision, and the sum is kept at exactly 100: the panels
+that can take the difference take it, first to last. `validateLayout` and `normalizeLayout` are
+the pure functions that do it, exported for your own code.

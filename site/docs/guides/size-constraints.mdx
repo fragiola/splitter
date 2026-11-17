@@ -1,0 +1,116 @@
+---
+title: Size constraints and units
+description: Give panels a default, a minimum and a maximum in percent, pixels, rem, em or the viewport; keep a panel in pixels as the group resizes; lock panels.
+---
+
+Each panel declares its own limits, in whatever unit fits it: a file list in rems, a preview in
+pixels, an editor in percent. The model keeps the layout in percent and resolves every other unit
+with the group's measured size, so a drag, a key and a command all stop at the same limits. The
+numbers are yours; the clamping is the package's.
+
+## Default, minimum, maximum
+
+```tsx
+<Splitter.Group className="h-96">
+    <Splitter.Panel id="files" defaultSize="12rem" minSize="10rem" maxSize="20rem">
+        …
+    </Splitter.Panel>
+    <Splitter.Separator aria-label="Resize files" className="w-1" />
+    <Splitter.Panel id="editor" minSize="30%">
+        …
+    </Splitter.Panel>
+    <Splitter.Separator aria-label="Resize preview" className="w-1" />
+    <Splitter.Panel id="preview" defaultSize={200} minSize={120} maxSize={360}>
+        …
+    </Splitter.Panel>
+</Splitter.Group>
+```
+
+- `defaultSize`: the size it starts with when no saved or given layout has one. Panels without
+  one share what is left, equally.
+- `minSize` (default 0) and `maxSize` (default 100%): the limits of an expanded panel.
+- A number is **pixels**; a string carries its unit; a string without one (`"30"`) is a
+  **percentage**. Units: `%`, `px`, `em` (the group's font size), `rem`, `vh`, `vw`.
+
+<Example id="size-constraints" />
+
+Keep the limits satisfiable together: three panels with a 40% minimum each cannot share 100%,
+and some panel will end up outside its limits.
+
+## Reading a size
+
+`onResize` fires with the size in percent and, once the group is measured, in pixels:
+
+```tsx
+import { type PanelSize, Splitter } from "@fragiola/splitter-react";
+import { useState } from "react";
+
+export function Measured() {
+    const [size, setSize] = useState<PanelSize>();
+    return (
+        <Splitter.Group className="h-80">
+            <Splitter.Panel id="editor" minSize="30%" onResize={(next) => setSize(next)}>
+                {size && `${Math.round(size.percentage)}% · ${Math.round(size.pixels ?? 0)}px`}
+            </Splitter.Panel>
+            <Splitter.Separator aria-label="Resize editor" className="w-1" />
+            <Splitter.Panel id="preview">…</Splitter.Panel>
+        </Splitter.Group>
+    );
+}
+```
+
+From code, `model.get("panel-size-by", { panelId })` returns the same `PanelSize`, and
+`model.get("panel-constraints-by", { panelId })` the limits resolved to percent.
+
+## Resizing from code
+
+`panel.resize` takes a size in any unit; the neighbours make room within their own limits:
+
+```ts
+model.run("panel.resize", { panelId: "preview", size: 280 }); // 280px
+model.run("panel.resize", { panelId: "files", size: "30%" });
+```
+
+A unit other than `%` needs the group measured: before that (in Node, on the server) it is
+`refused`.
+
+## Keeping pixels when the group resizes
+
+By default a panel keeps its percentage when the window resizes the group. A sidebar that should
+keep its width declares `groupResizeBehavior="preserve-pixel-size"`, and the other panels take
+the whole change:
+
+```tsx
+<Splitter.Panel id="sidebar" defaultSize={220} minSize={140} groupResizeBehavior="preserve-pixel-size">
+    …
+</Splitter.Panel>
+```
+
+<Example id="fixed-size-panels" />
+
+## Disabled panels and separators
+
+Three ways to keep part of a layout still:
+
+- `disabled` on a **panel**: no separator resizes it, so a separator beside it cannot move it
+  (a double click on that separator resets nothing), and it carries `data-disabled`;
+- `disabled` on a **separator**: it ignores the pointer, leaves the tab order and carries
+  `aria-disabled`; its panels can still change through another separator;
+- `disabled` on the **group**: none of its separators can be used.
+
+```tsx
+<Splitter.Group disabled={locked} className="h-96">
+    <Splitter.Panel id="toolbox" defaultSize="18%" disabled>
+        …
+    </Splitter.Panel>
+    <Splitter.Separator aria-label="Resize toolbox" className="w-1" />
+    <Splitter.Panel id="canvas" minSize="20%">…</Splitter.Panel>
+    <Splitter.Separator aria-label="Resize layers" disabled className="w-1" />
+    <Splitter.Panel id="layers" defaultSize="22%">…</Splitter.Panel>
+</Splitter.Group>
+```
+
+<Example id="disabled-panels" />
+
+Code can still resize a disabled panel (`panel.resize`, `panel.collapse`, `group.set-layout`), as
+React Resizable Panels' imperative API can. To refuse those too, veto them in a middleware.

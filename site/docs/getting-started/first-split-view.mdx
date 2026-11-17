@@ -1,0 +1,113 @@
+---
+title: Your first split view
+description: Build a group of panels with separators between them, give the panels sizes, stack them vertically, and read the layout as it changes.
+---
+
+A split view is one `Splitter.Group` with its `Splitter.Panel`s and a `Splitter.Separator`
+between each pair. The package registers them, sizes the panels and answers the pointer and the
+keyboard; the markup, the styles and the names are yours.
+
+## Panels and separators
+
+```tsx title="three-panes.tsx"
+"use client";
+
+import { Splitter } from "@fragiola/splitter-react";
+
+export function ThreePanes() {
+    return (
+        <Splitter.Group className="h-96 border">
+            <Splitter.Panel id="navigation" defaultSize="25%">
+                <nav aria-label="Navigation">…</nav>
+            </Splitter.Panel>
+            <Splitter.Separator aria-label="Resize navigation" className="w-1.5 bg-gray-200" />
+            <Splitter.Panel id="content" defaultSize="50%">
+                <main>…</main>
+            </Splitter.Panel>
+            <Splitter.Separator aria-label="Resize content" className="w-1.5 bg-gray-200" />
+            <Splitter.Panel id="details" defaultSize="25%">
+                <aside aria-label="Details">…</aside>
+            </Splitter.Panel>
+        </Splitter.Group>
+    );
+}
+```
+
+What this produces:
+
+- the group is a flex row (`display: flex`, written inline: it is structural); you give it its
+  size, here `h-96` (see [Sizing the group](/docs/getting-started/sizing));
+- each panel is a flex item whose grow factor is its size in percent: 25, 50 and 25;
+- each separator is focusable (`role="separator"`), drags with the pointer, moves with the arrow
+  keys and resets its panel to its `defaultSize` on a double click.
+
+The n-th separator of a group, in document order, is the one after its n-th panel. A panel's
+order is its position in the markup too, never the order it mounted in.
+
+<Example id="basic-horizontal" />
+
+## Sizes
+
+A panel without a `defaultSize` shares what the others leave, equally. A size is a percentage of
+the group as a string (`"25%"`, or `"25"`), pixels as a number (`240`), or a string in `px`,
+`em`, `rem`, `vh` or `vw`. The layout itself is always in percent and always sums to 100.
+
+```tsx
+<Splitter.Panel id="sidebar" defaultSize={240} minSize="12rem" maxSize="40%">
+    …
+</Splitter.Panel>
+```
+
+[Size constraints and units](/docs/guides/size-constraints) covers the limits and how each unit
+resolves.
+
+## Stacking panels
+
+`orientation="vertical"` stacks the panels. The separator between them is then horizontal
+(`aria-orientation="horizontal"`): it drags up and down, and its arrow keys are Up and Down. A
+vertical group needs a height.
+
+```tsx
+<Splitter.Group orientation="vertical" className="h-[32rem]">
+    <Splitter.Panel id="editor" defaultSize="65%" minSize="20%">
+        …
+    </Splitter.Panel>
+    <Splitter.Separator aria-label="Resize editor" className="h-1.5 bg-gray-200" />
+    <Splitter.Panel id="terminal" minSize="15%">
+        …
+    </Splitter.Panel>
+</Splitter.Group>
+```
+
+<Example id="vertical" />
+
+## Reading the layout
+
+`onLayoutChange` receives the layout (each panel's size in percent, by panel id) on every
+change, drag steps included; `onLayoutCommit` only when a change is final: a drag released, a key
+pressed, a command run (not the layout the group registers with).
+
+```tsx
+import { type Layout, Splitter } from "@fragiola/splitter-react";
+import { useState } from "react";
+
+export function WithReadout() {
+    const [layout, setLayout] = useState<Readonly<Layout>>();
+    return (
+        <>
+            <output>{JSON.stringify(layout)}</output>
+            <Splitter.Group id="main" onLayoutChange={setLayout} className="h-80">
+                <Splitter.Panel id="left">Left</Splitter.Panel>
+                <Splitter.Separator aria-label="Resize left" className="w-1 bg-gray-300" />
+                <Splitter.Panel id="right">Right</Splitter.Panel>
+            </Splitter.Group>
+        </>
+    );
+}
+```
+
+The ids are optional: without one, a group or panel gets a generated id, stable across the server
+and the client. Give explicit ids to anything you save or drive from code.
+
+Next: [style it](/docs/guides/styling-css), make a panel
+[collapsible](/docs/guides/collapsible-panels), or [save the layout](/docs/guides/persistence).

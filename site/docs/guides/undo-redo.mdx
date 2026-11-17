@@ -1,0 +1,132 @@
+---
+title: Undo and redo
+description: Build undo and redo from two verbs, model.subscribe and a batch of group.set-layout, so a whole drag is one step and every group comes back at once.
+---
+
+The package ships no history: what counts as a step, how many are kept and which shortcut undoes
+are app policy. It gives you what a history needs: one event per committed command, with the
+immutable state before and after it, and `batch` to put every layout back in one atomic step. The
+[undo example](/examples/undo-redo) carries a copyable `_kit/undo.ts`; this page explains it.
+
+## What a step is
+
+`model.subscribe` calls your listener once per commit. Three facts make the history simple:
+
+- a drag sends **transient** `separator.move` steps, then one final non-transient commit: record
+  the final one, measured from where the drag started (the last committed layouts);
+- registering panels (the `batch` a group runs when it mounts) is not a user step: everything the
+  adapter runs for the markup carries `meta: { source: "adapter" }`, so skip it;
+- states are immutable, so keeping the layouts before and after costs nothing.
+
+## A small history
+
+```ts title="undo.ts"
+import type { CommandEvent, Layout, SplitterModel } from "@fragiola/splitter-react";
+
+type Layouts = Record<string, Readonly<Layout>>;
+
+function layoutsOf(state: CommandEvent["after"]): Layouts {
+    return Object.fromEntries(Object.entries(state.groups).map(([id, group]) => [id, group.layout]));
+}
+
+export function createHistory(model: SplitterModel) {
+    const done: { before: Layouts; after: Layouts }[] = [];
+    const undone: { before: Layouts; after: Layouts }[] = [];
+    let settled = layoutsOf(model.get("state"));
+    let restoring = false;
+
+    const stop = model.subscribe((event) => {
+        if (restoring || event.transient) return; // our own restores, and drag steps
+        const before = settled;
+        settled = layoutsOf(event.after);
+        if (event.meta?.source === "adapter") return; // the markup's registration and props
+        if (JSON.stringify(before) === JSON.stringify(settled)) return;
+        done.push({ before, after: settled });
+        undone.length = 0;
+    });
+
+    function restore(layouts: Layouts) {
+        restoring = true;
+        try {
+            const commands = Object.entries(layouts)
+                .filter(([groupId]) => model.get("group-by", { id: groupId }))
+                .map(([groupId, layout]) => ({
+                    command: "group.set-layout" as const,
+                    payload: { groupId, layout: { ...layout } },
+                }));
+            const ok = model.run("batch", { commands }).ok;
+            settled = layoutsOf(model.get("state"));
+            return ok;
+        } finally {
+            restoring = false;
+        }
+    }
+
+    return {
+        undo() {
+            const entry = done.pop();
+            if (entry && restore(entry.before)) undone.push(entry);
+        },
+        redo() {
+            const entry = undone.pop();
+            if (entry && restore(entry.after)) done.push(entry);
+        },
+        dispose: stop,
+    };
+}
+```
+
+A middleware that vetoes the restore leaves the layout as it is, and the step is dropped in this
+short version; the kit keeps it.
+
+## Wiring it in React
+
+Create the history once the model exists, and dispose of it with the component:
+
+```tsx
+"use client";
+
+import { Splitter, useSplitter, useSplitterRef } from "@fragiola/splitter-react";
+import { useEffect, useState } from "react";
+import { createHistory } from "./undo";
+
+export function Editor() {
+    const splitterRef = useSplitterRef();
+    const splitter = useSplitter(splitterRef);
+    const [history, setHistory] = useState<ReturnType<typeof createHistory>>();
+    const model = splitter?.model;
+    useEffect(() => {
+        if (!model) return undefined;
+        const made = createHistory(model);
+        setHistory(made);
+        return made.dispose;
+    }, [model]);
+    return (
+        <>
+            <button type="button" onClick={() => history?.undo()}>
+                Undo
+            </button>
+            <button type="button" onClick={() => history?.redo()}>
+                Redo
+            </button>
+            <Splitter.Group splitterRef={splitterRef} className="h-96">
+                <Splitter.Panel id="outline" defaultSize="25%" minSize="15%" collapsible>
+                    …
+                </Splitter.Panel>
+                <Splitter.Separator aria-label="Resize outline" className="w-1" />
+                <Splitter.Panel id="draft">…</Splitter.Panel>
+            </Splitter.Group>
+        </>
+    );
+}
+```
+
+For the shortcuts, listen to `keydown` on the document, skip text fields (they keep their own
+undo), and do nothing while a drag runs: `engine.get("dragging-separator-id")` is defined then.
+
+<Example id="undo-redo" />
+
+## Undo with persistence
+
+Both listen to the same events: save the document after each commit, and an undo is a commit
+like any other, so the restored layout is saved too.

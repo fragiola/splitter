@@ -1,0 +1,46 @@
+---
+title: Paths
+description: Every group, panel and separator carries a path from its root group in data-splitter-path, a stable address for end-to-end tests, tooling and automation.
+---
+
+A path names an element by where it sits, not by its id: `/g0` is the first root group of a
+model, `/g0/p1` its second panel, `/g0/s0` its first separator, and `/g0/p1/g0` the first group
+nested in that panel. The package writes it on every element as `data-splitter-path`, so a test
+or a tool finds any part without knowing your ids or your class names.
+
+## How a path is built
+
+| part | path |
+| --- | --- |
+| a root group | `/g<n>`: the n-th root group of the model |
+| a group nested in a panel | `<panel path>/g<n>`: the n-th group in that panel |
+| a panel | `<group path>/p<index>`: its index among the group's panels |
+| a separator | `<group path>/s<index>`: its index among the group's separators |
+
+Indices count in model order: panels by their document position, separators between each pair,
+and groups in registration order (document order when they mount). A part has its path once it
+registers, before the first paint; the server HTML has none.
+
+## In end-to-end tests
+
+```ts title="layout.spec.ts"
+import { expect, test } from "@playwright/test";
+
+test("the sidebar separator resizes the sidebar", async ({ page }) => {
+    await page.goto("/"); // a sidebar at 25%, before the first separator
+    const separator = page.locator('[data-splitter-path="/g0/s0"]');
+    await separator.focus();
+    await page.keyboard.press("ArrowRight"); // one step: 5%
+    await expect(separator).toHaveAttribute("aria-valuenow", "30");
+});
+```
+
+A role and a name are the first choice for what a user can see (`getByRole("separator", { name:
+"Resize sidebar" })`); a path reaches a panel, which has no role, and anything unnamed.
+
+## From code
+
+The model answers the same paths: `model.get("group-path-by", { groupId })`,
+`model.get("panel-path-by", { panelId })` and `model.get("separator-path-by", { separatorId })`.
+An assistant or a devtool can show a path to a user and you resolve it back with
+`document.querySelector('[data-splitter-path="/g0/p1"]')`.

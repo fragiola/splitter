@@ -1,0 +1,78 @@
+---
+title: Keyboard
+description: Separators follow the WAI-ARIA Window Splitter pattern. Arrows resize, Home and End reach the limits, Enter collapses, and F6 moves between separators.
+---
+
+Every separator is a focusable `role="separator"` that the keyboard resizes, following the
+WAI-ARIA APG [Window Splitter](https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/) pattern.
+The package handles the keys and the ARIA values; the focus ring and the labels are yours.
+
+## The keys
+
+| key | does |
+| --- | --- |
+| **Left** / **Right** | in a horizontal group, move the separator by the keyboard step (mirrored in right-to-left) |
+| **Up** / **Down** | in a vertical group, move the separator by the keyboard step |
+| **Home** | give the panel before the separator its smallest size (collapsed, for a collapsible panel) |
+| **End** | give that panel its largest size |
+| **Enter** | collapse the panel before the separator, or expand it back, by moving this separator (disabled panels keep their sizes) |
+| **F6** / **Shift+F6** | move focus to the next or previous separator of the group |
+| **Tab** | the separators are in the tab order, in document order; a disabled one is not |
+
+Only the keys it handles are `preventDefault`ed: Tab, your shortcuts and any other key reach
+your code.
+
+<Example id="keyboard" />
+
+## The step
+
+An arrow moves the separator by 5% of the group by default. The root group's `keyboardStep` sets
+it, in percent, for every group of the model (it is read once, when the root mounts):
+
+```tsx
+<Splitter.Group keyboardStep={10} className="h-96">
+    …
+</Splitter.Group>
+```
+
+## What assistive technology hears
+
+`aria-valuenow` is the size of the panel before the separator in percent, between `aria-valuemin`
+and `aria-valuemax`, and `aria-controls` points at that panel. Give each separator a name
+(`aria-label="Resize the sidebar"`): see [Accessible names](/docs/getting-started/accessible-names).
+
+## A visible focus ring
+
+The package sets no outline. Style `:focus-visible`, which keyboard focus matches and a click does
+not:
+
+```css
+[data-splitter-part="separator"]:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: -1px;
+}
+```
+
+## Focus from code
+
+`engine.run("focus-separator", { separatorId })` moves focus to a separator, for a shortcut that
+jumps to the layout:
+
+```ts
+const [first] = model.get("separators-by", { groupId: "workbench" });
+if (first) engine.run("focus-separator", { separatorId: first.id });
+```
+
+## Double click
+
+A double click on a separator resizes the panel before it (else the one after) back to its
+`defaultSize`. It does nothing when a panel beside the separator is disabled, as the keys and a
+drag leave a disabled panel alone. `resetOnDoubleClick={false}` turns it off for one separator, or on the root group
+for all of them. `model.is("separator-resettable", { separatorId })` says whether a double click
+would do anything.
+
+## Disabled separators
+
+A separator disabled by its own `disabled` or by its group's ignores the keys, leaves the tab
+order and carries `aria-disabled`. A separator beside a disabled panel stays focusable, but cannot
+move that panel.

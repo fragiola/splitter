@@ -1,0 +1,93 @@
+---
+title: Model and engine
+description: The model holds every group's panels, sizes and rules, and the engine is those groups on screen. Both answer the same five verbs, from run to is.
+---
+
+Behind the primitives are two objects. The **model** is the layout as data: every group, its
+panels, their constraints, their sizes and which are collapsed, with the rules that keep them
+valid. It needs no DOM. The **engine** is the model's groups on screen: it measures them, runs
+the pointer drags and the keys on their separators, and answers what depends on the DOM. The
+outermost `Splitter.Group` creates both unless you pass a model; every group nested in it joins
+them.
+
+## One pattern on both
+
+Each object has the same five verbs. Each takes a key and a payload:
+
+| verb | means | on the model | on the engine |
+| --- | --- | --- | --- |
+| `run` | do it | `model.run("panel.collapse", { panelId })`: a command | `engine.run("measure", {})`: a screen action |
+| `can` | could I? (a `boolean`) | `model.can("panel.expand", { panelId })` | `engine.can("focus-separator", { separatorId })` |
+| `check` | what would happen? | `model.check("panel.resize", { panelId, size: "30%" })` | `engine.check("measure", { groupId })` |
+| `get` | read it | `model.get("layout-by", { groupId })` | `engine.get("direction-by", { groupId })` |
+| `is` | yes or no? | `model.is("panel-collapsed", { panelId })` | `engine.is("group-dragging", { groupId })` |
+
+Both also have `use` (a middleware), `subscribe` (a listener) and `dispatch` (`run` for untrusted
+JSON). Keys are kebab-case and typed; [Model](/docs/api/model) and [Engine](/docs/api/engine) list
+them all.
+
+Inside a group, `useSplitter()` returns both, with the enclosing group's id:
+
+```tsx
+import { useSplitter } from "@fragiola/splitter-react";
+
+export function CollapseButton({ panelId }: { panelId: string }) {
+    const { model } = useSplitter();
+    const collapsed = model.is("panel-collapsed", { panelId });
+    return (
+        <button
+            type="button"
+            disabled={!model.can(collapsed ? "panel.expand" : "panel.collapse", { panelId })}
+            onClick={() => model.run(collapsed ? "panel.expand" : "panel.collapse", { panelId })}
+        >
+            {collapsed ? "Show" : "Hide"}
+        </button>
+    );
+}
+```
+
+A component that reads the model this way re-renders when its parent does; to follow a value as
+it changes, use the callbacks (`onLayoutChange`, `onCollapse`, `onResize`) or `model.subscribe`.
+Outside the group, the [external ref](/docs/api/external-ref) gives you the same object.
+
+## Reading a key
+
+A key and its payload read as one sentence. A command has a dot, `<entity>.<verb>`
+(`panel.resize`, `group.set-layout`); an engine action never has one (`measure`,
+`focus-separator`). A field holding an id is `<entity>Id` (`panelId`, `groupId`, `separatorId`),
+except an entity's own `id`. A `get` key names its result and ends in `-by` when it takes an id
+(`panel-by { id }`, `layout-by { groupId }`); one that takes nothing has a plain name (`groups`,
+`splitter-json`). An `is` key is the question after "is": `panel-collapsed`, `group-measured`.
+
+## What lives where
+
+| question | asks | because |
+| --- | --- | --- |
+| a panel's size, its constraints in percent, whether it is collapsed | the model | they are data: the rules need no DOM |
+| a separator's `aria-valuenow`, `-min`, `-max` | the model (`separator-values-by`) | the same rules |
+| the separator's ARIA attributes with the panel's DOM id | the engine (`separator-aria-by`) | it knows the elements |
+| a group's direction (`ltr` or `rtl`), what is dragging | the engine | only the DOM says |
+| how many pixels a group measures | the model, once the engine reported it (`group.measure`) | so `px`, `em`, `rem`, `vh` and `vw` resolve without a DOM |
+
+The engine changes the model only by running commands, so a middleware sees a drag exactly as it
+sees a button: `separator.move` steps marked transient, then one final commit. See
+[The model and commands](/docs/concepts/model-and-commands).
+
+## Without React
+
+The core runs anywhere. A model in Node, with no engine, applies the same rules:
+
+```ts
+import { createSplitterModel } from "@fragiola/splitter";
+
+const model = createSplitterModel();
+model.run("batch", {
+    commands: [
+        { command: "group.add", payload: { id: "main" } },
+        { command: "panel.add", payload: { id: "nav", groupId: "main", minSize: "20%" } },
+        { command: "panel.add", payload: { id: "editor", groupId: "main" } },
+    ],
+});
+model.run("panel.resize", { panelId: "nav", size: "10%" }); // clamped to its minimum
+model.get("layout-by", { groupId: "main" }); // { nav: 20, editor: 80 }
+```

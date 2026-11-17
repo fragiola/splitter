@@ -1,0 +1,100 @@
+---
+title: The JSON document
+description: The saved layout as JSON, version 1, with every group's panel sizes, collapsed state and restore sizes, its JSON Schema, and how a document is validated.
+---
+
+The JSON document is what the user changed: each group's layout by explicit ids, which panels
+are collapsed, and the size each returns to on expand. `model.get("splitter-json")` writes it,
+`createSplitterModel(json)` restores it, and a round trip is stable. Constraints are not part of
+it: they come back with the markup. A group whose layout is still its default one (nobody resized
+it, or `group.reset` put it back) is left out: its default comes back from the markup, so a
+`defaultSize` in `px`, `em` or `rem` is derived again from the group's size on screen.
+
+```json
+{
+    "version": 1,
+    "groups": [
+        {
+            "id": "workbench",
+            "panels": [
+                { "id": "explorer", "size": 22 },
+                { "id": "workspace", "size": 78 }
+            ]
+        },
+        {
+            "id": "workspace",
+            "panels": [
+                { "id": "editors", "size": 100 },
+                { "id": "terminal", "size": 0, "collapsed": true, "restoreSize": 30 }
+            ]
+        }
+    ]
+}
+```
+
+## `SplitterJson`
+
+| field | type | description |
+| --- | --- | --- |
+| `version` | `1` | the document's version |
+| `groups` | `GroupJson[]` | the saved groups: those whose layout is not the default one |
+
+## `GroupJson`
+
+| field | type | description |
+| --- | --- | --- |
+| `id` | `string` | the group's id, as in the markup |
+| `panels` | `PanelJson[]` | its panels, in order |
+
+## `PanelJson`
+
+| field | type | description |
+| --- | --- | --- |
+| `id` | `string` | the panel's id, as in the markup |
+| `size` | `number` | its size, in percent |
+| `collapsed` | `boolean` | whether it is collapsed |
+| `restoreSize` | `number` | the size, in percent, it returns to when it expands |
+
+Ids are required: they must match the markup, so none is generated at load. Ids are unique in a
+document (a group's among groups, a panel's across every group), and `__proto__` is refused.
+
+## Loading
+
+- A saved group is **pending** until its panels register; its layout applies once the group holds
+  exactly the saved panels. Until then `splitter-json` writes it back as it was loaded.
+- A declared panel the document does not name takes its `defaultSize`.
+- A collapsed saved panel comes back at its current collapsed size, and expands to its
+  `restoreSize`.
+
+## Validating
+
+`validateSplitter(json: unknown)` returns every problem of a document as `ValidationIssue`s
+(`path`, a JSON pointer, and `message`), empty when it is valid: its JSON Schema first, then ids
+used twice. `createSplitterModel(json)` with an invalid document throws a
+`SplitterValidationError`, whose `issues` holds the same list.
+
+```ts
+import {
+    createSplitterModel,
+    type SplitterJson,
+    SplitterValidationError,
+    validateSplitter,
+} from "@fragiola/splitter-react";
+
+declare const fromStorage: unknown;
+
+const issues = validateSplitter(fromStorage);
+for (const issue of issues) console.warn(`${issue.path}: ${issue.message}`);
+
+try {
+    createSplitterModel(fromStorage as SplitterJson);
+} catch (error) {
+    if (error instanceof SplitterValidationError) console.warn(error.issues.length, "problems");
+}
+```
+
+## The schema
+
+`splitterJsonSchema` is the document's JSON Schema (a `JsonSchema`, the subset of JSON Schema the
+package's validator reads), to validate documents on a server or in another language. `JsonValue`
+is any JSON value.

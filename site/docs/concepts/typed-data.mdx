@@ -1,0 +1,85 @@
+---
+title: Typed data
+description: Declare your group and panel ids once in a registry type, and every payload, key and prop that names an id is checked by TypeScript.
+---
+
+A panel carries no data of its own: what it shows is your markup. What the model knows about are
+ids, so ids are what you type. A registry is one type with two fields, the group ids and the
+panel ids of your app:
+
+```ts title="types.ts"
+import type { SplitterTypes } from "@fragiola/splitter-react";
+
+export interface Types extends SplitterTypes {
+    readonly groupId: "workbench" | "workspace";
+    readonly panelId: "explorer" | "workspace" | "editor" | "terminal";
+}
+```
+
+Without a registry, every id is a `string` (the default registry is `AnyTypes`).
+
+## Where it applies
+
+Give it to the model, and the commands, `get` keys and `is` keys check every `groupId` and
+`panelId` they are given:
+
+```ts
+import { createSplitterModel } from "@fragiola/splitter-react";
+import type { Types } from "./types";
+
+const model = createSplitterModel<Types>();
+model.run("panel.collapse", { panelId: "terminal" });
+// @ts-expect-error: "termnial" is not a panel id of the registry
+model.run("panel.collapse", { panelId: "termnial" });
+```
+
+Give it to the primitives as a type argument, and their `id` props are checked:
+
+```tsx
+import { Splitter } from "@fragiola/splitter-react";
+import type { Types } from "./types";
+
+export function Workbench() {
+    return (
+        <Splitter.Group<Types> id="workbench" className="h-full">
+            <Splitter.Panel<Types> id="explorer" defaultSize="20%" collapsible>
+                …
+            </Splitter.Panel>
+            <Splitter.Separator aria-label="Resize the explorer" />
+            <Splitter.Panel<Types> id="workspace">…</Splitter.Panel>
+        </Splitter.Group>
+    );
+}
+```
+
+A group given a typed model infers the registry from it: `<Splitter.Group model={model}>` checks
+its `id` against `Types` with no type argument.
+
+And give it to the hooks, which return a typed model:
+
+```tsx
+import { useSplitter } from "@fragiola/splitter-react";
+import type { Types } from "./types";
+
+export function ResetButton() {
+    const { model, groupId } = useSplitter<Types>();
+    return (
+        <button type="button" onClick={() => model.run("group.reset", { groupId })}>
+            Reset
+        </button>
+    );
+}
+```
+
+The context of a part cannot carry the type parameter of the group above it, so each hook and
+part takes it again: a registry is only a type, nothing is checked at run time.
+
+## What is not typed by the registry
+
+- **Separator ids** are derived (`<beforePanelId>:<afterPanelId>`) and typed as `string`.
+- **`dispatch`** takes untrusted JSON: it validates against each command's JSON Schema at run
+  time, and an unknown id is `not_found`, not a type error.
+- **A loaded document** (`createSplitterModel(json)`) is checked by `validateSplitter`, not by
+  the registry: saved ids that no panel declares stay in the document until they register.
+
+`GroupIdOf<T>` and `PanelIdOf<T>` read the id types back from a registry, for your own helpers.

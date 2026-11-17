@@ -1,0 +1,68 @@
+---
+title: Sizing the group
+description: The group is a flex container that takes the size you give it; the panels share it. How to size a group, a nested one and the content of a panel.
+---
+
+The package sizes the panels inside a group, never the group itself. A group's element is a flex
+container (`display: flex`, `flex-direction` from its orientation, `flex-wrap: nowrap`); its width
+and height are yours, like any `div`'s. An unsized vertical group, or a horizontal one in a
+parent with no height, collapses to the height of its content.
+
+## Give the group a size
+
+Any CSS that sizes a block works: a fixed height, `height: 100%` in a sized parent, or a flex or
+grid item that fills its container.
+
+```tsx
+<div className="flex h-dvh flex-col">
+    <header>…</header>
+    {/* fills what the header leaves */}
+    <Splitter.Group className="min-h-0 flex-1">
+        <Splitter.Panel id="a">…</Splitter.Panel>
+        <Splitter.Separator aria-label="Resize" className="w-1" />
+        <Splitter.Panel id="b">…</Splitter.Panel>
+    </Splitter.Group>
+</div>
+```
+
+`min-h-0` matters in a flex column: without it a flex item never shrinks below its content, and
+the group grows instead of letting its panels scroll.
+
+## The content of a panel
+
+A panel has `overflow: hidden` (structural: a panel smaller than its content must not spill into
+its neighbours). Scrolling is yours: put it on an element inside the panel.
+
+```tsx
+<Splitter.Panel id="list">
+    <div className="h-full overflow-auto">{/* a long list */}</div>
+</Splitter.Panel>
+```
+
+## A nested group
+
+A `Splitter.Group` inside a panel sizes like any block inside it: give it the panel's full size
+with `h-full` (or make the panel a flex container and the group `flex-1`).
+
+```tsx
+<Splitter.Panel id="main">
+    <Splitter.Group orientation="vertical" className="h-full">
+        …
+    </Splitter.Group>
+</Splitter.Panel>
+```
+
+## Separators take room
+
+A separator is a flex item too (`flex-grow: 0`, `flex-shrink: 0`): its thickness is yours (a
+width in a horizontal group, a height in a vertical one) and it is taken from the group before the
+panels share the rest. The model measures the panels only, so `minSize={200}` is 200 pixels of
+panel, whatever the separators measure.
+
+## Pixel units need a measure
+
+Percentages resolve at once. `px`, `em`, `rem`, `vh` and `vw` need the group's size on screen,
+which the engine measures when the group mounts and whenever it resizes. Before that first
+measure, on the server and in the first client render, a panel with a `defaultSize` takes it as
+its flex basis, in its own unit, so the first paint already has the right sizes. See
+[Geometry and units](/docs/concepts/geometry-and-units).

@@ -1,0 +1,58 @@
+---
+title: Introduction
+description: What the package does for a split view (resizing, the keyboard, collapsing, a saved layout) and what stays yours, down to every pixel, cursor and word.
+---
+
+A split view puts panels side by side, or stacks them, with a separator between each pair that
+the user drags to share the room. `@fragiola/splitter-react` gives you that behaviour as three
+headless primitives, `Splitter.Group`, `Splitter.Panel` and `Splitter.Separator`, over a
+framework-free core, `@fragiola/splitter`.
+
+What the package gives you:
+
+- **Resizing** with the pointer (mouse, touch and pen through one path, with pointer capture),
+  with the keyboard (the WAI-ARIA APG Window Splitter pattern), and from code.
+- **Constraints** on every panel: a minimum, a maximum, a default size, in `%`, `px`, `em`,
+  `rem`, `vh` or `vw`.
+- **Collapsing**: a collapsible panel snaps shut past a threshold and remembers the size it
+  returns to.
+- **Nested groups** that share one model, so one JSON document saves the whole layout.
+- **A typed model** whose every change is a command that middleware can veto or rewrite, and a
+  JSON Schema for each command, ready for automation.
+- **Right-to-left** as a mirror, and server rendering without a layout shift.
+
+What stays **yours**: every pixel. The package ships no CSS, no icons, no cursors and no text.
+It writes only the structural inline style (the flex sizing of the panels) and exposes its state
+as `data-*` attributes and ARIA, so Tailwind, plain CSS, CSS modules or CSS-in-JS all work.
+Accessible names come from you too: a separator has no label until you give it one.
+
+```tsx title="editor-layout.tsx"
+import { Splitter } from "@fragiola/splitter-react";
+
+export function EditorLayout() {
+    return (
+        <Splitter.Group className="h-96">
+            <Splitter.Panel id="files" defaultSize="25%" minSize="10%">
+                Files
+            </Splitter.Panel>
+            <Splitter.Separator aria-label="Resize files" className="w-1 bg-gray-300" />
+            <Splitter.Panel id="editor">Editor</Splitter.Panel>
+        </Splitter.Group>
+    );
+}
+```
+
+<Example id="basic-horizontal" />
+
+## Where to go next
+
+<Cards>
+<Card title="Installation" href="/docs/getting-started/installation" description="One package for React, the core re-exported." />
+<Card title="Your first split view" href="/docs/getting-started/first-split-view" description="Panels, separators, sizes and orientation." />
+<Card title="Model and engine" href="/docs/concepts/model-and-engine" description="The two objects behind the primitives, and their five verbs." />
+<Card title="Limitations" href="/docs/limitations" description="What React Resizable Panels has that this package does not, and why." />
+</Cards>
+
+The behaviour follows [React Resizable Panels](https://github.com/bvaughn/react-resizable-panels)
+(its flex groups): the same constraints, units, collapse thresholds and restore sizes. The model,
+the commands and the primitives are Fragiola's, shared with every library of the ecosystem.
