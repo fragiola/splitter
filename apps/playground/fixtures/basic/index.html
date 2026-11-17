@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="noindex" />
+        <title>Splitter fixture</title>
+        <style>
+            /* the fixture's own few lines: a group of a known size, visible panels and separators */
+            body { margin: 0; padding: 80px 120px; font: 13px/1.2 system-ui, sans-serif; }
+            [data-splitter-part="group"][data-orientation="horizontal"] { width: 620px; height: 200px; }
+            [data-splitter-part="group"][data-orientation="vertical"] { width: 300px; height: 620px; }
+            [data-splitter-part="panel"] { background: #eee; }
+            [data-splitter-part="separator"] { background: #333; }
+            [data-splitter-part="separator"][data-orientation="vertical"] { width: 10px; }
+            [data-splitter-part="separator"][data-orientation="horizontal"] { height: 10px; }
+            [data-splitter-part="separator"][data-disabled] { background: #bbb; }
+        </style>
+    </head>
+    <body>
+        <div id="root"></div>
+        <script type="module">
+            import { mountSplitterFixture } from "../../src/fixture/splitter-fixture.tsx";
+            mountSplitterFixture();
+        </script>
+    </body>
+</html>
