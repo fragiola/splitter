@@ -11,7 +11,8 @@ import {
 } from "./helpers";
 
 // Every example mounts, registers its groups (every part has a path), and logs no error, in every
-// theme (there are two); a new example folder is covered without touching this file.
+// theme (`THEMES`: light, dark, ide, paper, terminal); a new example folder is covered without
+// touching this file.
 
 /** Examples that must exist: the smoke run is meaningless without them. */
 const REQUIRED: string[] = ["basic-horizontal", "styling-showcase"];
