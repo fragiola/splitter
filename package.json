@@ -1,0 +1,31 @@
+{
+    "name": "splitter",
+    "version": "0.0.0",
+    "private": true,
+    "license": "MIT",
+    "type": "module",
+    "author": {
+        "name": "Mauro de Souza",
+        "email": "maurodesouza.me@gmail.com",
+        "url": "https://github.com/maurodesouza"
+    },
+    "packageManager": "pnpm@11.23.0",
+    "engines": {
+        "node": ">=24",
+        "pnpm": ">=11"
+    },
+    "scripts": {
+        "format": "biome format --write",
+        "lint": "biome lint",
+        "check": "biome check && pnpm check:layout",
+        "check:layout": "node scripts/check-layout.ts",
+        "check:fix": "biome check --write",
+        "typecheck": "pnpm -r typecheck",
+        "test": "vitest run",
+        "build": "pnpm -r build && node scripts/check-dts.ts"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "2.5.14",
+        "vitest": "5.0.2"
+    }
+}
