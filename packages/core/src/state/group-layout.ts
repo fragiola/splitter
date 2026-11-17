@@ -99,6 +99,42 @@ export function commitLayout(
     });
 }
 
+/**
+ * The key of a set of panels in a group's `layoutMemory`: the JSON of its sorted ids, so the
+ * order the panels are in does not matter and any id (a colon, a quote) is safe.
+ */
+export function panelSetKey(panelIds: readonly string[]): string {
+    return JSON.stringify([...panelIds].sort());
+}
+
+/**
+ * The group with the layout it is leaving remembered for its panel set (a layout the user
+ * changed only: a default one is derived again anyway), and the one remembered for the set it is
+ * entering, when there is one.
+ */
+function rememberLayout(
+    draft: Draft,
+    group: GroupState,
+    panelIds: readonly string[],
+): { group: GroupState; remembered: Readonly<Layout> | undefined } {
+    const leaving = Object.keys(group.layout);
+    const memory: Record<string, Readonly<Layout>> = { ...group.layoutMemory };
+    if (leaving.length > 0 && !group.pristine) {
+        Object.defineProperty(memory, panelSetKey(leaving), {
+            value: group.layout,
+            enumerable: true,
+            writable: true,
+            configurable: true,
+        });
+    }
+    const key = panelSetKey(panelIds);
+    const remembered = Object.hasOwn(memory, key) ? memory[key] : undefined;
+    return {
+        group: draft.setGroup({ ...group, layoutMemory: memory }),
+        remembered,
+    };
+}
+
 /** Sorts panel ids by their panels' `order`, keeping the current order on ties (stable). */
 function sortPanelIds(draft: Draft, panelIds: readonly string[]): string[] {
     return [...panelIds].sort(
@@ -141,8 +177,9 @@ function applyPending(draft: Draft, group: GroupState): GroupState {
 /**
  * After the group's panels changed (added, removed, reordered or their constraints changed):
  * panels sorted by `order`, then the saved layout when the group now holds exactly its panels;
- * else, when the set of panels changed or the layout is still the default, the default layout;
- * else the layout validated against the new constraints.
+ * else, when the set of panels changed, the layout the group last had with the new set (the one
+ * it leaves is remembered), or the default layout; else the default layout again while it is
+ * pristine, or the layout validated against the new constraints.
  */
 export function relayout(
     draft: Draft,
@@ -170,7 +207,26 @@ export function relayout(
     const samePanels =
         Object.keys(group.layout).length === panelIds.length &&
         panelIds.every((id) => Object.hasOwn(group.layout, id));
-    if (!samePanels || group.pristine) {
+    if (!samePanels) {
+        const { group: remembering, remembered } = rememberLayout(
+            draft,
+            group,
+            panelIds,
+        );
+        if (remembered) {
+            return commitLayout(
+                draft,
+                remembering,
+                validateLayout(remembered, constraints),
+                { trackRestore: false },
+            );
+        }
+        return commitLayout(draft, remembering, defaultLayout(constraints), {
+            pristine: true,
+            trackRestore: false,
+        });
+    }
+    if (group.pristine) {
         return commitLayout(draft, group, defaultLayout(constraints), {
             pristine: true,
             trackRestore: false,

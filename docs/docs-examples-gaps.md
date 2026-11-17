@@ -11,7 +11,6 @@ page.
 
 | # | needed by | needed | workaround | proposed API |
 |---|---|---|---|---|
-| S1 | `conditional-panels`, guide *Conditional panels* | Keep the other panels' sizes when a panel is hidden and shown again. A change of the panel set takes the default layout of the new set (React Resizable Panels keeps a layout per set in memory). | The example accepts the reset; the guide shows a collapsible panel collapsed to 0 instead of unmounting it. | A per-panel-set layout memory on the group (in the state, out of the JSON document, or in it as an optional `layouts` map). |
 | S2 | `collapsible-sidebar`, `ide-layout`, guides *Collapsible panels*, *Undo and redo* | Follow a model value (a panel collapsed, a layout) from a component. `useSplitter()` returns stable objects and does not re-render on a model change. | `onCollapse` / `onExpand` / `onLayoutChange` copied into React state; `model.subscribe` in an effect for the history. | A `useSplitterState(selector, { splitterRef? })` hook that re-renders only when its answer changes (Dockable's `useModelState`). |
 | S3 | every example's separator, guide *Styling with CSS* | A pointer target wider than the visible line, larger on coarse pointers (React Resizable Panels' `resizeTargetMinimumSize`, panel-edge targets, crossing separators of nested groups dragged together). | A 9px separator with a 1px line drawn by `::before`; `@media (pointer: coarse)` can widen it. | Out of scope for now (AGENTS.md, provenance). Revisit with an optional hit-area option on the engine. |
 | S4 | every example's separator and group, guide *Styling with CSS* | Cursors (a separator's, and one that stays during a drag). The package sets none: a cursor is cosmetic. | `data-[orientation=…]:cursor-*-resize` on the separator, `data-disabled:cursor-not-allowed`; the guide adds a cursor on `[data-dragging]` groups. | None: by design (rule 15). |
@@ -22,7 +21,13 @@ page.
 | S9 | `undo-redo` | Skip a shortcut during a drag. | The example reads `engine.get("dragging-separator-id")` in its `keydown` listener. | None needed: the key exists. |
 | S10 | `collapsible-sidebar`, guides *Accessible names*, *Collapsible panels* | Hide a collapsed panel's content from assistive technology. A collapsed panel stays in the document at its collapsed size. | `in-data-collapsed:hidden` on the content (labels, here). | None: the content is the app's; documented. |
 
-## 2. Documentation decisions
+## 2. Closed gaps
+
+| # | closed by | API |
+|---|---|---|
+| S1 | the core: a group remembers a layout per panel set | `GroupState.layoutMemory` (by the JSON of the set's sorted panel ids, in the state, out of the JSON document): a set the group had before takes back the layout the user last gave it, clamped to the current constraints; a new set takes its default layout. `conditional-panels` shows it and its spec asserts it. |
+
+## 3. Documentation decisions
 
 - The API reference is written by hand (TypeScript 7 ships no compiler API for
   `fumadocs-typescript`); `site/tests/docs-reference.test.ts` fails when an export, a prop, a

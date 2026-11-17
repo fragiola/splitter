@@ -63,6 +63,7 @@ export const groupAdd = defineCommand({
             panelIds: [],
             layout: {},
             pristine: true,
+            layoutMemory: {},
             separators: {},
         };
         draft.setGroup(group);

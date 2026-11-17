@@ -1,6 +1,6 @@
 ---
 title: Conditional panels
-description: Show and hide panels by rendering them conditionally. Each lands where the markup puts it, with its separator; keep sizes across toggles by collapsing instead.
+description: Show and hide panels by rendering them conditionally. Each lands where the markup puts it, with its separator; the group remembers each set's sizes.
 ---
 
 A panel rendered conditionally registers when it mounts and leaves the model when it unmounts.
@@ -54,17 +54,22 @@ export function Editor({ sidebar, inspector }: { sidebar: boolean; inspector: bo
 
 ## What happens to the sizes
 
-When the set of panels changes, the group takes the **default layout of the new set**: each
-panel with a `defaultSize` takes it, and the others share the rest. The sizes the user gave the
-other panels are not kept, and a panel shown again does not come back at the size it had. (React
-Resizable Panels remembers a layout per set of panels in memory; this package does not yet. See
-[Limitations](/docs/limitations).) A saved document's layout applies again once the group holds
+The group **remembers a layout per set of panels**, as React Resizable Panels does. When the set
+changes, the layout the user gave the set it leaves is kept, and the set it enters takes the
+layout it last had: hide the inspector and show it again, and every panel comes back at its size.
+A set the group has never had takes its **default layout**: each panel with a `defaultSize` takes
+it, and the others share the rest. A remembered layout is clamped to the panels' current
+constraints when it comes back.
+
+The memory is in the model's state (`GroupState.layoutMemory`), not in the saved document: it
+lasts while the group is mounted. A saved document's layout applies again once the group holds
 exactly the panels it saved.
 
-## Keeping the sizes: collapse instead
+## Keeping the panel's place: collapse instead
 
-A panel that the user hides and shows again is usually better as a collapsible panel collapsed to
-0: it stays registered, the others keep their sizes, and expanding gives it back the size it had.
+A panel that the user hides and shows again can also be a collapsible panel collapsed to 0: it
+stays registered (and saved in the document), its separator stays so the user can drag it back
+open, and expanding gives it back the size it had.
 
 ```tsx
 "use client";

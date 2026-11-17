@@ -7,8 +7,8 @@ import * as styles from "./styles";
 
 // Panels rendered conditionally: each takes its place from its position in the markup, never
 // from when it mounts, so the inspector shown again lands at the end. A separator goes with the
-// panel it belongs to. The group gives the panels that stay the room a hidden one leaves, and
-// takes it back for one that comes back.
+// panel it belongs to. The group remembers a layout per set of panels: resize, hide the inspector
+// and show it again, and every panel comes back at the size it had.
 export default function ConditionalPanels() {
     const [sidebar, setSidebar] = useState(true);
     const [inspector, setInspector] = useState(true);

@@ -88,6 +88,11 @@ export interface GroupState {
     readonly measure?: GroupMeasure;
     /** the layout is the default one: it is derived again when a new measure resolves its units */
     readonly pristine: boolean;
+    /**
+     * the last layout the user gave the group with each other set of panels, keyed by the JSON of
+     * the set's sorted panel ids: when its panels become that set again, it comes back (not saved)
+     */
+    readonly layoutMemory: Readonly<Record<string, Readonly<Layout>>>;
     /** what the separators' markup declares, by `separatorId` */
     readonly separators: Readonly<Record<string, SeparatorOptions>>;
 }

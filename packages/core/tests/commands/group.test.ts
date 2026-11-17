@@ -73,6 +73,55 @@ describe("registering groups and panels", () => {
         expect(sizes(model)).toEqual([50, 50]);
     });
 
+    it("remembers the layout of each panel set: hiding and showing a panel keeps the others' sizes", () => {
+        const model = group([
+            { id: "a", order: 0 },
+            { id: "b", order: 1 },
+            { id: "c", order: 2 },
+        ]);
+        model.run("group.set-layout", {
+            groupId: "g",
+            layout: { a: 20, b: 50, c: 30 },
+        });
+        model.run("panel.remove", { panelId: "c" });
+        // a set never seen takes its default layout
+        expect(sizes(model)).toEqual([50, 50]);
+        model.run("group.set-layout", {
+            groupId: "g",
+            layout: { a: 30, b: 70 },
+        });
+        model.run("panel.add", { id: "c", groupId: "g", order: 2 });
+        expect(sizes(model)).toEqual([20, 50, 30]);
+        expect(model.get("group-by", { id: "g" })?.pristine).toBe(false);
+        model.run("panel.remove", { panelId: "c" });
+        expect(sizes(model)).toEqual([30, 70]);
+        // the memory is not part of the document
+        expect(model.get("splitter-json")).toEqual({
+            version: 1,
+            groups: [
+                {
+                    id: "g",
+                    panels: [
+                        { id: "a", size: 30 },
+                        { id: "b", size: 70 },
+                    ],
+                },
+            ],
+        });
+    });
+
+    it("remembers only a layout the user changed, clamped to the constraints when it comes back", () => {
+        const model = group([{ id: "a" }, { id: "b" }]);
+        model.run("panel.add", { id: "c", groupId: "g" });
+        model.run("panel.remove", { panelId: "c" });
+        expect(model.get("group-by", { id: "g" })?.layoutMemory).toEqual({});
+        model.run("panel.resize", { panelId: "a", size: "10%" });
+        model.run("panel.add", { id: "c", groupId: "g" });
+        model.run("panel.update", { panelId: "a", minSize: "25%" });
+        model.run("panel.remove", { panelId: "c" });
+        expect(sizes(model)).toEqual([25, 75]);
+    });
+
     it("keeps the registration order on equal orders, and appends without one", () => {
         const model = group([{ id: "a" }, { id: "b" }]);
         model.run("panel.add", { id: "c", groupId: "g" });

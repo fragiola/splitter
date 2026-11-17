@@ -106,6 +106,7 @@ takes nothing takes `NoPayload`; `QueryArgs<P>` makes the payload optional then.
 | `layout` | `Layout` | each panel's size in percent, summing to 100 |
 | `measure` | `GroupMeasure` | what the engine measured of it (not saved) |
 | `pristine` | `boolean` | the layout is the default one: derived again when a new measure resolves its units |
+| `layoutMemory` | `Record<string, Layout>` | the last layout the user gave the group with each other set of panels, keyed by the JSON of the set's sorted panel ids; it comes back when the panels are that set again (not saved) |
 | `separators` | `Record<string, SeparatorOptions>` | what the separators' markup declares, by separator id |
 
 `PanelState` extends `PanelConstraints`:
