@@ -11,5 +11,5 @@ export default {
         "preserve-pixel-size",
         "preserve-relative-size",
     ],
-    docs: "/docs/concepts/sizes-and-units",
+    docs: "/docs/guides/size-constraints",
 } satisfies ExampleMeta;

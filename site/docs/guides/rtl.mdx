@@ -1,0 +1,60 @@
+---
+title: Right-to-left
+description: A horizontal group follows the inline direction it inherits. Under dir="rtl" its first panel is on the right, and drags and arrow keys mirror with it.
+---
+
+Right-to-left is a mirror, not a second layout. A horizontal group reads the inline direction
+its element computes (from a `dir` attribute on it or any ancestor): under `rtl` its first panel
+is on the right, a drag toward the start side shrinks the panel before the separator, and so does
+the arrow key pointing that way. Your markup and the layout's numbers do not change; your styles
+use logical sides.
+
+## Turning it on
+
+```tsx
+<div dir="rtl" lang="ar">
+    <Splitter.Group className="h-96">
+        <Splitter.Panel id="folders" defaultSize="25%" minSize="15%">
+            …
+        </Splitter.Panel>
+        <Splitter.Separator aria-label="تغيير حجم المجلدات" className="w-1" />
+        <Splitter.Panel id="messages">…</Splitter.Panel>
+    </Splitter.Group>
+</div>
+```
+
+The panels are flex items of a `flex-direction: row` group, so the browser already places them
+right to left; the engine reads the direction when the group binds, so pointer drags and the
+arrow keys follow it. A vertical group is the same in both directions.
+
+<Example id="rtl-layout" />
+
+## What mirrors
+
+| | `ltr` | `rtl` |
+| --- | --- | --- |
+| first panel | left | right |
+| drag the separator right | grows the panel before it | shrinks the panel before it |
+| **Right** arrow | grows the panel before it | shrinks the panel before it |
+| **Left** arrow | shrinks it | grows it |
+| `aria-valuenow` | the size of the panel before the separator | the same |
+
+The layout, the commands and the saved document are the same in both directions: a document
+saved in `ltr` restores the same panel sizes in `rtl`.
+
+## Logical styles
+
+Write sides as start and end (`padding-inline-start`, `border-inline-start`; Tailwind `ps-`,
+`border-s-`, `start-0`) so the same classes are right in both directions. Separators drawn with
+`inset-block` and widths need nothing more.
+
+## Changing the direction at runtime
+
+The engine reads a group's direction when it binds and whenever it measures it.
+`engine.get("direction-by", { groupId })` returns it. After switching `dir` on a mounted page
+(a language picker), ask for a measure so the drags follow:
+
+```ts
+document.documentElement.dir = "rtl";
+engine.run("measure", {});
+```

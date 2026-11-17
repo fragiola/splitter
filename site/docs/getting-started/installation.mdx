@@ -1,0 +1,68 @@
+---
+title: Installation
+description: Install the React package, which re-exports the whole core, or the framework-free core alone for Node, tests or another framework.
+---
+
+The React package is the only one a React app installs: it re-exports everything the core
+exports, so the model, the types and the pure rules come from the same import.
+
+<Tabs items={["pnpm", "npm", "yarn"]}>
+<Tab value="pnpm">
+
+```bash
+pnpm add @fragiola/splitter-react
+```
+
+</Tab>
+<Tab value="npm">
+
+```bash
+npm install @fragiola/splitter-react
+```
+
+</Tab>
+<Tab value="yarn">
+
+```bash
+yarn add @fragiola/splitter-react
+```
+
+</Tab>
+</Tabs>
+
+It needs `react` and `react-dom` 19 as peers. Nothing else: the package has no runtime
+dependency of its own and ships no stylesheet to import.
+
+## Importing
+
+```tsx
+import { createSplitterModel, Splitter, type SplitterJson } from "@fragiola/splitter-react";
+```
+
+`Splitter` is the namespace of the primitives (`Splitter.Group`, `Splitter.Panel`,
+`Splitter.Separator`); the hooks (`useSplitter`, `useSplitterRef`, `usePanel`, ...) are named
+exports beside it. The components are client components: in a framework with server components,
+render them from a file that starts with `"use client"`. They still render on the server (see
+[Server rendering](/docs/guides/server-rendering)).
+
+## The core alone
+
+`@fragiola/splitter` is the framework-free core: the model, its commands, the JSON document and
+its schema, the layout rules and the engine. It runs in plain Node with no DOM, which is what you
+want for a server that validates saved layouts or an assistant that drives one.
+
+```bash
+pnpm add @fragiola/splitter
+```
+
+```ts title="validate.ts"
+import { createSplitterModel, type SplitterJson, validateSplitter } from "@fragiola/splitter";
+
+/** A model of the saved layout, or of the defaults when the document is not valid. */
+export function loadLayout(json: unknown) {
+    const valid = validateSplitter(json).length === 0;
+    return createSplitterModel(valid ? (json as SplitterJson) : undefined);
+}
+```
+
+Both packages are ES modules with their types included.

@@ -7,5 +7,5 @@ export default {
     category: "layouts",
     order: 2,
     features: ["conditional rendering", "document order", "onLayoutChange"],
-    docs: "/docs/concepts/panels-and-order",
+    docs: "/docs/guides/conditional-panels",
 } satisfies ExampleMeta;

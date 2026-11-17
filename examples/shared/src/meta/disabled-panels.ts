@@ -7,5 +7,5 @@ export default {
     category: "constraints",
     order: 3,
     features: ["disabled", "Splitter.Separator disabled", "data-disabled"],
-    docs: "/docs/guides/disabled",
+    docs: "/docs/guides/size-constraints#disabled-panels-and-separators",
 } satisfies ExampleMeta;

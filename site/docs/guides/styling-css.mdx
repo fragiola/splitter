@@ -1,0 +1,160 @@
+---
+title: Styling with CSS
+description: Style groups, panels and separators with plain CSS from their data attributes, with a hairline on a wide hit area, cursors, and hover, drag and focus states.
+---
+
+The package writes the flex sizing and nothing else. The look of every part is yours: its
+colours, its separators' thickness and cursor, its focus ring. Everything a part shows about its
+state is an attribute, so a stylesheet styles it without a `className` function.
+
+The snippets below use one stylesheet and this markup:
+
+```tsx title="layout.tsx"
+import { Splitter } from "@fragiola/splitter-react";
+import "./splitter.css";
+
+export function Layout() {
+    return (
+        <Splitter.Group className="layout">
+            <Splitter.Panel id="files" defaultSize="25%" minSize="10%" className="pane">
+                …
+            </Splitter.Panel>
+            <Splitter.Separator aria-label="Resize files" className="separator" />
+            <Splitter.Panel id="editor" className="pane">
+                …
+            </Splitter.Panel>
+        </Splitter.Group>
+    );
+}
+```
+
+## The group and its panels
+
+```css title="splitter.css"
+.layout {
+    height: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.pane {
+    background: var(--surface);
+}
+/* scrolling is the content's: the panel itself is overflow: hidden */
+.pane > .scroll {
+    height: 100%;
+    overflow: auto;
+}
+```
+
+## A hairline with a wide hit area
+
+A separator takes the room you give it. A comfortable target for a pointer is wider than the line
+you want to see, so draw the line inside the element:
+
+```css title="splitter.css"
+.separator {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    outline: none;
+    user-select: none;
+}
+.separator[data-orientation="vertical"] {
+    width: 9px;
+    cursor: col-resize;
+}
+.separator[data-orientation="horizontal"] {
+    height: 9px;
+    cursor: row-resize;
+}
+.separator::before {
+    content: "";
+    position: absolute;
+    background: var(--line);
+    transition: background-color 120ms;
+}
+.separator[data-orientation="vertical"]::before {
+    inset-block: 0;
+    width: 1px;
+}
+.separator[data-orientation="horizontal"]::before {
+    inset-inline: 0;
+    height: 1px;
+}
+```
+
+`data-orientation` is the separator's **own** orientation: `vertical` for the bar between side by
+side panels. A cursor is cosmetic, so the package sets none.
+
+## Hover, drag and focus
+
+```css title="splitter.css"
+.separator:not([data-disabled]):hover::before {
+    background: var(--accent-soft);
+}
+.separator[data-dragging]::before {
+    background: var(--accent);
+}
+.separator:focus-visible::before {
+    background: var(--focus);
+    width: 2px;
+}
+.separator[data-disabled] {
+    cursor: not-allowed;
+}
+```
+
+While a pointer drags a separator, the group carries `data-dragging` too. Keep the cursor across
+the panels during a drag, and stop the panels' text from being selected:
+
+```css title="splitter.css"
+.layout[data-dragging] {
+    user-select: none;
+}
+.layout[data-orientation="horizontal"][data-dragging] * {
+    cursor: col-resize;
+}
+.layout[data-orientation="vertical"][data-dragging] * {
+    cursor: row-resize;
+}
+```
+
+## Collapsed panels
+
+```css title="splitter.css"
+.pane[data-collapsed] .label {
+    display: none;
+}
+.pane[data-collapsible]:not([data-collapsed]) {
+    min-width: 0;
+}
+```
+
+## Theming with custom properties
+
+Every value above is a custom property, so a theme is a block of values, and the markup does not
+change:
+
+```css title="splitter.css"
+:root {
+    --surface: #ffffff;
+    --line: #e5e7eb;
+    --accent-soft: #93c5fd;
+    --accent: #2563eb;
+    --focus: #2563eb;
+}
+[data-theme="dark"] {
+    --surface: #111827;
+    --line: #374151;
+    --accent-soft: #1d4ed8;
+    --accent: #60a5fa;
+    --focus: #93c5fd;
+}
+```
+
+<Example id="styling-showcase" />
+
+The examples follow this pattern with Tailwind and Fragiola UI palettes: see
+[Styling with Tailwind](/docs/guides/styling-tailwind).

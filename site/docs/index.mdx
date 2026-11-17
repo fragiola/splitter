@@ -1,0 +1,78 @@
+---
+title: Splitter — headless resizable panel groups for React
+description: Headless resizable panel groups for React, with drag, keyboard, collapse, nested groups and a saved JSON layout. It ships the behaviour; every pixel is yours.
+layout: landing
+---
+
+<Hero
+    eyebrow="@fragiola/splitter · React"
+    title="Resizable split views, without a single line of CSS from us."
+    description="Panels side by side or stacked, resized by pointer, keyboard or code, collapsible and nested, with a typed model and a JSON layout. It ships the behaviour and the accessibility. Every pixel is yours."
+    actions={[
+        { label: "Read the docs", href: "/docs/getting-started/introduction", variant: "primary", icon: "arrow" },
+        { label: "Browse {examples} examples", href: "/examples", variant: "secondary" },
+        { label: "GitHub", href: "https://github.com/fragiola/splitter", variant: "ghost", icon: "external" },
+    ]}
+/>
+
+<Example id="ide-layout" variant="showcase" theme="light" height={560} label="Same markup, two themes:" />
+
+<Section eyebrow="What it ships" title="Behaviour and accessibility, nothing to restyle" description="Three primitives over a framework-free core: everything that is not rendering lives in the core.">
+<Features columns={3}>
+<Feature title="Resizing">
+Pointer drags with pointer capture (mouse, touch and pen), the Window Splitter keys, a double
+click to reset, and commands from code.
+</Feature>
+<Feature title="Constraints in any unit">
+Minimums, maximums and defaults in `%`, `px`, `em`, `rem`, `vh` or `vw`, and panels that keep
+their pixels when the group resizes.
+</Feature>
+<Feature title="Collapsing">
+Panels that snap shut past a threshold, come back at the size they had, and expose
+`data-collapsed` for their content.
+</Feature>
+<Feature title="Nested groups">
+Groups inside panels share one model: one JSON document saves the whole layout, and every part has
+a path.
+</Feature>
+<Feature title="A typed model">
+Every change is a command with a JSON Schema, which middleware can veto or rewrite and an
+assistant can call.
+</Feature>
+<Feature title="RTL and server rendering">
+Right-to-left is a mirror, and the server HTML already has every panel's size.
+</Feature>
+</Features>
+</Section>
+
+<Section eyebrow="What stays yours" title="What it never ships">
+<Pills strike items={["CSS", "Cursors", "Icons", "Text", "A design system"]} />
+
+The state is exposed as `data-*` attributes and ARIA, so any styling works: Tailwind, plain CSS,
+CSS modules, CSS-in-JS. The examples use Fragiola UI and its palettes.
+</Section>
+
+<Section eyebrow="Start" title="Three primitives">
+
+```tsx
+import { Splitter } from "@fragiola/splitter-react";
+
+export function Editor() {
+    return (
+        <Splitter.Group className="h-96">
+            <Splitter.Panel id="files" defaultSize="25%" minSize="10%" collapsible>
+                …
+            </Splitter.Panel>
+            <Splitter.Separator aria-label="Resize files" className="w-1.5 bg-gray-200" />
+            <Splitter.Panel id="editor">…</Splitter.Panel>
+        </Splitter.Group>
+    );
+}
+```
+
+<Cards>
+<Card title="Your first split view" href="/docs/getting-started/first-split-view" description="Panels, separators, sizes and orientation." />
+<Card title="Saving a layout" href="/docs/guides/persistence" description="One JSON document for every group." />
+<Card title="Limitations" href="/docs/limitations" description="What React Resizable Panels has that this does not." />
+</Cards>
+</Section>

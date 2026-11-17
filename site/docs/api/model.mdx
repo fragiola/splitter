@@ -1,0 +1,204 @@
+---
+title: Model
+description: createSplitterModel and the model's state, its get and is keys, the types that describe groups and panels, and the pure layout rules behind them.
+---
+
+The model holds every group's panels, their constraints, their sizes and their collapsed state,
+as plain, frozen, JSON-shaped data that only commands change. It needs no DOM: it runs in Node,
+on a server and in tests. The outermost `Splitter.Group` creates one unless you pass yours.
+
+```ts
+import { createSplitterModel, type SplitterJson } from "@fragiola/splitter-react";
+
+declare const saved: SplitterJson | undefined;
+
+const model = createSplitterModel(saved, { createId: (kind) => `${kind}-${crypto.randomUUID()}` });
+model.get("layout-by", { groupId: "main" });
+model.is("panel-collapsed", { panelId: "sidebar" });
+```
+
+## `createSplitterModel`
+
+`createSplitterModel<T>(json?, options?)` returns a `SplitterModel<T>`, typed by your registry
+`T` (see [Typed data](/docs/concepts/typed-data)). `json` is a saved document (see
+[The JSON document](/docs/api/json-document)); an invalid one throws a `SplitterValidationError`.
+
+`SplitterModelOptions`:
+
+| option | type | description |
+| --- | --- | --- |
+| `createId` | `CreateId` | generates the id of a group or panel added without one: `(kind: IdKind) => string`, `IdKind` being `"group"` or `"panel"`; default `` `${kind}-${n}` `` (no `crypto` needed). An id in use is skipped and asked again |
+
+## The members
+
+Every member is one verb, and every method is bound (it can be passed around on its own):
+
+| member | does |
+| --- | --- |
+| `run(command, payload, options?)` | changes the state through the middleware chain; never throws on bad input |
+| `dispatch(input, options?)` | `run` for untrusted JSON `{ command, payload, transient? }`, validated |
+| `can(command, payload, options?)` | whether `run` would succeed now |
+| `check(command, payload, options?)` | what `run` would return, without committing |
+| `get(key, payload?)` | reads from the current state |
+| `is(key, payload)` | asks a yes/no question |
+| `use(middleware)` | adds a middleware around every command; returns its remover |
+| `subscribe(listener)` | listens to every commit; returns its remover |
+
+`run`, `dispatch`, `can`, `check`, `use` and `subscribe` are on [The command bus](/docs/api/command-bus).
+
+## `get` keys
+
+| key | payload | returns |
+| --- | --- | --- |
+| `"state"` | none | the whole `SplitterState` (a new object after every change) |
+| `"groups"` | none | every registered group, in registration order |
+| `"group-by"` | `{ id }` | a group, or undefined |
+| `"panel-by"` | `{ id }` | a panel, or undefined |
+| `"panels-by"` | `{ groupId }` | a group's panels, in order |
+| `"layout-by"` | `{ groupId }` | a group's layout: each panel's size in percent, by panel id |
+| `"panel-size-by"` | `{ panelId }` | a `PanelSize`: in percent, and in pixels once its group is measured |
+| `"panel-constraints-by"` | `{ panelId }` | its constraints resolved to percent (`ResolvedConstraints`) |
+| `"separators-by"` | `{ groupId }` | a group's separators, in order |
+| `"separator-by"` | `{ id }` | a separator by its id (`<beforePanelId>:<afterPanelId>`) |
+| `"separator-values-by"` | `{ separatorId }` | its `SeparatorValues`: `aria-valuenow`, `-min`, `-max` |
+| `"group-path-by"` | `{ groupId }` | its path (`/g0`, `/g0/p1/g0`) |
+| `"panel-path-by"` | `{ panelId }` | its path (`/g0/p1`) |
+| `"separator-path-by"` | `{ separatorId }` | its path (`/g0/s0`) |
+| `"splitter-json"` | none | the JSON document of the state: what `createSplitterModel(json)` restores |
+| `"commands"` | none | every command with its description and JSON Schemas (`CommandInfo[]`) |
+
+## `is` keys
+
+| key | payload | answers |
+| --- | --- | --- |
+| `"panel-collapsed"` | `{ panelId }` | the panel is collapsible and at its collapsed size |
+| `"panel-collapsible"` | `{ panelId }` | the panel can collapse |
+| `"panel-disabled"` | `{ panelId }` | no separator resizes it |
+| `"group-disabled"` | `{ groupId }` | none of its separators can be used |
+| `"group-measured"` | `{ groupId }` | the engine reported its size, so every unit resolves |
+| `"separator-disabled"` | `{ separatorId }` | it, or its group, is disabled |
+| `"separator-resettable"` | `{ separatorId }` | a double click on it would reset a panel |
+
+The key types are `ModelGetKey`, `ModelGetMap<T>`, `ModelGetPayload<T, K>` and
+`ModelGetResult<T, K>`, and `ModelIsKey`, `ModelIsMap<T>` and `ModelIsPayload<T, K>`. A key that
+takes nothing takes `NoPayload`; `QueryArgs<P>` makes the payload optional then.
+
+## The state
+
+`SplitterState`:
+
+| field | type | description |
+| --- | --- | --- |
+| `groups` | `Record<string, GroupState>` | the registered groups, by id |
+| `panels` | `Record<string, PanelState>` | the registered panels, by id |
+| `pending` | `Record<string, GroupJson>` | saved groups of the loaded document whose panels have not all registered yet |
+
+`GroupState`:
+
+| field | type | description |
+| --- | --- | --- |
+| `type` | `"group"` | |
+| `id` | `string` | its id |
+| `orientation` | `Orientation` | `"horizontal"` or `"vertical"` |
+| `parentPanelId` | `string` | the panel a nested group sits in |
+| `disabled` | `boolean` | no separator of the group can be used |
+| `panelIds` | `string[]` | its panels, in order |
+| `layout` | `Layout` | each panel's size in percent, summing to 100 |
+| `measure` | `GroupMeasure` | what the engine measured of it (not saved) |
+| `pristine` | `boolean` | the layout is the default one: derived again when a new measure resolves its units |
+| `separators` | `Record<string, SeparatorOptions>` | what the separators' markup declares, by separator id |
+
+`PanelState` extends `PanelConstraints`:
+
+| field | type | description |
+| --- | --- | --- |
+| `type` | `"panel"` | |
+| `id` | `string` | its id |
+| `groupId` | `string` | its group |
+| `order` | `number` | its document position: panels sort by it, then by when they were added |
+| `restoreSize` | `number` | the size in percent it returns to when it expands |
+| `minSize`, `maxSize`, `defaultSize`, `collapsedSize`, `collapsedThreshold` | `SizeValue` | its constraints as declared |
+| `collapsible`, `disabled` | `boolean` | |
+| `groupResizeBehavior` | `GroupResizeBehavior` | `"preserve-relative-size"` or `"preserve-pixel-size"` |
+
+`SeparatorState` (derived, never registered), with `SeparatorOptions` (what its markup declares,
+`disabled` and `resetOnDoubleClick`):
+
+| field | type | description |
+| --- | --- | --- |
+| `type` | `"separator"` | |
+| `id` | `string` | `<beforePanelId>:<afterPanelId>` |
+| `groupId` | `string` | its group |
+| `index` | `number` | its position among the group's separators |
+| `panelIds` | `[string, string]` | the panels before and after it |
+| `disabled` | `boolean` | it, or its group, is disabled |
+| `resetOnDoubleClick` | `boolean` | a double click resets its panel |
+
+`Layout` is `Record<string, number>`. `SplitterTypes` is the registry shape, `AnyTypes` the
+default one (any string id); `GroupIdOf<T>` and `PanelIdOf<T>` read their id types.
+
+`PanelSize`, what `panel-size-by` and a panel's `onResize` give:
+
+| field | type | description |
+| --- | --- | --- |
+| `percentage` | `number` | the size in percent of its group |
+| `pixels` | `number \| undefined` | the size in pixels; undefined until its group is measured |
+
+## Resolved constraints and measures
+
+`ResolvedConstraints` is a panel's constraints in percent of its group, what the rules use: a
+size that cannot be resolved yet counts as absent.
+
+| field | type | description |
+| --- | --- | --- |
+| `panelId` | `string` | the panel |
+| `minSize`, `maxSize` | `number` | its limits in percent (0 and 100 when absent) |
+| `defaultSize` | `number \| undefined` | its default size in percent |
+| `collapsible` | `boolean` | |
+| `collapsedSize` | `number` | in percent |
+| `collapsedThreshold` | `number \| undefined` | in percent |
+| `disabled` | `boolean` | |
+| `groupResizeBehavior` | `GroupResizeBehavior` | |
+
+`GroupMeasure`, what `group.measure` reports:
+
+| field | type | description |
+| --- | --- | --- |
+| `axisSize` | `number` | the group's size along its orientation in pixels: the sum of its panels |
+| `fontSize` | `number` | the group element's font size (what `em` resolves against) |
+| `rootFontSize` | `number` | the root element's font size (`rem`) |
+| `viewportWidth`, `viewportHeight` | `number` | the viewport (`vw`, `vh`) |
+
+## Units
+
+| export | does |
+| --- | --- |
+| `SizeValue` | a declared size: a number (pixels) or a string (`"30%"`, `"240px"`, `"15rem"`, `"2em"`, `"40vh"`, `"25vw"`, or `"30"` for percent) |
+| `SizeUnit` | `"%" \| "px" \| "em" \| "rem" \| "vh" \| "vw"` |
+| `parseSize(size)` | splits a size into a `ParsedSize` (`value`, `unit`), or undefined when invalid |
+| `sizeToPixels(size, measure)` | a size in pixels, or undefined when the measure it needs is missing |
+| `sizeToPercentage(size, measure)` | a size in percent of its group, or undefined when it cannot resolve yet |
+
+## The pure rules
+
+The model's rules are exported as pure functions (they never mutate their input), for tools,
+tests and adapters of your own. Each takes `ResolvedConstraints` in panel order.
+
+| export | does |
+| --- | --- |
+| `defaultLayout(constraints)` | the default layout: each `defaultSize`, the rest shared equally, validated |
+| `validateLayout(layout, constraints)` | the valid layout closest to `layout`: scaled to 100 and clamped |
+| `normalizeLayout(layout, panelIds)` | a layout scaled to sum to 100, without constraints |
+| `adjustLayoutByDelta(input: AdjustLayoutByDeltaInput)` | the layout after a separator moves by `delta` percent (`initialLayout`, `prevLayout`, `constraints`, `pivotIndices`, `trigger`) |
+| `resizePanel(input: ResizePanelInput)` | the layout after one panel takes `size` (`layout`, `constraints`, `panelId`, `size`, `allowPartialSize`) |
+| `validatePanelSize(input: ValidatePanelSizeInput)` | the size a panel takes when `size` is asked: snapped at its collapse threshold, clamped (`constraints`, `prevSize`, `size`, `overrideDisabled`) |
+| `preservePixelSizes(input: PreservePixelSizesInput)` | the layout after the group resized, `preserve-pixel-size` panels keeping their pixels (`layout`, `constraints`, `prevAxisSize`, `nextAxisSize`) |
+| `resolveConstraints(panelId, declared, measure)` | a panel's `PanelConstraints` resolved to percent |
+| `separatorValues(layout, constraints, index)` | the `SeparatorValues` of the separator after panel `index`: `panelId`, `valueNow`, `valueMin`, `valueMax` |
+
+Their input types are `AdjustLayoutByDeltaInput`, `ResizePanelInput`, `ValidatePanelSizeInput`
+and `PreservePixelSizesInput`.
+
+`ResizeTrigger` (`"pointer" \| "keyboard" \| "code"`) says what started a change: a pointer
+snaps a collapsible panel at its threshold, the keyboard collapses it in one step, and code may
+resize a disabled panel.

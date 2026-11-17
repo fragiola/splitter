@@ -1,0 +1,158 @@
+---
+title: The model and commands
+description: Every change is a command run through middleware, from a drag to a button. Run commands from code, veto or rewrite them, and listen to every commit.
+---
+
+The model's state is plain, frozen, JSON-shaped data, and only commands change it. A drag, a key
+press, a double click, a prop that changed and a button in your toolbar all end in the same
+place: `model.run(command, payload)`. That is what lets you drive a layout from anywhere, refuse
+a change whoever asked for it, and record every change for undo or persistence.
+
+## Running a command
+
+`model.run` returns a result, never throws on bad input:
+
+```ts
+const result = model.run("panel.resize", { panelId: "sidebar", size: "30%" });
+if (result.ok) {
+    console.log(result.value.size); // the size it took, in percent
+} else {
+    console.log(result.error.code); // "not_found", "refused", "vetoed", ...
+}
+```
+
+`model.can` says whether `run` would succeed, `model.check` returns what it would return, and
+neither commits anything. Use them to enable a button:
+
+```tsx
+<button
+    type="button"
+    disabled={!model.can("panel.expand", { panelId: "terminal" })}
+    onClick={() => model.run("panel.expand", { panelId: "terminal" })}
+>
+    Show the terminal
+</button>
+```
+
+The commands are listed, with their payloads, results and errors, on
+[Commands](/docs/api/commands). The ones you call most:
+
+| command | does |
+| --- | --- |
+| `panel.resize` | gives a panel a size, in any unit; the others make room |
+| `panel.collapse` / `panel.expand` | collapses a collapsible panel, or gives it back the size it had |
+| `group.set-layout` | sets a whole layout at once (validated against the constraints) |
+| `group.reset` | puts a group back to its default layout |
+| `batch` | runs several commands as one atomic step |
+
+## From outside the group
+
+A toolbar above the group reaches the model through an external ref:
+
+```tsx
+"use client";
+
+import { Splitter, type SplitterRef, useSplitter, useSplitterRef } from "@fragiola/splitter-react";
+
+function Toolbar({ splitterRef }: { splitterRef: SplitterRef }) {
+    const splitter = useSplitter(splitterRef); // null until the group mounts
+    if (!splitter) return null;
+    const { model, groupId } = splitter;
+    return (
+        <div role="toolbar" aria-label="Layout">
+            <button type="button" onClick={() => model.run("panel.resize", { panelId: "sidebar", size: "20%" })}>
+                Narrow sidebar
+            </button>
+            <button type="button" onClick={() => model.run("group.reset", { groupId })}>
+                Reset
+            </button>
+        </div>
+    );
+}
+
+export function Editor() {
+    const splitterRef = useSplitterRef();
+    return (
+        <>
+            <Toolbar splitterRef={splitterRef} />
+            <Splitter.Group id="editor-layout" splitterRef={splitterRef} className="h-96">
+                <Splitter.Panel id="sidebar" defaultSize="25%" minSize="10%">…</Splitter.Panel>
+                <Splitter.Separator aria-label="Resize sidebar" className="w-1" />
+                <Splitter.Panel id="editor">…</Splitter.Panel>
+            </Splitter.Group>
+        </>
+    );
+}
+```
+
+<Example id="controlled-from-code" />
+
+You can also create the model yourself with `createSplitterModel()` and pass it to the root
+group's `model` prop: code that holds it needs no ref at all.
+
+## Middleware: veto or rewrite
+
+`model.use` adds a function around every command, whoever issued it. Return an error without
+calling `next` to veto (`veto()` builds one), assign `ctx.payload` to rewrite, or call `next()`
+and look at the result to observe. Checking `ctx.command` narrows `ctx.payload`.
+
+```ts
+import { createSplitterModel, veto } from "@fragiola/splitter-react";
+
+const model = createSplitterModel();
+
+// while a presentation runs, nobody resizes the panels: not a drag, not a key, not a button
+let presenting = false;
+model.use((ctx, next) => {
+    if (presenting && (ctx.command === "separator.move" || ctx.command === "panel.resize")) {
+        return veto("the layout is locked while presenting");
+    }
+    return next();
+});
+
+export function startPresenting() {
+    presenting = true;
+}
+```
+
+A vetoed drag puts the panels back where the drag started: the engine runs the drag's steps as
+transient commands, then one final `separator.move`, and restores the origin when that final one
+is refused.
+
+## Listening: every commit
+
+`model.subscribe` calls a listener once per committed command, with the state `before` and
+`after`, whether it was `transient` (a drag step) and its `meta`:
+
+```ts
+const stop = model.subscribe((event) => {
+    if (event.transient) return; // a drag in progress
+    console.log(event.command, event.after.groups);
+});
+```
+
+States are immutable: an untouched group keeps its object, so `before.groups.main ===
+after.groups.main` means that group did not change. This is all [undo and
+redo](/docs/guides/undo-redo) and [persistence](/docs/guides/persistence) need.
+
+## Transient steps and batches
+
+`{ transient: true }` marks a step of a gesture. A drag sends one `separator.move` per pointer
+move with it, then a final non-transient one; `onLayoutChange` sees every step,
+`onLayoutCommit` only the final one. `batch` runs a list of commands as one step: they all apply
+or none does, and listeners receive one event with every step in `commands`.
+
+```ts
+model.run("batch", {
+    commands: [
+        { command: "panel.collapse", payload: { panelId: "sidebar" } },
+        { command: "panel.expand", payload: { panelId: "terminal" } },
+    ],
+});
+```
+
+## The full surface
+
+[The command bus](/docs/api/command-bus) documents `run`, `can`, `check`, `dispatch`, `use` and
+`subscribe`, the result and the error codes; [Commands](/docs/api/commands) is generated from the
+registry.

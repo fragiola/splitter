@@ -1,0 +1,89 @@
+---
+title: Server rendering
+description: The server HTML already has every panel's size, so hydration moves nothing. Restore a saved layout on the server from a cookie for a first paint without a jump.
+---
+
+The primitives render on the server like any React component, and their only inline style is
+the flex sizing, computed from the layout without measuring anything. The HTML the server sends
+has the right sizes, and hydrating it changes no attribute and no style. Where the saved layout
+comes from is yours.
+
+## What the server renders
+
+- **Sizes.** With a saved document, a `layout` or a `defaultLayout`, every panel's `flex` is its
+  size in percent. Without one, a panel with a `defaultSize` renders `flex: 0 1 <defaultSize>` in
+  its own unit and the others share the rest: the default layout, before any measure.
+- **Ids.** Groups and panels without an `id` get one from `useId`, the same on the server and the
+  client.
+- **Not yet:** paths (`data-splitter-path`) and the separators' ARIA values. A part registers in
+  the browser before the first paint, and then has them.
+
+The components are client components: render them from a module that starts with `"use client"`
+in a framework with server components. They are still rendered on the server.
+
+## A saved layout without a jump
+
+When the layout is saved in `localStorage`, the server cannot read it and renders the defaults,
+and the client then shows the saved sizes. To send the saved sizes in the HTML, store the
+document where the server sees it, a cookie for instance, and restore it on both sides:
+
+```tsx title="app/workbench.tsx"
+"use client";
+
+import { createSplitterModel, Splitter, type SplitterJson, validateSplitter } from "@fragiola/splitter-react";
+import { useEffect, useState } from "react";
+
+/** The model of the saved document, or of the defaults when there is none or it is invalid. */
+function restore(saved: string | undefined) {
+    let json: unknown;
+    try {
+        json = saved === undefined ? undefined : JSON.parse(saved);
+    } catch {
+        json = undefined;
+    }
+    const valid = json !== undefined && validateSplitter(json).length === 0;
+    return createSplitterModel(valid ? (json as SplitterJson) : undefined);
+}
+
+export function Workbench({ saved }: { saved: string | undefined }) {
+    const [model] = useState(() => restore(saved));
+    useEffect(
+        () =>
+            model.subscribe((event) => {
+                if (event.transient) return;
+                const value = encodeURIComponent(JSON.stringify(model.get("splitter-json")));
+                document.cookie = `layout=${value}; path=/; max-age=31536000; samesite=lax`;
+            }),
+        [model],
+    );
+    return (
+        <Splitter.Group id="workbench" model={model} className="h-dvh">
+            <Splitter.Panel id="sidebar" defaultSize="25%" minSize="10%">
+                …
+            </Splitter.Panel>
+            <Splitter.Separator aria-label="Resize sidebar" className="w-1" />
+            <Splitter.Panel id="editor">…</Splitter.Panel>
+        </Splitter.Group>
+    );
+}
+```
+
+```tsx title="app/page.tsx"
+import { cookies } from "next/headers";
+import { Workbench } from "./workbench";
+
+export default async function Page() {
+    const cookie = (await cookies()).get("layout")?.value;
+    return <Workbench saved={cookie === undefined ? undefined : decodeURIComponent(cookie)} />;
+}
+```
+
+The server creates the same model from the same document, so its HTML and the first client
+render agree, and the user never sees the default layout first.
+
+## Units on the server
+
+Nothing is measured on the server, so only percentages resolve there. A layout saved in the
+document is in percent, so it renders exactly. A `defaultSize` in pixels or rems is written as
+the flex basis in its own unit and is exact too; `minSize` and `maxSize` in those units apply
+once the engine measures the group in the browser, before the first paint.

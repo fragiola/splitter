@@ -1,0 +1,78 @@
+---
+title: Nested groups
+description: Put a group inside a panel to mix horizontal and vertical splits. Nested groups share one model, so one document saves them all, with paths to every part.
+---
+
+An editor beside a sidebar, above a terminal: that is a vertical group inside a panel of a
+horizontal one. Nesting needs nothing but the markup. A `Splitter.Group` rendered inside a
+`Splitter.Panel` joins the outer group's model and engine, so commands, middleware, listeners and
+the saved document cover every level at once.
+
+## A group in a panel
+
+```tsx title="workbench.tsx"
+"use client";
+
+import { Splitter } from "@fragiola/splitter-react";
+
+export function Workbench() {
+    return (
+        <Splitter.Group id="workbench" className="h-full">
+            <Splitter.Panel id="sidebar" defaultSize="28%" minSize="15%">
+                …
+            </Splitter.Panel>
+            <Splitter.Separator aria-label="Resize sidebar" className="w-1" />
+            <Splitter.Panel id="main">
+                <Splitter.Group id="main-split" orientation="vertical" className="h-full">
+                    <Splitter.Panel id="editor" defaultSize="65%">
+                        …
+                    </Splitter.Panel>
+                    <Splitter.Separator aria-label="Resize editor" className="h-1" />
+                    <Splitter.Panel id="terminal" minSize="10%" collapsible>
+                        …
+                    </Splitter.Panel>
+                </Splitter.Group>
+            </Splitter.Panel>
+        </Splitter.Group>
+    );
+}
+```
+
+The inner group needs the panel's full size (`h-full`): a panel is a flex item, the group inside
+it a block like any other (see [Sizing the group](/docs/getting-started/sizing)).
+
+<Example id="nested-groups" />
+
+## What nesting shares
+
+- **One model.** `model.get("groups")` lists both groups, and `model.get("splitter-json")`
+  saves both layouts in one document. Ids are unique across the whole model, not per group.
+- **One engine.** It measures every group and runs every drag; each separator resizes its own
+  group only.
+- **One root.** The outermost group owns the model, reads `keyboardStep` and
+  `resetOnDoubleClick`, and holds the `splitterRef`. A nested group ignores those props.
+- **Paths.** The inner group's path starts with its panel's: `/g0/p1/g0`, its panels
+  `/g0/p1/g0/p0`, its separator `/g0/p1/g0/s0`. See [Paths](/docs/concepts/paths).
+
+`group.add` records the panel a nested group sits in as `parentPanelId`; removing the outer group
+does not remove the inner one from the model by itself (React unmounts both).
+
+## Several levels
+
+Groups nest to any depth. An IDE layout is three: the workbench (explorer and workspace), the
+workspace (editors above the terminal) and the editors (editor beside the outline).
+
+<Example id="ide-layout" />
+
+## A separate model
+
+A nested group given its own `model` is a root of its own: its own engine, its own document, its
+own `/g0`. Use it when an inner split belongs to another feature that saves its layout elsewhere.
+
+```tsx
+<Splitter.Panel id="preview">
+    <Splitter.Group model={previewModel} orientation="vertical" className="h-full">
+        …
+    </Splitter.Group>
+</Splitter.Panel>
+```

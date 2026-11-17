@@ -1,0 +1,103 @@
+---
+title: Conditional panels
+description: Show and hide panels by rendering them conditionally. Each lands where the markup puts it, with its separator; keep sizes across toggles by collapsing instead.
+---
+
+A panel rendered conditionally registers when it mounts and leaves the model when it unmounts.
+The package keeps the order right and gives the room to the others; whether a panel is shown is
+your state.
+
+## Rendering a panel conditionally
+
+Render the panel and its separator together:
+
+```tsx
+"use client";
+
+import { Splitter } from "@fragiola/splitter-react";
+
+export function Editor({ sidebar, inspector }: { sidebar: boolean; inspector: boolean }) {
+    return (
+        <Splitter.Group className="h-96">
+            {sidebar && (
+                <>
+                    <Splitter.Panel id="sidebar" defaultSize="25%" minSize="10%">
+                        …
+                    </Splitter.Panel>
+                    <Splitter.Separator aria-label="Resize sidebar" className="w-1" />
+                </>
+            )}
+            <Splitter.Panel id="editor" minSize="20%">
+                …
+            </Splitter.Panel>
+            {inspector && (
+                <>
+                    <Splitter.Separator aria-label="Resize inspector" className="w-1" />
+                    <Splitter.Panel id="inspector" defaultSize="25%" minSize="10%">
+                        …
+                    </Splitter.Panel>
+                </>
+            )}
+        </Splitter.Group>
+    );
+}
+```
+
+- **Order comes from the document.** The inspector shown again is the last panel, because it is
+  last in the markup, however late it mounts.
+- **Separators follow the panels.** The n-th separator element is the one after the n-th panel,
+  so a separator that goes with its panel keeps every other separator in its place.
+- **Ids matter.** Give conditional panels explicit ids, so a saved layout and your code name
+  the same panel every time it mounts.
+
+<Example id="conditional-panels" />
+
+## What happens to the sizes
+
+When the set of panels changes, the group takes the **default layout of the new set**: each
+panel with a `defaultSize` takes it, and the others share the rest. The sizes the user gave the
+other panels are not kept, and a panel shown again does not come back at the size it had. (React
+Resizable Panels remembers a layout per set of panels in memory; this package does not yet. See
+[Limitations](/docs/limitations).) A saved document's layout applies again once the group holds
+exactly the panels it saved.
+
+## Keeping the sizes: collapse instead
+
+A panel that the user hides and shows again is usually better as a collapsible panel collapsed to
+0: it stays registered, the others keep their sizes, and expanding gives it back the size it had.
+
+```tsx
+"use client";
+
+import { Splitter, useSplitter, useSplitterRef } from "@fragiola/splitter-react";
+
+export function Editor() {
+    const splitterRef = useSplitterRef();
+    const splitter = useSplitter(splitterRef);
+    function toggleInspector() {
+        if (!splitter) return;
+        const { model } = splitter;
+        const hidden = model.is("panel-collapsed", { panelId: "inspector" });
+        model.run(hidden ? "panel.expand" : "panel.collapse", { panelId: "inspector" });
+    }
+    return (
+        <>
+            <button type="button" onClick={toggleInspector}>
+                Inspector
+            </button>
+            <Splitter.Group splitterRef={splitterRef} className="h-96">
+                <Splitter.Panel id="editor" minSize="20%">
+                    …
+                </Splitter.Panel>
+                <Splitter.Separator aria-label="Resize inspector" className="w-1" />
+                <Splitter.Panel id="inspector" defaultSize="25%" minSize="10%" collapsible>
+                    <div className="h-full in-data-collapsed:hidden">…</div>
+                </Splitter.Panel>
+            </Splitter.Group>
+        </>
+    );
+}
+```
+
+The collapsed panel's content is hidden from its own `data-collapsed`, so assistive technology
+does not reach it either. Its separator stays, so the user can drag the panel back open.

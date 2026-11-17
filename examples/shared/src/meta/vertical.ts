@@ -7,5 +7,5 @@ export default {
     category: "getting-started",
     order: 2,
     features: ['orientation="vertical"', "aria-orientation", "minSize"],
-    docs: "/docs/getting-started/first-splitter",
+    docs: "/docs/getting-started/first-split-view",
 } satisfies ExampleMeta;

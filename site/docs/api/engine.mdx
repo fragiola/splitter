@@ -1,0 +1,113 @@
+---
+title: Engine
+description: The engine binds a model's groups to the DOM. It measures them, runs pointer drags and keys on their separators, and answers what only the screen knows.
+---
+
+The engine is the model's groups on screen. It measures each bound group (with its element's own
+`ResizeObserver`) and reports the measure through `group.measure`, runs pointer drags (with
+pointer capture) and the Window Splitter keys on its separators, and answers what depends on the
+DOM: the separators' ARIA attributes with DOM ids, each group's direction, what is dragging. It
+changes the model only by running commands, and it never touches the global `document` or
+`window`: every element is reached through its own `ownerDocument` and `defaultView`, so it
+works in an iframe or a popup.
+
+The root `Splitter.Group` creates it; reach it with `useSplitter()` or an
+[external ref](/docs/api/external-ref):
+
+```tsx
+import { useSplitter } from "@fragiola/splitter-react";
+
+function DirectionBadge() {
+    const { engine, groupId } = useSplitter();
+    return <span>{engine.get("direction-by", { groupId })}</span>;
+}
+```
+
+## `createSplitterEngine`
+
+`createSplitterEngine(model, options?)` returns a `SplitterEngine` for any number of the model's
+groups. An adapter calls it; an app only does to write an adapter of its own. Creating one has no
+side effect: it listens to the model only while a group is bound.
+
+`SplitterEngineOptions` (the root group's props of the same names):
+
+| option | type | default | description |
+| --- | --- | --- | --- |
+| `keyboardStep` | `number` | `5` | how far an arrow key moves a separator, in percent of its group |
+| `resetOnDoubleClick` | `boolean` | `true` | a double click on a separator resets its panel to its default size |
+
+## The members
+
+| member | does |
+| --- | --- |
+| `run(action, payload)` | performs a screen action (never a command) |
+| `can(action, payload)` | whether `run` would succeed now |
+| `check(action, payload)` | what `run` would return, without doing it |
+| `get(key, payload?)` | reads a fact of the groups on screen |
+| `is(key, payload)` | asks a yes/no question about them |
+| `use(middleware: EngineMiddleware)` | adds a middleware around every action; returns its remover |
+| `subscribe(listener: EngineListener)` | listens to what the engine shows changing; returns its remover |
+| `dispatch(input)` | `run` for untrusted JSON `{ action, payload }`, validated |
+| `adapter` | what only adapters call (below) |
+
+## Actions
+
+| key | payload | result | does |
+| --- | --- | --- | --- |
+| `"measure"` | `{ groupId? }` | `{ groupIds }` | measures the bound groups (or one) again, through `group.measure`; call it after a change the engine cannot observe, such as a `dir` switch |
+| `"focus-separator"` | `{ separatorId }` | `{ separatorId }` | moves focus to a bound separator |
+
+The types: `EngineActionKey`, `EngineActionMap`, `EngineActionPayload<K>`, `EngineActionResult<K>`.
+An `EngineMiddleware` is `(ctx, next) => CommandResult | undefined`, the context an
+`EngineActionContext` holding `action`, `dryRun` and `payload`.
+
+## `get` keys
+
+| key | payload | returns |
+| --- | --- | --- |
+| `"separator-aria-by"` | `{ separatorId }` | its `SeparatorAria`, ready to spread on its element |
+| `"direction-by"` | `{ groupId }` | `"ltr"` or `"rtl"`: the group's computed inline direction |
+| `"dragging-separator-id"` | none | the separator a pointer is dragging, if any |
+
+`SeparatorAria` holds `role`, `aria-orientation` (across the group's), `aria-valuenow`,
+`aria-valuemin`, `aria-valuemax`, `aria-controls` (the DOM id of the panel before it, when it
+has one) and `aria-disabled`. The types: `EngineGetKey`, `EngineGetMap`, `EngineGetPayload<K>`,
+`EngineGetResult<K>`.
+
+## `is` keys
+
+| key | payload | answers |
+| --- | --- | --- |
+| `"separator-dragging"` | `{ separatorId }` | a pointer is dragging it |
+| `"group-dragging"` | `{ groupId }` | a pointer is dragging one of its separators |
+| `"group-bound"` | `{ groupId }` | the group is bound to an element |
+
+The types: `EngineIsKey`, `EngineIsMap`, `EngineIsPayload<K>`.
+
+## Events
+
+An `EngineListener` receives `EngineEvent`s: `{ type: "dragging", separatorId }` when a drag
+starts (and `separatorId: undefined` when it ends), `{ type: "direction", groupId, direction }`
+when a group's direction changes, and `{ type: "action", action, payload, result }` after an
+action ran.
+
+## The keyboard as a pure function
+
+`separatorKeyIntent(input)` is what a key does on a focused separator, the rule the engine
+applies: a `SeparatorKeyInput` (`{ key, shiftKey?, orientation, direction, step }`) in, a
+`SeparatorKeyIntent` out (`{ type: "move", delta }`, `{ type: "toggle" }`,
+`{ type: "cycle", backwards }`), or undefined for a key it ignores.
+
+## The adapter
+
+`engine.adapter` is a `SplitterEngineAdapter`: what an adapter calls to bind the elements its
+framework rendered. Apps and examples never touch it. Each `bind` returns its unbinder.
+
+| member | does |
+| --- | --- |
+| `bindGroup(groupId, element)` | binds a group: the engine measures it, reads its direction and reports both |
+| `bindPanel(panelId, element)` | binds a panel: its size is part of its group's measure |
+| `bindSeparator(separatorId, element)` | binds a separator: pointer drags, keys and double clicks on it resize its panels |
+| `syncOrder(groupId)` | sorts the group's panels by the document position of their elements, in one `batch` of `panel.update { order }` |
+| `syncSeparators(groupId, elements)` | binds a group's separator elements by document order (the n-th is the n-th separator); returns each one's separator id |
+| `destroy()` | unbinds everything and stops observing |

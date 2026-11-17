@@ -1,0 +1,117 @@
+---
+title: Hooks
+description: useSplitter reaches the model and engine; useGroup, usePanel and useSeparator are the layer under each part, returning its state and the props of its element.
+---
+
+The hooks are the lower layer of the primitives. `useSplitter` is the one an app calls most: it
+gives a component inside a group (or anywhere, with a ref) the model and the engine. `useGroup`,
+`usePanel` and `useSeparator` return a part's state and the props of its element, to build a
+part of your own; `useSplitterRef` is on [External ref](/docs/api/external-ref).
+
+## `useSplitter`
+
+```tsx
+import { useSplitter } from "@fragiola/splitter-react";
+
+function ResetButton() {
+    const { model, groupId } = useSplitter(); // inside a Splitter.Group
+    return (
+        <button type="button" onClick={() => model.run("group.reset", { groupId })}>
+            Reset
+        </button>
+    );
+}
+```
+
+- `useSplitter<T>()`: inside a `Splitter.Group`, its model and engine, and the enclosing group's
+  id. It throws outside a group.
+- `useSplitter<T>(splitterRef)`: the root group's that holds the ref, from anywhere, or `null`
+  while none does. It re-renders when a group takes or releases the ref.
+
+It returns a `SplitterContextValue<T>`:
+
+| field | type | description |
+| --- | --- | --- |
+| `model` | `SplitterModel<T>` | the model of every group of the splitter (see [Model](/docs/api/model)) |
+| `engine` | `SplitterEngine` | the engine of its groups on screen (see [Engine](/docs/api/engine)) |
+| `groupId` | `GroupIdOf<T>` | the enclosing group (inside a group), or the root group (through a ref) |
+
+The hook returns stable objects: it does not re-render on every model change. Follow values with
+the parts' callbacks, or subscribe to the model.
+
+## `useGroup`
+
+`useGroup()` returns the enclosing group's state and the props of its element
+(`UseGroupResult`). `Splitter.Group` creates or joins the model and registers the group; this
+hook only reads it, so it serves a component inside a group that wants the group's state:
+
+```tsx
+import { useGroup } from "@fragiola/splitter-react";
+
+function DragHint() {
+    const { state } = useGroup();
+    return state.dragging ? <p role="status">Release to apply the new size</p> : null;
+}
+```
+
+| field | type | description |
+| --- | --- | --- |
+| `state` | `GroupPartState` | `id`, `orientation`, `disabled`, `dragging`, `path` (see [Group](/docs/api/group#state)) |
+| `props` | `{ ref, style } & data-*` | the ref that binds the group's element, its structural style and its `data-*` |
+
+## `usePanel`
+
+`usePanel(options)` registers a panel in the enclosing group and returns its state and the props
+of its element (`UsePanelResult`). The options (`UsePanelOptions<T>`) are the props of
+[`Splitter.Panel`](/docs/api/panel#props): `id`, `minSize`, `maxSize`, `defaultSize`,
+`collapsible`, `collapsedSize`, `collapsedThreshold`, `disabled`, `groupResizeBehavior`,
+`onResize`, `onCollapse` and `onExpand`.
+
+| field | type | description |
+| --- | --- | --- |
+| `state` | `PanelPartState` | `id`, `size`, `collapsed`, `collapsible`, `disabled`, `path` (see [Panel](/docs/api/panel#state)) |
+| `props` | `{ id, ref, style } & data-*` | its DOM `id` (the panel id), the ref that binds it, its structural style, its `data-*` |
+
+A group nested inside an element of your own built on `usePanel` does not nest in it: use
+`Splitter.Panel` as the parent of a nested group.
+
+## `useSeparator`
+
+`useSeparator(options)` binds a separator element of the enclosing group (its options run
+`separator.update`) and returns its state and the props of its element (`UseSeparatorResult`).
+The options (`UseSeparatorOptions`) are `disabled` and `resetOnDoubleClick`.
+
+```tsx
+import { useSeparator } from "@fragiola/splitter-react";
+
+export function Rule({ label }: { label: string }) {
+    const { props } = useSeparator();
+    return <hr {...props} aria-label={label} />;
+}
+```
+
+| field | type | description |
+| --- | --- | --- |
+| `state` | `SeparatorPartState` | `id`, `orientation`, `disabled`, `dragging`, `path` (see [Separator](/docs/api/separator#state)) |
+| `props` | `{ ref, role, tabIndex, style } & ARIA & data-*` | the ref that binds it (the engine listens to its pointer, keyboard and double click events), `role="separator"`, its Window Splitter ARIA values, `tabIndex` (none while disabled), its structural style and `data-*` |
+
+## Every field
+
+The hooks' types, field by field:
+
+| field | of | description |
+| --- | --- | --- |
+| `state` | `UseGroupResult`, `UsePanelResult`, `UseSeparatorResult` | the part's state |
+| `props` | `UseGroupResult`, `UsePanelResult`, `UseSeparatorResult` | what goes on the part's element |
+| `id` | `GroupPartState`, `PanelPartState`, `SeparatorPartState`, `UsePanelOptions` | the part's id |
+| `orientation` | `GroupPartState`, `SeparatorPartState` | the group's orientation, or the separator's own |
+| `disabled` | every state, `UsePanelOptions`, `UseSeparatorOptions` | the part cannot be used, or is not moved by a separator |
+| `dragging` | `GroupPartState`, `SeparatorPartState` | a pointer drags the separator, or one of the group's |
+| `path` | every state | its path, once registered |
+| `size` | `PanelPartState` | the panel's size in percent |
+| `collapsed` | `PanelPartState` | the panel is collapsed |
+| `collapsible` | `PanelPartState`, `UsePanelOptions` | the panel can collapse |
+| `minSize`, `maxSize`, `defaultSize`, `collapsedSize`, `collapsedThreshold`, `groupResizeBehavior` | `UsePanelOptions` | the panel's constraints |
+| `onResize`, `onCollapse`, `onExpand` | `UsePanelOptions` | the panel's callbacks |
+| `resetOnDoubleClick` | `UseSeparatorOptions` | a double click resets its panel |
+| `model`, `engine`, `groupId` | `SplitterContextValue` | what `useSplitter` returns |

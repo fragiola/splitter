@@ -7,5 +7,5 @@ export default {
     category: "layouts",
     order: 1,
     features: ["nested Splitter.Group", "one model", "data-splitter-path"],
-    docs: "/docs/concepts/nesting",
+    docs: "/docs/guides/nested-groups",
 } satisfies ExampleMeta;

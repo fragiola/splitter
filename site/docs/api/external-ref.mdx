@@ -1,0 +1,87 @@
+---
+title: External ref
+description: useSplitterRef and createSplitterRef give code outside the root group (a toolbar, a menu, a store) the splitter's model and engine, and follow it as it mounts.
+---
+
+Code outside the root group cannot read the group's context. An external ref bridges the gap:
+give it to the root group's `splitterRef`, and anything holding the ref reaches that splitter's
+model, engine and root group id, from anywhere in the tree, or outside React.
+
+```tsx
+"use client";
+
+import { Splitter, type SplitterRef, useSplitter, useSplitterRef } from "@fragiola/splitter-react";
+
+function Toolbar({ splitterRef }: { splitterRef: SplitterRef }) {
+    const splitter = useSplitter(splitterRef);
+    if (!splitter) return null; // no group holds the ref yet
+    return (
+        <button type="button" onClick={() => splitter.model.run("group.reset", { groupId: splitter.groupId })}>
+            Reset the layout
+        </button>
+    );
+}
+
+export function App() {
+    const splitterRef = useSplitterRef();
+    return (
+        <>
+            <Toolbar splitterRef={splitterRef} />
+            <Splitter.Group splitterRef={splitterRef} className="h-96">
+                <Splitter.Panel id="a">…</Splitter.Panel>
+                <Splitter.Separator aria-label="Resize" className="w-1" />
+                <Splitter.Panel id="b">…</Splitter.Panel>
+            </Splitter.Group>
+        </>
+    );
+}
+```
+
+## `useSplitterRef`
+
+`useSplitterRef()` returns a `SplitterRef`, the same object for the component's life. Pass it to
+a root group's `splitterRef`, then read it with [`useSplitter(splitterRef)`](/docs/api/hooks#usesplitter),
+which re-renders when a group takes or releases it, or with `splitterRef.current`.
+
+## `createSplitterRef`
+
+`createSplitterRef()` makes one outside a component: in a module, a store or a test. It is the
+same object `useSplitterRef` returns.
+
+```ts
+import { createSplitterRef } from "@fragiola/splitter-react";
+
+export const workbenchRef = createSplitterRef();
+
+export function resetWorkbench() {
+    const splitter = workbenchRef.current;
+    if (splitter) splitter.model.run("group.reset", { groupId: splitter.groupId });
+}
+```
+
+## `SplitterRef`
+
+| member | type | description |
+| --- | --- | --- |
+| `current` | `SplitterHandle \| null` | the root group's splitter while a root group holds the ref, `null` otherwise |
+| `subscribe` | `(listener: () => void) => () => void` | listens to a root group taking or releasing it; returns the unsubscription |
+
+## `SplitterHandle`
+
+| field | type | description |
+| --- | --- | --- |
+| `model` | `SplitterModel` | the splitter's model |
+| `engine` | `SplitterEngine` | its engine |
+| `groupId` | `string` | the root group's id |
+
+## Rules
+
+- A ref is held by one mounted root group at a time. A second root given the same ref reports it
+  in the console and does not take it: give each root its own.
+- Only a root group takes a ref; a nested group's `splitterRef` is ignored (it shares the root's
+  splitter anyway).
+- A ref must come from `useSplitterRef()` or `createSplitterRef()`: the adapters write it with
+  `attachSplitterRef(splitterRef, handle)`, an adapter-only function an app never calls.
+
+When you create the model yourself (`createSplitterModel()` passed to the group's `model`), code
+that holds the model needs no ref to run commands; the ref adds the engine and the root group id.

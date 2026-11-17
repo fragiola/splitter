@@ -1,0 +1,88 @@
+---
+title: Composition
+description: Assemble groups, panels and separators under one namespace, nest groups in panels, swap any element with render, and drop to the hooks to build your own part.
+---
+
+There is no configuration object and no list of panels to pass: the layout is the markup. You
+assemble the three primitives under the `Splitter` namespace, and the package reads what you
+rendered: which panels a group holds, in which order, and which separator sits between which
+pair. What goes inside each panel is entirely yours.
+
+## The markup is the layout
+
+- A `Splitter.Group` lays out the `Splitter.Panel`s rendered inside it, at any depth of your own
+  components: a panel wrapped in a `<Card>` of yours is still the group's panel.
+- Panels sort by their **position in the document**, never by the order they mounted in. A panel
+  rendered conditionally lands where it is in the markup (see
+  [Conditional panels](/docs/guides/conditional-panels)).
+- Separators are derived: a group has one between each pair of neighbouring panels, and the n-th
+  `Splitter.Separator` element in document order is its n-th separator. Render one between each
+  pair; a separator element beyond the group's count stays unbound.
+
+```tsx
+function Pane({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+    return (
+        <Splitter.Panel id={id} minSize="15%">
+            <section aria-label={title} className="h-full overflow-auto p-3">
+                <h2>{title}</h2>
+                {children}
+            </section>
+        </Splitter.Panel>
+    );
+}
+
+export function Mail() {
+    return (
+        <Splitter.Group className="h-full">
+            <Pane id="folders" title="Folders">…</Pane>
+            <Splitter.Separator aria-label="Resize folders" className="w-1" />
+            <Pane id="messages" title="Messages">…</Pane>
+        </Splitter.Group>
+    );
+}
+```
+
+## Nesting
+
+A `Splitter.Group` inside a `Splitter.Panel` nests in it: it joins the outer group's model and
+engine, its path starts with the panel's (`/g0/p1/g0`), and one `model.get("splitter-json")`
+saves both. No Provider is involved. A nested group given a `model` of its own is a root of its
+own instead. See [Nested groups](/docs/guides/nested-groups).
+
+## Replacing an element: `render`
+
+Each primitive renders a `div`. `render` swaps it, with an element whose props are merged with
+the primitive's, or with a function that receives the props and the part's state:
+
+```tsx
+<Splitter.Group render={<main />} />
+<Splitter.Panel id="nav" render={<nav aria-label="Main" />} />
+<Splitter.Separator
+    aria-label="Resize"
+    render={(props, state) => <div {...props} title={state.dragging ? "Release to drop" : undefined} />}
+/>
+```
+
+There is no `asChild`. The rules every primitive follows are on
+[The primitive contract](/docs/concepts/primitive-contract).
+
+## The hooks layer
+
+Below each part is a hook that returns its state and the props of its element: `useGroup()` (the
+enclosing group), `usePanel(options)` and `useSeparator(options)`. A part of your own spreads the
+props on any element:
+
+```tsx
+import { useSeparator } from "@fragiola/splitter-react";
+
+/** A separator drawn as a native <hr>, focusable and resizable like Splitter.Separator. */
+export function RuleSeparator({ label }: { label: string }) {
+    const { state, props } = useSeparator();
+    return <hr {...props} aria-label={label} data-active={state.dragging ? "" : undefined} />;
+}
+```
+
+`props` carries the ref that binds the element (the engine listens to its pointer, keyboard and
+double clicks through it), the role, the ARIA values, `tabIndex`, the structural style and the
+`data-*`. `usePanel` registers a panel the same way, but a group nested in an element of your own
+does not see it as its parent: nest groups in `Splitter.Panel`. See [Hooks](/docs/api/hooks).

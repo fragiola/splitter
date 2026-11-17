@@ -13,5 +13,5 @@ export default {
         "group.reset",
         "layout-by",
     ],
-    docs: "/docs/guides/from-code",
+    docs: "/docs/concepts/model-and-commands",
 } satisfies ExampleMeta;

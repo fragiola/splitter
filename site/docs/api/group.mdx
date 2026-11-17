@@ -1,0 +1,102 @@
+---
+title: Group
+description: Splitter.Group lays out its panels side by side or stacked, creates the model for the whole splitter, and takes a controlled or a default layout.
+---
+
+`Splitter.Group` is a flex container whose `Splitter.Panel`s share its room, with a
+`Splitter.Separator` between each pair. The outermost group creates the model and the engine
+(unless you pass a `model`); a group inside a `Splitter.Panel` joins them and nests in that
+panel. It renders a `div` with no role and no name: your markup decides what it is.
+
+```tsx
+import { type Layout, Splitter } from "@fragiola/splitter-react";
+import { useState } from "react";
+
+export function Controlled() {
+    const [layout, setLayout] = useState<Layout>({ left: 30, right: 70 });
+    return (
+        <Splitter.Group id="main" layout={layout} onLayoutChange={(next) => setLayout({ ...next })} className="h-80">
+            <Splitter.Panel id="left">…</Splitter.Panel>
+            <Splitter.Separator aria-label="Resize left" className="w-1" />
+            <Splitter.Panel id="right">…</Splitter.Panel>
+        </Splitter.Group>
+    );
+}
+```
+
+`Group` is also a named export (`import { Group } from "@fragiola/splitter-react"`), the same
+component.
+
+## Props
+
+`GroupProps<T>` extends the [common primitive props](/docs/api/group#common-props) and every
+`div` attribute.
+
+| prop | type | default | description |
+| --- | --- | --- | --- |
+| `id` | `GroupIdOf<T>` | generated (`useId`) | the group's id, as the saved layout names it |
+| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | panels side by side, or stacked |
+| `disabled` | `boolean` | `false` | none of its separators can be used (code can still resize its panels) |
+| `model` | `SplitterModel<T>` | a new one (root), the parent's (nested) | the model to register in; a nested group given one is a root of its own |
+| `layout` | `Layout` | none | the layout (each panel's size in percent, by panel id), applied when the group registers and whenever its values change (`group.set-layout`); pair it with `onLayoutChange` |
+| `defaultLayout` | `Layout` | none | the layout it starts with, unless the model has a saved one for it |
+| `onLayoutChange` | `(layout: Readonly<Layout>) => void` | none | the layout changed: on every commit, drag steps and the registration included |
+| `onLayoutCommit` | `(layout: Readonly<Layout>) => void` | none | a layout was committed: a drag released, a key pressed, a command run (never a drag step) |
+| `splitterRef` | `SplitterRef` | none | gives code outside the group its model and engine (a root group only); see [External ref](/docs/api/external-ref) |
+| `keyboardStep` | `number` | `5` | how far an arrow key moves a separator, in percent (a root group only, read once) |
+| `resetOnDoubleClick` | `boolean` | `true` | a double click on a separator resets its panel (a root group only, read once) |
+| `children` | `ReactNode` | none | its panels and separators, at any depth of your components |
+
+A `layout` the model refuses (it does not name the group's panels) is ignored; a valid one is
+clamped to the constraints. The adapter does not snap the model back when you ignore
+`onLayoutChange`: a middleware vetoes the changes your app refuses.
+
+## State
+
+`GroupPartState`, what `className`, `style` and `render` receive (also returned by
+[`useGroup`](/docs/api/hooks#usegroup)):
+
+| field | type | description |
+| --- | --- | --- |
+| `id` | `string` | the group's id |
+| `orientation` | `"horizontal" \| "vertical"` | its orientation |
+| `disabled` | `boolean` | none of its separators can be used |
+| `dragging` | `boolean` | a pointer is dragging one of its separators |
+| `path` | `string \| undefined` | its path (`/g0`, `/g0/p1/g0`); undefined until it registers |
+
+## Data attributes
+
+| attribute | value |
+| --- | --- |
+| `data-splitter-part` | `"group"` |
+| `data-splitter-path` | its path (see [Paths](/docs/concepts/paths)) |
+| `data-orientation` | `"horizontal"` or `"vertical"` |
+| `data-disabled` | present when disabled |
+| `data-dragging` | present while one of its separators is dragged |
+
+## Structural style
+
+`display: flex`, `flex-direction: row` (horizontal) or `column` (vertical), `flex-wrap: nowrap`.
+Its size is yours: see [Sizing the group](/docs/getting-started/sizing).
+
+## Commands
+
+Registering runs one `batch`: `group.add`, a `panel.add` per panel, and `group.set-layout` for
+`layout` (else `defaultLayout` when the model saved no layout for the group). Changing
+`orientation` or `disabled` runs `group.update`; unmounting runs `group.remove` (keeping a layout
+the user changed, so a remount restores it).
+
+## Common props
+
+Every part (`Splitter.Group`, `Splitter.Panel`, `Splitter.Separator`) takes these, on top of the
+attributes of the element it renders (`PrimitiveProps<State>`):
+
+| prop | type | description |
+| --- | --- | --- |
+| `render` | `RenderProp<State>` | replaces the element: an element (its props merged with the part's) or `(props: RenderedProps, state) => element` (never `asChild`) |
+| `className` | `string \| ((state) => string \| undefined)` | a class, or a function of the part's state |
+| `style` | `CSSProperties \| ((state) => CSSProperties \| undefined)` | a style, or a function of the state; the structural keys always win |
+| `ref` | `Ref<HTMLElement>` | merged with the part's own ref |
+
+`RenderedProps` are the props a `render` function spreads: the element's attributes, a callback
+`ref` that fits any element, and the `data-*`. See [The primitive contract](/docs/concepts/primitive-contract).

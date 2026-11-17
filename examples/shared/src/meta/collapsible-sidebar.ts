@@ -13,5 +13,5 @@ export default {
         "panel.expand",
         "data-collapsed",
     ],
-    docs: "/docs/guides/collapsing",
+    docs: "/docs/guides/collapsible-panels",
 } satisfies ExampleMeta;

@@ -1,0 +1,86 @@
+---
+title: Panel
+description: Splitter.Panel is a flex item whose size comes from the group's layout, with its constraints in any unit, collapsing, and callbacks for every change.
+---
+
+`Splitter.Panel` is one entry of its group's layout: a flex item whose grow factor is its size in
+percent. Its order is its position in the document, so a panel rendered conditionally lands
+where the markup puts it. A `Splitter.Group` inside it nests in it. Its element's DOM `id` is its
+panel id, which the separators' `aria-controls` point at.
+
+```tsx
+<Splitter.Panel
+    id="sidebar"
+    defaultSize="25%"
+    minSize="10rem"
+    maxSize="40%"
+    collapsible
+    collapsedSize="3rem"
+    onCollapse={() => setCollapsed(true)}
+    onExpand={() => setCollapsed(false)}
+>
+    …
+</Splitter.Panel>
+```
+
+`Panel` is also a named export, the same component.
+
+## Props
+
+`PanelProps<T>` extends the [common primitive props](/docs/api/group#common-props), every `div`
+attribute but `id` and `onResize`, and `UsePanelOptions<T>` (the same options as
+[`usePanel`](/docs/api/hooks#usepanel)). A size is a `SizeValue`: a number is pixels, a string
+carries its unit (`%`, `px`, `em`, `rem`, `vh`, `vw`), a string without one is a percentage.
+
+| prop | type | default | description |
+| --- | --- | --- | --- |
+| `id` | `PanelIdOf<T>` | generated (`useId`) | the panel's id, as the saved layout names it, and its element's DOM `id` |
+| `defaultSize` | `SizeValue` | an equal share of what is left | the size it starts with when no saved or given layout has one |
+| `minSize` | `SizeValue` | `0` | the smallest size it takes when expanded |
+| `maxSize` | `SizeValue` | `"100%"` | the largest size it takes |
+| `collapsible` | `boolean` | `false` | it can collapse below its minimum, to its collapsed size |
+| `collapsedSize` | `SizeValue` | `0` | its size collapsed |
+| `collapsedThreshold` | `SizeValue` | halfway | how far past its minimum a drag goes before it collapses |
+| `disabled` | `boolean` | `false` | no separator resizes it (code still can) |
+| `groupResizeBehavior` | `"preserve-relative-size" \| "preserve-pixel-size"` | `"preserve-relative-size"` | when the group resizes, it keeps its percentage, or its pixels |
+| `onResize` | `(size: PanelSize, previous: PanelSize \| undefined) => void` | none | its size changed (`percentage`, and `pixels` once measured); `previous` is undefined the first time |
+| `onCollapse` | `() => void` | none | it collapsed |
+| `onExpand` | `() => void` | none | it expanded |
+| `children` | `ReactNode` | none | its content |
+
+## State
+
+`PanelPartState`, what `className`, `style` and `render` receive (also returned by
+[`usePanel`](/docs/api/hooks#usepanel)):
+
+| field | type | description |
+| --- | --- | --- |
+| `id` | `string` | the panel's id |
+| `size` | `number \| undefined` | its size in percent; undefined until known |
+| `collapsed` | `boolean` | it is collapsed |
+| `collapsible` | `boolean` | it can collapse |
+| `disabled` | `boolean` | no separator resizes it |
+| `path` | `string \| undefined` | its path (`/g0/p1`); undefined until it registers |
+
+## Data attributes
+
+| attribute | value |
+| --- | --- |
+| `data-splitter-part` | `"panel"` |
+| `data-splitter-path` | `<group path>/p<index>` (see [Paths](/docs/concepts/paths)) |
+| `data-collapsed` | present while collapsed |
+| `data-collapsible` | present when it can collapse |
+| `data-disabled` | present when disabled |
+| `id` | its panel id |
+
+## Structural style
+
+`flex: <size> 1 0` and `overflow: hidden`. Before its size is known (no saved, given or default
+layout), `flex: 0 1 <defaultSize>` when it declares one, else `flex: 1 1 0`: the same on the
+server and in the hydration render. Scrolling its content is yours.
+
+## Commands
+
+It registers with `panel.add` (with its group's registration, or on its own when it mounts
+later); a changed constraint runs `panel.update`, unmounting `panel.remove`. A drag runs
+`separator.move`; code resizes it with `panel.resize`, `panel.collapse` and `panel.expand`.

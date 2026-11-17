@@ -1,0 +1,116 @@
+---
+title: Collapsible panels
+description: Let a panel snap shut past a threshold and come back at the size it had, from a drag, the Enter key, a button or code, with its state on data-collapsed.
+---
+
+A collapsible panel can go below its minimum, to its collapsed size, and remembers the size it
+had so expanding gives it back. The package decides when it snaps, records the restore size and
+reports the change; the button, the icon and what the panel shows while collapsed are yours.
+
+## Making a panel collapsible
+
+```tsx
+<Splitter.Panel
+    id="sidebar"
+    defaultSize="25%"
+    minSize="10rem"
+    collapsible
+    collapsedSize="3rem"
+    onCollapse={() => setCollapsed(true)}
+    onExpand={() => setCollapsed(false)}
+>
+    …
+</Splitter.Panel>
+```
+
+- `collapsible` lets it collapse; without it the panel never goes below `minSize`.
+- `collapsedSize` is its size collapsed, in any unit (default 0): a rail of icons, a strip with a
+  title, or nothing.
+- `collapsedThreshold` is how far past its minimum a drag goes before it snaps shut (default:
+  halfway between the collapsed size and the minimum).
+- `onCollapse` and `onExpand` fire when its state changes, whatever changed it.
+
+While collapsed the panel carries `data-collapsed`, and `model.is("panel-collapsed", { panelId })`
+answers `true`.
+
+<Example id="collapsible-sidebar" />
+
+## Every way to collapse it
+
+| how | what runs |
+| --- | --- |
+| dragging the separator past the threshold | `separator.move`: the panel snaps to its collapsed size |
+| dragging it back past the threshold | `separator.move`: the panel snaps to its minimum, then follows the pointer |
+| **Enter** on the separator after it | `panel.collapse`, or `panel.expand` when it is collapsed |
+| **Home** on that separator | moves to the smallest size: collapsed, for a collapsible panel |
+| code | `model.run("panel.collapse", { panelId })` / `model.run("panel.expand", { panelId })` |
+
+Enter acts on the panel **before** the separator. For a panel at the end of a group (a terminal
+under an editor), drag it or use code.
+
+## A toggle button
+
+Outside the group, reach the model through an external ref and follow the state with the
+callbacks:
+
+```tsx
+"use client";
+
+import { Splitter, useSplitter, useSplitterRef } from "@fragiola/splitter-react";
+import { useState } from "react";
+
+export function Workbench() {
+    const splitterRef = useSplitterRef();
+    const splitter = useSplitter(splitterRef);
+    const [collapsed, setCollapsed] = useState(false);
+    function toggle() {
+        splitter?.model.run(collapsed ? "panel.expand" : "panel.collapse", { panelId: "sidebar" });
+    }
+    return (
+        <>
+            <button type="button" aria-pressed={!collapsed} onClick={toggle}>
+                Sidebar
+            </button>
+            <Splitter.Group splitterRef={splitterRef} className="h-96">
+                <Splitter.Panel
+                    id="sidebar"
+                    defaultSize="25%"
+                    minSize="15%"
+                    collapsible
+                    onCollapse={() => setCollapsed(true)}
+                    onExpand={() => setCollapsed(false)}
+                >
+                    …
+                </Splitter.Panel>
+                <Splitter.Separator aria-label="Resize sidebar" className="w-1" />
+                <Splitter.Panel id="main">…</Splitter.Panel>
+            </Splitter.Group>
+        </>
+    );
+}
+```
+
+## The size it comes back to
+
+Whenever a change collapses a panel, the model records its size before as its restore size
+(`restoreSize` in the state and in the saved document). `panel.expand` gives it back, as far as
+the other panels can make room; with no restore size, the panel expands to its minimum (1% when
+its minimum is 0). A collapsed panel saved in the JSON document comes back collapsed, and still
+expands to the size it had.
+
+## When it is refused
+
+`panel.collapse` and `panel.expand` are `refused` on a panel that is not collapsible, and when
+the other panels cannot make room within their own constraints. Ask first with `model.can`:
+
+```tsx
+<button type="button" disabled={!model.can("panel.expand", { panelId: "terminal" })}>
+    Show the terminal
+</button>
+```
+
+## Hiding what is collapsed
+
+A panel collapsed to 0 is still in the document. Hide its content from assistive technology as
+well as from sight: `in-data-collapsed:hidden` on the content (Tailwind), a
+`[data-collapsed] > *` rule (CSS), or render the content from your `collapsed` state.

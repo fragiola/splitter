@@ -1,0 +1,46 @@
+---
+title: Limitations
+description: What React Resizable Panels has that this package does not, why, and what to do instead, plus the known gaps of the current release.
+---
+
+The behaviour reference of this package is [React Resizable Panels](https://github.com/bvaughn/react-resizable-panels)
+(its flex groups: `Group`, `Panel`, `Separator`). Constraints, units, collapse thresholds, restore
+sizes, group resize behaviour and normalization follow it, checked by tests against it. This page
+lists, honestly, what it has that this package does not: some on purpose (they are app policy,
+or cosmetic, or another library's job), some not yet. Each comes with what to do instead.
+
+## Not yet
+
+| React Resizable Panels | here | what to do instead |
+| --- | --- | --- |
+| Remembers a layout **per set of panels** in memory: hide a panel and show it again, and every panel comes back at its size. | A change of the panel set takes the **default layout** of the new set: the others' sizes are not kept. A saved document applies again once the group holds exactly its panels. | Collapse the panel to 0 instead of unmounting it (see [Conditional panels](/docs/guides/conditional-panels#keeping-the-sizes-collapse-instead)). |
+| `em` resolves against the panel's own font size. | `em` resolves against the **group** element's font size, which the engine measures once per group. | Use `rem`, or set the font size on the group. |
+| **Extended hit targets**: a minimum target size (`resizeTargetMinimumSize`, larger for coarse pointers), resizing from a panel's edge, and one drag moving the crossing separators of nested groups together. | The separator element is the hit target; each drag moves one separator. | Give the separator the hit area you want and draw a thin line inside it (see [Styling with CSS](/docs/guides/styling-css#a-hairline-with-a-wide-hit-area)); `@media (pointer: coarse)` can widen it on touch screens. |
+| Numeric ids (`id={1}`). | Ids are strings. | `id={String(n)}`. |
+
+## On purpose
+
+| React Resizable Panels | here | why, and what to do instead |
+| --- | --- | --- |
+| **Cursor styles**: a global cursor while dragging, `disableCursor`. | No cursor at all. | A cursor is cosmetic, so it is yours: `cursor: col-resize` from `data-orientation`, and on the group while `data-dragging` (see [Styling with CSS](/docs/guides/styling-css#hover-drag-and-focus)). |
+| **Separator previews**: `resizePreviewMode="separator"`, `SeparatorOverlay`, a separator's `preview`, resizing only on release. | Panels resize live, every pointer move. | Out of scope for the first release. A drag's steps are transient commands, so a middleware or listener can tell a preview from the commit. |
+| **`useDefaultLayout`**: saves and restores a layout in a storage you pass. | The saved document, and `defaultSize` / `defaultLayout` for the defaults. | Persistence is app policy: save `model.get("splitter-json")` wherever you want and restore it with `createSplitterModel(json)` (see [Saving a layout](/docs/guides/persistence)). |
+| **Imperative handles**: `panelRef` and `groupRef` (`collapse`, `expand`, `resize`, `getSize`, `isCollapsed`, `getLayout`, `setLayout`). | Commands and keys on the model, reached with `useSplitter()` or an [external ref](/docs/api/external-ref). | `model.run("panel.collapse", { panelId })`, `model.get("panel-size-by", { panelId })`, `model.run("group.set-layout", …)`: one API that middleware sees and an assistant can call. |
+| `onLayoutChanged(layout, meta)` with `isUserInteraction`. | `onLayoutCommit(layout)`. | `model.subscribe` tells which command committed, with its `meta`: a drag is `separator.move`, a button runs what you called. |
+| `Grid`, `Gridline`, `Cell` (two-dimensional layouts) and the `Workspace` (tabsets). | Flex groups only. | Use Fragiola's [Grid Layout](https://fragiola.com/grid-layout) for grids and [Dockable](https://fragiola.com/dockable) for tabsets and docking. |
+| Default styles it writes (a group's `height: 100%`, ...). | Structural style only: flex sizing, `overflow: hidden` on panels, `touch-action: none` on separators. | Size the group yourself (see [Sizing the group](/docs/getting-started/sizing)). |
+
+## Other things to know
+
+- **Code can resize a disabled panel** (`panel.resize`, `panel.collapse`, `group.set-layout`), as
+  React Resizable Panels' imperative API can. A middleware vetoes it if your app must not.
+- **Pixel units need a measure.** Until the engine measured a group (on the server, in Node), only
+  percentages resolve, and `panel.resize` to a pixel size is `refused`.
+- **A direction set at runtime** is read when the engine measures: run `engine.run("measure", {})`
+  after switching `dir` (see [Right-to-left](/docs/guides/rtl#changing-the-direction-at-runtime)).
+- **React only, for now.** Vue and Angular adapters are planned; the core is framework-free, so
+  an adapter is only rendering and wiring.
+- **Separators are matched by order**, not by declaration: the n-th separator element of a group
+  is the one after its n-th panel. Render one between each pair of panels.
+
+Found something else? [Open an issue](https://github.com/fragiola/splitter/issues).

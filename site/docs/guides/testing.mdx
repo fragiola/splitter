@@ -1,0 +1,103 @@
+---
+title: Testing
+description: Test layout rules on the model in Node, the keyboard with Testing Library in jsdom, and pointer drags in a real browser, by role, name and path.
+---
+
+The layout is data, so most of what you want to check needs no browser at all. The package's own
+tests are split the same way: the rules on the model in Node, the primitives in jsdom, and the
+gestures in Playwright. What your tests assert is yours; this page shows where each kind fits.
+
+## The rules: the model in Node
+
+Your middleware, your persistence and your toolbar's commands are model code. Build the groups
+with commands, as the primitives would, and assert on the results:
+
+```ts title="layout.test.ts"
+import { createSplitterModel, veto } from "@fragiola/splitter";
+import { expect, it } from "vitest";
+
+function editorModel() {
+    const model = createSplitterModel();
+    model.run("batch", {
+        commands: [
+            { command: "group.add", payload: { id: "main" } },
+            { command: "panel.add", payload: { id: "sidebar", groupId: "main", minSize: "20%", collapsible: true } },
+            { command: "panel.add", payload: { id: "editor", groupId: "main" } },
+        ],
+    });
+    return model;
+}
+
+it("keeps the sidebar open while a document is unsaved", () => {
+    const model = editorModel();
+    model.use((ctx, next) => (ctx.command === "panel.collapse" ? veto("unsaved changes") : next()));
+    const result = model.run("panel.collapse", { panelId: "sidebar" });
+    expect(result.ok).toBe(false);
+    expect(model.is("panel-collapsed", { panelId: "sidebar" })).toBe(false);
+});
+
+it("restores a saved layout", () => {
+    const saved = editorModel();
+    saved.run("panel.resize", { panelId: "sidebar", size: "30%" });
+    const restored = createSplitterModel(saved.get("splitter-json"));
+    expect(restored.get("splitter-json")).toEqual(saved.get("splitter-json"));
+});
+```
+
+## The primitives: Testing Library in jsdom
+
+jsdom lays nothing out, but percentages and the keyboard need no layout: render the component,
+find the separator by its role and name, press keys, and read its ARIA value.
+
+```tsx title="editor.test.tsx"
+import { Splitter } from "@fragiola/splitter-react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { expect, it } from "vitest";
+
+function Editor() {
+    return (
+        <Splitter.Group id="main">
+            <Splitter.Panel id="sidebar" defaultSize="25%" minSize="10%" />
+            <Splitter.Separator aria-label="Resize sidebar" />
+            <Splitter.Panel id="editor" />
+        </Splitter.Group>
+    );
+}
+
+it("resizes the sidebar from the keyboard", () => {
+    render(<Editor />);
+    const separator = screen.getByRole("separator", { name: "Resize sidebar" });
+    expect(separator).toHaveAttribute("aria-valuenow", "25");
+    fireEvent.keyDown(separator, { key: "ArrowRight" });
+    expect(separator).toHaveAttribute("aria-valuenow", "30");
+});
+```
+
+(`toHaveAttribute` comes from `@testing-library/jest-dom`.) A panel's inline `flex-grow` is its
+size in percent, which is another way to assert a layout in jsdom. Units other than `%` and
+pointer drags need real sizes: test them in a browser.
+
+## Gestures: a real browser
+
+Drags, `px` and `rem` constraints and resizing the window are browser behaviour. In Playwright,
+reach the parts by role and name, or by path when they have neither:
+
+```ts title="workbench.spec.ts"
+import { expect, test } from "@playwright/test";
+
+test("dragging the separator resizes the sidebar", async ({ page }) => {
+    await page.goto("/");
+    const separator = page.getByRole("separator", { name: "Resize sidebar" });
+    const box = await separator.boundingBox();
+    if (!box) throw new Error("the separator is not visible");
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 120, box.y + box.height / 2, { steps: 5 });
+    await page.mouse.up();
+    await expect(separator).not.toHaveAttribute("aria-valuenow", "25");
+});
+```
+
+Every part carries `data-splitter-part` and `data-splitter-path` (see [Paths](/docs/concepts/paths)),
+which survive any restyling. The site's own examples are tested this way: one spec per example,
+reaching them only through paths, roles, accessible names and test ids.

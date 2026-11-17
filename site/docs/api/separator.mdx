@@ -1,0 +1,77 @@
+---
+title: Separator
+description: Splitter.Separator sits between two panels and resizes them with the pointer, the Window Splitter keys or a double click, with its ARIA values set for you.
+---
+
+`Splitter.Separator` is the separator between two neighbouring panels: `role="separator"`,
+following the WAI-ARIA APG Window Splitter pattern. Drag it with the pointer (mouse, touch and
+pen, with pointer capture), or focus it and use the arrows, Home, End and Enter; double click it
+to reset its panel. The n-th separator element of a group, in document order, is the one after
+its n-th panel. It has no name of its own: give it an `aria-label`.
+
+```tsx
+<Splitter.Separator aria-label="Resize the sidebar" resetOnDoubleClick={false} className="separator" />
+```
+
+`Separator` is also a named export, the same component.
+
+## Props
+
+`SeparatorProps` extends the [common primitive props](/docs/api/group#common-props), every `div`
+attribute and `UseSeparatorOptions` (the options of [`useSeparator`](/docs/api/hooks#useseparator)).
+
+| prop | type | default | description |
+| --- | --- | --- | --- |
+| `disabled` | `boolean` | `false` | it cannot be used to resize its panels (they may still change through other separators) |
+| `resetOnDoubleClick` | `boolean` | `true` (or the root group's) | a double click resets its panel to its default size |
+| `children` | `ReactNode` | none | content such as a grip |
+
+## State
+
+`SeparatorPartState`, what `className`, `style` and `render` receive (also returned by
+[`useSeparator`](/docs/api/hooks#useseparator)):
+
+| field | type | description |
+| --- | --- | --- |
+| `id` | `string \| undefined` | its id, `<beforePanelId>:<afterPanelId>`; undefined until it mounts, or when the group has fewer separators than separator elements |
+| `orientation` | `"horizontal" \| "vertical" \| undefined` | its own orientation, as its `aria-orientation`: `vertical` between side by side panels |
+| `disabled` | `boolean` | it, or its group, is disabled |
+| `dragging` | `boolean` | a pointer is dragging it |
+| `path` | `string \| undefined` | its path (`/g0/s0`); undefined while it has no id |
+
+## Data attributes and ARIA
+
+| attribute | value |
+| --- | --- |
+| `data-splitter-part` | `"separator"` |
+| `data-splitter-path` | `<group path>/s<index>` (see [Paths](/docs/concepts/paths)) |
+| `data-orientation` | its own orientation |
+| `data-disabled` | present when it, or its group, is disabled |
+| `data-dragging` | present while dragged |
+| `role` | `"separator"` |
+| `aria-orientation` | same as `data-orientation` |
+| `aria-valuenow` | the size of the panel before it, in percent |
+| `aria-valuemin` / `aria-valuemax` | the smallest and largest size that panel can reach by moving it |
+| `aria-controls` | the DOM id of the panel before it |
+| `aria-disabled` | `true` when it cannot be used |
+| `aria-label` | none of its own: pass yours (see [Accessible names](/docs/getting-started/accessible-names)) |
+| `tabIndex` | `0`, none while disabled |
+
+## Structural style
+
+`flex-grow: 0`, `flex-shrink: 0` and `touch-action: none` (a pointer drag on a touch screen needs
+it). Its thickness, its cursor and its look are yours: see [Styling with CSS](/docs/guides/styling-css).
+
+## Keyboard
+
+The arrows along the group's orientation move it by the keyboard step (5% by default, mirrored in
+right-to-left), Home and End move the panel before it to its limits, Enter collapses or expands
+that panel, F6 and Shift+F6 move to the next and previous separator. See
+[Keyboard](/docs/guides/keyboard).
+
+## Commands
+
+A drag runs `separator.move` steps with `{ transient: true }` measured from where it started,
+then one final commit that middleware can veto (a veto puts the panels back). A key runs one
+`separator.move`, Enter `panel.collapse` or `panel.expand`, a double click `panel.resize` to the
+default size. Its `disabled` and `resetOnDoubleClick` props run `separator.update`.

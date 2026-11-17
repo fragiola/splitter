@@ -1,0 +1,123 @@
+---
+title: Saving a layout
+description: Save every group's sizes and collapsed panels as one JSON document, restore it before the first render, and validate what comes back from storage.
+---
+
+The whole layout of a model (every group, each panel's size, which panels are collapsed and the
+size each one expands back to) is one JSON document. The package gives you the document, its
+JSON Schema and its validator; where it is stored, when, and under which key is yours.
+
+## The document
+
+```ts
+model.get("splitter-json");
+// {
+//     version: 1,
+//     groups: [
+//         { id: "persistent", panels: [{ id: "sidebar", size: 25 }, { id: "main", size: 75 }] },
+//         { id: "persistent-main", panels: [
+//             { id: "editor", size: 100 },
+//             { id: "terminal", size: 0, collapsed: true, restoreSize: 30 },
+//         ] },
+//     ],
+// }
+```
+
+It names groups and panels by id, so give every saved group and panel an explicit `id`.
+Constraints are not in it: they come back with the markup. See
+[The JSON document](/docs/api/json-document).
+
+## Save on every commit, restore before the first render
+
+```tsx title="persistent-layout.tsx"
+"use client";
+
+import { createSplitterModel, Splitter, type SplitterJson, validateSplitter } from "@fragiola/splitter-react";
+import { useEffect, useState } from "react";
+
+const KEY = "my-app:layout";
+
+/** The saved layout's model; a document that is missing or invalid starts from the defaults. */
+function restore() {
+    let saved: unknown;
+    try {
+        saved = JSON.parse(localStorage.getItem(KEY) ?? "null");
+    } catch {
+        saved = null;
+    }
+    const valid = saved !== null && validateSplitter(saved).length === 0;
+    return createSplitterModel(valid ? (saved as SplitterJson) : undefined);
+}
+
+export function PersistentLayout() {
+    const [model] = useState(restore);
+    useEffect(
+        () =>
+            model.subscribe((event) => {
+                if (event.transient) return; // a drag in progress: save its release only
+                try {
+                    localStorage.setItem(KEY, JSON.stringify(model.get("splitter-json")));
+                } catch {
+                    // storage blocked or full: the layout still works, it is just not saved
+                }
+            }),
+        [model],
+    );
+    return (
+        <Splitter.Group id="persistent" model={model} className="h-96">
+            <Splitter.Panel id="sidebar" defaultSize="25%" minSize="10%">
+                …
+            </Splitter.Panel>
+            <Splitter.Separator aria-label="Resize sidebar" className="w-1" />
+            <Splitter.Panel id="main">
+                <Splitter.Group id="persistent-main" orientation="vertical" className="h-full">
+                    <Splitter.Panel id="editor" minSize="20%">
+                        …
+                    </Splitter.Panel>
+                    <Splitter.Separator aria-label="Resize editor" className="h-1" />
+                    <Splitter.Panel id="terminal" defaultSize="30%" minSize="15%" collapsible>
+                        …
+                    </Splitter.Panel>
+                </Splitter.Group>
+            </Splitter.Panel>
+        </Splitter.Group>
+    );
+}
+```
+
+- `createSplitterModel(json)` restores the document **before** the group renders, so the first
+  paint already has the saved sizes: there is no default layout flashing first.
+- One `model.subscribe` covers every group of the model, nested ones included. `onLayoutCommit`
+  on a group works too, for that group only.
+- `validateSplitter` returns the problems of a document (empty when it is valid). Loading an
+  invalid one directly throws a `SplitterValidationError` with every `issue` and its JSON path, so
+  validate whatever comes from storage, a server or a user.
+
+<Example id="persistent-layout" />
+
+The example's `_kit/persistence.ts` is the same code as small helpers (`load`, `save`,
+`forget`) to copy into your app.
+
+## Panels that are not in the document
+
+A declared panel the document does not name takes its `defaultSize`. A saved group whose panels
+have not all registered yet waits: its layout applies once the group holds exactly its saved
+panels. Until then `splitter-json` writes it back as it was loaded, so saving a page that does
+not render every group does not lose the others' layouts.
+
+## Resetting
+
+`group.reset` puts a group back to its default layout; run it on every group to forget the user's
+changes, and remove the stored document so the next load starts fresh:
+
+```ts
+for (const group of model.get("groups")) {
+    model.run("group.reset", { groupId: group.id });
+}
+localStorage.removeItem(KEY);
+```
+
+## On the server
+
+The document is plain JSON and the core runs in Node: a server can validate it, store it per
+user, and render the page with it. See [Server rendering](/docs/guides/server-rendering).

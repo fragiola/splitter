@@ -7,5 +7,5 @@ export default {
     category: "constraints",
     order: 1,
     features: ["minSize", "maxSize", "rem", "%", "px", "panel-size-by"],
-    docs: "/docs/concepts/sizes-and-units",
+    docs: "/docs/guides/size-constraints",
 } satisfies ExampleMeta;

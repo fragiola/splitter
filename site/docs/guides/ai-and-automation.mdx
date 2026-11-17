@@ -1,0 +1,84 @@
+---
+title: AI and automation
+description: Let an assistant, a script or a server drive a layout. Every command has a JSON Schema, dispatch validates untrusted input, and middleware decides.
+---
+
+Every change to a layout is a command with a JSON payload, described by a JSON Schema. That is
+what an assistant needs to drive a layout as tool calls, and what a script or a server needs to
+change one safely. The package gives you the schemas, a validating entry point and middleware;
+which tools you expose and what an assistant is allowed to do are yours.
+
+## The commands as tools
+
+`model.get("commands")` lists every command with its description and the JSON Schemas of its
+payload and result:
+
+```ts
+import { createSplitterModel } from "@fragiola/splitter-react";
+
+const model = createSplitterModel();
+
+/** what an assistant may ask for: layout changes, never registration */
+const ALLOWED = new Set(["panel.resize", "panel.collapse", "panel.expand", "group.set-layout", "group.reset"]);
+
+const tools = model
+    .get("commands")
+    .filter((info) => ALLOWED.has(info.name))
+    .map((info) => ({
+        name: info.name.replace(".", "_"),
+        description: info.description,
+        input_schema: info.payloadSchema,
+    }));
+```
+
+Expose only what the assistant should use: those five describe a layout change, while
+`group.add` and `panel.add` are what the primitives run when they mount.
+
+## Running untrusted input
+
+`model.dispatch` is `run` for JSON you did not write: it validates the input
+(`{ command, payload, transient? }`) against the command's schema and never throws.
+
+```ts
+const result = model.dispatch(
+    { command: "panel.collapse", payload: { panelId: "terminal" } },
+    { meta: { source: "assistant" } },
+);
+if (!result.ok) {
+    // tell the assistant why: "invalid_payload" (with error.issues), "not_found", "refused", ...
+    console.log(result.error.code, result.error.message);
+}
+```
+
+`meta` comes from your code, never from the input, so a middleware can trust it to say who asked.
+
+## Deciding what it may do
+
+```ts
+import { veto } from "@fragiola/splitter-react";
+
+model.use((ctx, next) => {
+    if (ctx.meta?.source !== "assistant") return next();
+    // the assistant may resize and collapse, but never touch the navigation
+    if ("panelId" in ctx.payload && ctx.payload.panelId === "navigation") {
+        return veto("the navigation is not the assistant's to change");
+    }
+    return next();
+});
+```
+
+The same middleware sees the user's drags and keys, so a rule written once holds for everyone.
+
+## Telling it the current layout
+
+Give the assistant the document (`model.get("splitter-json")`): every group's panels by id with
+their sizes in percent and which are collapsed. For one panel, `model.get("panel-size-by",
+{ panelId })` and `model.get("panel-constraints-by", { panelId })` say where it is and how far it
+can go.
+
+## Outside the browser
+
+The core runs in Node with no DOM. A server can load a user's saved document
+(`createSplitterModel(json)` after `validateSplitter(json)`), apply commands from an assistant or
+an admin script, and save the result, with the same rules the browser applies. Percentages
+resolve without a screen; sizes in other units need a measure, so send them in percent.

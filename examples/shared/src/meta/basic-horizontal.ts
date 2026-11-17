@@ -13,5 +13,5 @@ export default {
         "defaultSize",
         "double click to reset",
     ],
-    docs: "/docs/getting-started/first-splitter",
+    docs: "/docs/getting-started/first-split-view",
 } satisfies ExampleMeta;

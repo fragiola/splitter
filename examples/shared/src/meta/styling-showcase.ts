@@ -13,5 +13,5 @@ export default {
         "--sp-* tokens",
         "className function",
     ],
-    docs: "/docs/guides/styling",
+    docs: "/docs/guides/styling-css",
 } satisfies ExampleMeta;
