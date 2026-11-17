@@ -5,17 +5,21 @@
    no markup. It declares:
      1. shape tokens (--sp-*) that the examples' class names read: fonts and sizes
         (--sp-font, --sp-font-size), a panel's padding, corners and frame (--sp-panel-padding,
-        --sp-radius, --sp-border), a separator's hit size and drawn line (--sp-separator-size,
-        --sp-separator-line), the focus ring (--sp-focus-width), a panel title's weight
-        (--sp-title-weight), the shadow of a raised panel (--sp-shadow) and motion (--sp-motion);
+        --sp-radius, --sp-border), the focus ring (--sp-focus-width), a panel title's weight
+        (--sp-title-weight), the shadow of a raised panel (--sp-shadow), motion (--sp-motion)
+        and a separator's shape: its box, which the engine measures (--sp-separator-size), the
+        line drawn in its middle (--sp-separator-line), the wider area that grabs the pointer
+        (--sp-separator-grab, at least the line and the focus width) and whether it shows a
+        grip (--sp-grip: none or block);
      2. the Fragiola palettes the examples use, each with all SIX roles
         (base, soft, line, contrast, accent, ring). A palette that omitted one
         would inherit it from the page and leak across the theme boundary;
      3. on every palette, the colour tokens that depend on it: the group's canvas
-        (--sp-canvas-bg), a panel's frame (--sp-panel-line), a separator at rest, hovered and
-        dragged (--sp-separator-color, --sp-separator-hover, --sp-separator-active) and the focus
-        ring (--sp-focus-line). They are declared per palette so that var(--palette-…) resolves
-        against the palette the element sits in.
+        (--sp-canvas-bg), a panel's frame (--sp-panel-line), a separator's box (--sp-separator-bg),
+        its line and grip at rest, hovered and dragged (--sp-separator-color,
+        --sp-separator-hover, --sp-separator-active) and the focus ring (--sp-focus-line). They
+        are declared per palette so that var(--palette-…) resolves against the palette the
+        element sits in.
 
    Geometry is not a token: sizes and constraints are the panels' own props (they decide the
    layout), never CSS.
@@ -35,6 +39,8 @@
     --sp-shadow: 0 1px 3px oklch(0 0 0 / 0.4);
     --sp-separator-size: 9px;
     --sp-separator-line: 1px;
+    --sp-separator-grab: 9px;
+    --sp-grip: none;
     --sp-focus-width: 2px;
     --sp-title-weight: 600;
     --sp-motion: 120ms;
@@ -114,6 +120,7 @@
 :root [data-example-theme="dark"][class*="palette-"] {
     --sp-canvas-bg: var(--palette-soft);
     --sp-panel-line: var(--palette-line);
+    --sp-separator-bg: var(--palette-base);
     --sp-separator-color: var(--palette-line);
     --sp-separator-hover: oklch(from oklch(0.7 0.18 250) l c h / 0.6);
     --sp-separator-active: oklch(0.7 0.18 250);

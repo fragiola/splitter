@@ -21,12 +21,15 @@ const TOKENS = [
     "shadow",
     "separator-size",
     "separator-line",
+    "separator-grab",
+    "grip",
     "focus-width",
     "title-weight",
     "motion",
     // per palette: they read the palette the element sits in
     "canvas-bg",
     "panel-line",
+    "separator-bg",
     "separator-color",
     "separator-hover",
     "separator-active",
@@ -128,6 +131,28 @@ describe.each(parsed)("theme $theme.name", ({ theme, palettes, tokens }) => {
 
     it("declares every shape token", () => {
         expect([...tokens].sort()).toEqual([...TOKENS].sort());
+    });
+
+    it("grabs a separator by at least its box, its line and its focus ring", () => {
+        // the grab area (`::before`) draws the line in its middle: a line or a focus ring wider
+        // than it would not fit, and one narrower than the box would leave part of it dead
+        const css = readFileSync(join(DIR, `${theme.name}.css`), "utf-8");
+        const px = (token: string) => {
+            const value = new RegExp(
+                String.raw`--sp-${token}:\s*(\d+)px;`,
+            ).exec(css)?.[1];
+            expect(value, `--sp-${token} in px`).toBeDefined();
+            return Number(value);
+        };
+        const grab = px("separator-grab");
+        for (const token of [
+            "separator-size",
+            "separator-line",
+            "focus-width",
+        ]) {
+            expect(grab, token).toBeGreaterThanOrEqual(px(token));
+        }
+        expect(css).toMatch(/--sp-grip:\s*(none|block);/);
     });
 
     it("draws contrast text on base at AA (4.5:1) in every palette", () => {

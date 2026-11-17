@@ -5,9 +5,9 @@ import { GripVertical } from "lucide-react";
 import * as styles from "./styles";
 
 // Everything the separators look like comes from their state attributes and the theme's tokens:
-// a wide hit area with a hairline and a grip, the cursor from `data-orientation`, the colours from
-// hover, `data-dragging` and focus, and the whole group dimmed while one of its separators drags
-// (`data-dragging` on the group too). The package writes only the flex sizing.
+// a wide hit area with the theme's line and a grip, the cursor from `data-orientation`, the
+// colours from hover, `data-dragging` and focus, and the whole group dimmed while one of its
+// separators drags (`data-dragging` on the group too). The package writes only the flex sizing.
 export default function StylingShowcase() {
     return (
         <div className={styles.frame}>

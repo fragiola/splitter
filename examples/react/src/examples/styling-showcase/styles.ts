@@ -40,25 +40,28 @@ export const title = "truncate font-(--sp-title-weight)";
 export const text = "opacity-85";
 
 /**
- * A hit area twice the theme's, a hairline in the middle and a grip on it. Everything that changes
- * reads a state attribute: the cursor `data-orientation`, the colours hover, `data-dragging` and
- * focus, the cursor of a disabled one `data-disabled`.
+ * A hit area twice the theme's box (at least its grab area), the theme's line in the middle and a
+ * grip on it, always shown. Everything that changes reads a state attribute: the cursor
+ * `data-orientation`, the colours hover, `data-dragging` and focus, the cursor of a disabled one
+ * `data-disabled`.
  */
 export const separator = cn(
     "group/separator palette-surface relative flex shrink-0 items-center justify-center bg-palette-base outline-none select-none",
-    "data-[orientation=vertical]:w-[calc(var(--sp-separator-size)*2)] data-[orientation=vertical]:cursor-col-resize",
-    "data-[orientation=horizontal]:h-[calc(var(--sp-separator-size)*2)] data-[orientation=horizontal]:cursor-row-resize",
+    "data-[orientation=vertical]:w-[max(calc(var(--sp-separator-size)*2),var(--sp-separator-grab))] data-[orientation=vertical]:cursor-col-resize",
+    "data-[orientation=horizontal]:h-[max(calc(var(--sp-separator-size)*2),var(--sp-separator-grab))] data-[orientation=horizontal]:cursor-row-resize",
     "before:absolute before:bg-(--sp-separator-color) before:transition-colors before:duration-(--sp-motion)",
     "data-[orientation=vertical]:before:inset-y-0 data-[orientation=vertical]:before:w-(--sp-separator-line)",
     "data-[orientation=horizontal]:before:inset-x-0 data-[orientation=horizontal]:before:h-(--sp-separator-line)",
     "not-data-disabled:hover:before:bg-(--sp-separator-hover) data-dragging:before:bg-(--sp-separator-active)",
     "focus-visible:before:bg-(--sp-focus-line)",
+    "focus-visible:data-[orientation=vertical]:before:w-[max(var(--sp-separator-line),var(--sp-focus-width))]",
+    "focus-visible:data-[orientation=horizontal]:before:h-[max(var(--sp-separator-line),var(--sp-focus-width))]",
     "data-disabled:cursor-not-allowed",
 );
 
-/** the grip: a pill on the line, lit by the separator's state */
+/** the grip: a pill on the line (square in the square themes), lit by the separator's state */
 export const grip = cn(
-    "palette-raised relative flex items-center justify-center rounded-full",
+    "palette-raised relative flex items-center justify-center rounded-[calc(var(--sp-radius)*2)]",
     "border-(length:--sp-border) border-(--sp-separator-color) bg-palette-base text-palette-accent shadow-(--sp-shadow)",
     "transition-colors duration-(--sp-motion)",
     "group-data-[orientation=vertical]/separator:h-6 group-data-[orientation=vertical]/separator:w-3.5",

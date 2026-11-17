@@ -328,7 +328,7 @@ copyright line and the MIT licence, and the guard test lists it.
     `["react"]` only, so a Vue or Angular app may ship a subset while it is written (a spec for an
     example it lacks is skipped); each joins the list when it has every example (Vue did with
     Issue #9).
-  - **Examples (15):** `basic-horizontal`, `vertical` (getting started); `nested-groups`,
+  - **Examples (15; 25 since Epic #22, Issues #19 to #21):** `basic-horizontal`, `vertical` (getting started); `nested-groups`,
     `conditional-panels` (layouts); `size-constraints`, `fixed-size-panels`, `disabled-panels`
     (constraints); `collapsible-sidebar` (collapsing); `keyboard`; `rtl-layout`,
     `styling-showcase` (styling); `controlled-from-code`, `persistent-layout`, `undo-redo`
@@ -339,7 +339,8 @@ copyright line and the MIT licence, and the guard test lists it.
     `--sp-border`, `--sp-shadow`, `--sp-separator-size`, `--sp-separator-line`, `--sp-focus-width`,
     `--sp-title-weight`, `--sp-motion`, and per palette `--sp-canvas-bg`, `--sp-panel-line`,
     `--sp-separator-color`, `--sp-separator-hover`, `--sp-separator-active`, `--sp-focus-line`
-    (`tests/themes.test.ts` holds the list).
+    (`tests/themes.test.ts` holds the list). Five since Issue #18 (below), with the separator-shape
+    tokens `--sp-separator-grab`, `--sp-grip` and, per palette, `--sp-separator-bg`.
   - **Styling rules enforced by `examples/react/tests/examples.test.ts`:** no class string or
     `cn()` in a `.tsx`, `#/` and the listed packages only (`@/` refused), no fixed colour in a
     `styles.ts`, and every resize cursor behind a `data-` variant. State is styled with data
@@ -553,7 +554,7 @@ copyright line and the MIT licence, and the guard test lists it.
     with the React kit's classes; Reka's switch also writes Base UI's `data-checked`), and the
     tests (`examples`, `kit`, `vendored`). Versions are Grid Layout's pins (`@lucide/vue` 1.70.0,
     `reka-ui` 2.11.0, `@vitejs/plugin-vue` 6.0.10, `vue-tsc` 3.3.14) and this repo's for the rest.
-  - **Every example, same ids (15/15).** Each is `index.vue` (`<script setup>`) plus kebab-case
+  - **Every example, same ids (15/15; 25/25 since Epic #22).** Each is `index.vue` (`<script setup>`) plus kebab-case
     sibling components where React has a second component in the file (`toolbar.vue`,
     `panel-toggle.vue`) and `undo-redo/use-undo-history.ts` (Grid Layout's composable). The
     markup keeps React's paths, roles, accessible names and test ids, so the shared suite passes
@@ -686,7 +687,7 @@ copyright line and the MIT licence, and the guard test lists it.
     TestBed, `vendored`). The kit needs no Angular CDK: the examples have no popup (no
     `floating.ts`). Versions are Grid Layout's pins (`@lucide/angular` 1.70.0) and
     `packages/angular`'s for Angular.
-  - **Every example, same ids (15/15).** Each is `index.ts`, a default-exported standalone
+  - **Every example, same ids (15/15; 25/25 since Epic #22).** Each is `index.ts`, a default-exported standalone
     component (`host: { class: "contents" }`) with an inline template, plus kebab-case sibling
     components where React has a second component (`toolbar.ts`, `panel-toggle.ts`). The
     directives sit on the same elements React's primitives render (`<div splitterPanel>`), so the
@@ -727,3 +728,146 @@ copyright line and the MIT licence, and the guard test lists it.
   - **CI:** the e2e matrix lists every `examples/*/playwright.config.ts`, so the Angular job came
     with the app (only the header comment changed); Dockable's and Grid Layout's CI have nothing
     else for Angular.
+- **Issue #18 (Epic #22, five example themes):**
+  - **Themes:** `light`, `dark`, `ide`, `paper`, `terminal`, in that switcher order. `THEMES` takes
+    Dockable's names, titles, schemes and swatches; the descriptions say what a theme does to a
+    split view (Dockable's mention tabs). `ide.css`, `paper.css` and `terminal.css` carry Grid
+    Layout's palettes (a "From Grid Layout" header) and their `--sp-*` values: `ide` dense, square,
+    no motion; `paper` serif, warm, spacious, rounded; `terminal` monospace, square, no motion.
+    `light` and `dark` only gained the new tokens, with values that draw what they drew before.
+    The playground's switcher and the site export already followed `THEMES`.
+  - **Separator shape** (imitating Dockable's `--dk-splitter-size`, `--dk-splitter-grab`,
+    `--dk-splitter-bg`, `--dk-grip`): the box is `--sp-separator-size` thick (the engine measures
+    it) and filled with `--sp-separator-bg` (per palette); `::before` is the grab area,
+    `--sp-separator-grab` thick and centred on the box (negative insets when it is wider), with
+    `--sp-separator-line` drawn in its middle (its padding and `background-clip: content-box`, so
+    the line and the hit area are one pseudo-element; a focus ring is
+    `max(line, --sp-focus-width)`); `::after` is the grip, shown by `--sp-grip` (`none` | `block`,
+    `[display:var(--sp-grip)]`). The separator is `relative z-10`, so its grab area wins over the
+    panels it overlaps. `ide`: a 1px hairline grabbed over 7px; `paper`: a 12px transparent gutter
+    showing the canvas, no line, a grip; `terminal`: a 6px filled bar grabbed over 10px. Dockable
+    draws its grip as a child element; here it is a pseudo-element, so the markup of the 15
+    examples (three frameworks) did not change: only their `styles.ts` (React's, copied unchanged).
+    `styling-showcase` keeps its own grip (always shown) on a box of `max(2 × size, grab)`.
+  - **Tests:** `themes.test.ts` lists the new tokens and checks that the grab area is at least
+    the box, the line and the focus width, and that `--sp-grip` is `none` or `block`.
+    `e2e/themes.spec.ts` checks on computed styles that an example's separator reads the tokens
+    and is drawn differently in `light`, `ide`, `paper` and `terminal`, and that a hairline takes
+    the pointer beside its line. The smoke and iframe specs run in the five themes.
+- **Issue #19 (Epic #22, separator styles):**
+  - **Six examples** in `styling` (orders 3 to 8, after `rtl-layout` and `styling-showcase`, `docs`
+    `/docs/guides/styling-css`), one style each, in React, Vue and Angular with React's
+    `styles.ts` byte for byte: `separator-three-dots` (three dots, `data-testid="dot"`, a column or
+    a row from the separator's `data-orientation`), `separator-sash` (a 1px box; `::before` a
+    constant 9px hit area, `::after` the sash: 1px, then 4px in `--sp-separator-active` after a
+    300ms `transition-delay` on hover and at once while `data-dragging` or focused),
+    `separator-collapse-button` (a button inside the separator runs `panel.collapse` /
+    `panel.expand`; its name and `aria-expanded` follow `useSplitterState`, its icon turns from the
+    panel's `data-collapsed`), `separator-gutter` (panels as cards on the canvas; the separator is
+    the `--sp-panel-padding` gap, its line transparent at rest), `separator-size-readout` (a badge,
+    `data-testid="readout"`, `aria-hidden`, with `panel-size-by` read by `useSplitterState`, shown
+    while `data-dragging` or `focus-visible`) and `separator-drawer-tab` (a vertical group, a line
+    of `max(--sp-separator-line, 1px)` with a pull tab, `data-testid="drawer-tab"`).
+  - **They read the theme**, not its separator shape: each example draws its own separator (its
+    sizes are the example's), with the theme's fonts, radii (a dot or button is round, square
+    where `--sp-radius` is 0, from `rounded-[calc(var(--sp-radius)*100)]`), palettes, colour
+    tokens (`--sp-separator-color`, `-hover`, `-active`, `--sp-focus-line`) and `--sp-motion`.
+    `separator-collapse-button` and `separator-size-readout` keep the theme's separator (its box,
+    line and grab area); the button replaces the theme's grip.
+  - **Content inside a separator** keeps its events from it (`primitive-contract.mdx`): React's
+    capture handlers (`onPointerDownCapture`, `onKeyDownCapture`, `onDoubleClickCapture`) stop
+    them, Vue's `.stop` listeners and Angular's `$event.stopPropagation()` likewise; the spec
+    fails without them (checked once by removing them). A real double click on the button cannot
+    be asserted (its second press lands where the moved button no longer is), so the spec
+    dispatches `dblclick` on the button, then on the separator, which still resets.
+  - **Workaround S11** (`docs/docs-examples-gaps.md`): a separator carries none of its panels'
+    state, so the button's icon reads the panel before it with `[[data-collapsed]+*_&]:` (the
+    panel is the separator's previous sibling in every framework's markup).
+  - **Specs** (`e2e/examples/separator-*.spec.ts`) read computed styles and boxes and poll
+    (`expect.poll`), never a fixed wait: the sash's delay is read as `transitionDelay` and its
+    width polled until 4px.
+- **Issue #20 (Epic #22, email client and markdown editor):**
+  - **Two apps** in `apps` (orders 2 and 3, after `ide-layout`, height 560), in React, Vue and
+    Angular with React's `styles.ts` and plain-TS siblings byte for byte (`email-client/messages.ts`,
+    `markdown-editor/render.ts` and `sample.ts`); the second component is a kebab-case sibling in
+    Vue and Angular (`email-client/toolbar.vue|ts`, `markdown-editor/view-modes.vue|ts`). Both use
+    the theme's separator (the shared `separator` class), so they take each theme's shape.
+  - **`email-client`:** one group `mail` given both the restored `model` (`_kit/persistence.ts`,
+    key `fragiola-splitter:email-client`, validated with `validateSplitter`, as
+    `persistent-layout`) and an external ref for the toolbar's "Folders" toggle (`aria-pressed`
+    from `useSplitterState`). Folders: `defaultSize="13rem"`, `minSize="10rem"`, `maxSize="30%"`,
+    `collapsible`, `collapsedSize="3.25rem"`; their buttons keep an `aria-label` while the labels
+    and unread counts hide (`in-data-collapsed:hidden`). Message list: `defaultSize={320}`,
+    `minSize={240}`, `maxSize={440}`. Folders and list are `preserve-pixel-size`, so the reader
+    (`minSize="30%"`) takes a window resize. Selected and unread messages are `data-active` /
+    `data-unread` (`aria-current` for the open one and the open folder).
+  - **`markdown-editor`:** the mode is read from the model (`useSplitterState`: a collapsed editor is
+    Preview, a collapsed preview is Editor, else Split), so a drag that collapses a pane presses its
+    button. A button runs one `batch`: `panel.expand` of what the mode shows, then
+    `panel.collapse` of what it hides; Split expands back to the size the pane had (its restore
+    size), not to the defaults (`group.reset` would lose the user's split). The segmented control is
+    a `<fieldset aria-label="Mode">` (Biome's `useSemanticElements` refuses `role="group"`); the
+    "Stacked" switch sets the group's `orientation`, and the layout, in percent, is kept.
+  - **The preview is HTML from `render.ts`** (headings, paragraphs, lists, fenced code, inline code,
+    bold, italic; no library): it escapes every piece of the source before adding its own tags,
+    which carry no attribute, so the string is safe by construction. React sets it with
+    `dangerouslySetInnerHTML` (a `biome-ignore` names the reason), Vue with `v-html`, Angular with
+    `[innerHTML]` (its sanitizer keeps those tags as they are): the same output in the three
+    frameworks, simpler than a node tree rendered three times. `examples/react/tests/
+    markdown-render.test.ts` checks the escaping (only the renderer's tags, no attribute, in every
+    construct) and the rendering.
+  - **Specs:** `email-client` waits for the list's default 320px before a drag (the px/rem layout
+    exists once the group is measured; under load in Vue a drag started earlier missed the
+    separator), then reads boxes with `expect.poll`; the viewport resize is
+    `page.setViewportSize`. `markdown-editor` checks the modes, the orientation (group
+    `data-orientation`, separator `aria-orientation`, `aria-valuenow` kept, stacked boxes) and that
+    typed HTML shows as text with no element or handler. No gap needed a workaround.
+- **Issue #21 (Epic #22, chat with threads and database console):**
+  - **Two apps** in `apps` (orders 4 and 5, height 560), in React, Vue and Angular with React's
+    `styles.ts` and plain-TS siblings byte for byte (`chat-thread/data.ts`,
+    `database-console/sample.ts`); the header of `chat-thread` is a kebab-case sibling in Vue and
+    Angular (`header.vue|ts`), `database-console` has one component. Both use the theme's
+    separator (the shared `separator` class). The examples number **25**: Epic #7's 15, six
+    separator styles (Issue #19) and the apps `email-client`, `markdown-editor`, `chat-thread`
+    and `database-console` beside `ide-layout`.
+  - **`chat-thread`:** one group `chat` with an external ref for the header's "Members" toggle
+    (`aria-pressed` from `useSplitterState`). Channels: `defaultSize="14rem"`, `minSize="10rem"`,
+    `maxSize="20rem"`; conversation `minSize="25%"`; members `defaultSize="13rem"`,
+    `minSize="10rem"`, `maxSize="18rem"`, `collapsible` (to 0). The thread's separator and panel
+    (`id="thread"`, `defaultSize="30%"`, `minSize="20%"`, `maxSize="45%"`) are rendered while a
+    thread is open (`{thread && …}`, `v-if`, `@if`), between the conversation and the members; any
+    message's thread uses the same panel, so it comes back at the size the user gave it (S1's
+    layout memory). No `preserve-pixel-size` there: the separator that comes with the thread
+    shrinks the panels' axis by its width, and preserve-pixel-size panels then kept pixels
+    computed from the restored percentages, which moved the thread by about 2px. In React's dev
+    build (StrictMode mounts the thread panel twice) the channels and members can come back a
+    few pixels off; the production embeds, Vue and Angular restore the remembered layout exactly.
+    Sending a message or a reply appends it locally (an uncontrolled `<form>` read with
+    `FormData`), no network. Opening a thread while the members are collapsed expands them (a new
+    panel set takes its default layout): gap S13, no workaround.
+  - **`database-console`:** a root group `console` (schema `defaultSize="16rem"`,
+    `minSize="12rem"`, `maxSize="40%"`, `preserve-pixel-size`; workspace `minSize="40%"`) and a
+    vertical group `query` nested in the workspace (editor `minSize={120}` px; results
+    `defaultSize="40%"`, `minSize="7rem"`, `collapsible`, `collapsedSize="2rem"`, the height of
+    their title bar), one model. The toolbar reads the external ref from the component that
+    renders the group (`useSplitter(splitterRef)`, `useSplitterState`). "Results" toggles them,
+    "Run" (and Ctrl/⌘+Enter in the editor) expands them when collapsed and shows a static table
+    over `RESULT`'s rows, "Reset layout" runs one `batch` of `group.reset` for both groups. The
+    editor is a `<textarea wrap="off">` with as many `rows` as lines (`field-sizing: content`
+    where supported) beside a line-number gutter, in one scroll container.
+  - **Workaround S12** (`docs/docs-examples-gaps.md`): the engine's Enter toggles the panel
+    *before* a separator (React Resizable Panels' primary pane); the results are after theirs, so
+    the separator's own `keydown` listener (React `onKeyDown`, Vue `@keydown`, Angular `(keydown)`,
+    all after the engine's) toggles them on Enter.
+  - **`tests/vendored.test.ts`** (Vue and Angular) now compares every `.ts` file of React's
+    examples (React's components are `.tsx`, so these are the kit, the `styles.ts` and the data
+    and helper siblings) with this app's copy, except `ide-layout/files.ts`, which shows a file of
+    the framework (listed in `DIFFERENT`, checked to exist). This app's entry and components
+    (`index.vue|ts`, `toolbar.*`, `header.*`, …) have no counterpart there.
+  - **Specs:** `chat-thread` waits for the channels' default 14rem before a drag, then checks the
+    paths (`/g0/p2` is the thread between the conversation and the members, `aria-controls` of
+    both separators), the thread's width after a drag, a close and another thread opened (polled,
+    within 1.5px), the members' toggle, the channels' rem limits and sending. `database-console`
+    waits for the schema's 16rem, then checks the editor/results drag and the editor's 120px
+    minimum, `data-collapsed` from the button and from Enter, Run (expanded, eight rows) and
+    Reset (both separators' `aria-valuenow` back to their defaults).
