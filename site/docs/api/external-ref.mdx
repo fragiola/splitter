@@ -48,7 +48,7 @@ export function App() {
 import { type SplitterRef, useSplitter } from "@fragiola/splitter-vue";
 
 const props = defineProps<{ splitterRef: SplitterRef }>();
-const splitter = useSplitter(props.splitterRef); // a computed ref, null until a group holds the ref
+const splitter = useSplitter(() => props.splitterRef); // a computed ref, null until a group holds the ref
 
 function reset() {
     const current = splitter.value;

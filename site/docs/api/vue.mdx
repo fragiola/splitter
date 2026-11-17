@@ -101,7 +101,8 @@ and a group nested in that panel follows it in place, with its layout.
 ## Composables
 
 The hooks have the same names and arguments. A composable is called in `setup`; what changes is a
-`ComputedRef`, and an option is a value, a ref or a getter.
+`ComputedRef`, and an option is a value, a ref or a getter. Pass a prop as a getter
+(`() => props.splitterRef`): read in `setup`, its value would stay the first one.
 
 | React | Vue |
 | --- | --- |
@@ -119,10 +120,10 @@ The hooks have the same names and arguments. A composable is called in `setup`; 
 import { type SplitterRef, useSplitter, useSplitterState } from "@fragiola/splitter-vue";
 
 const props = defineProps<{ splitterRef: SplitterRef }>();
-const splitter = useSplitter(props.splitterRef);
+const splitter = useSplitter(() => props.splitterRef);
 const collapsed = useSplitterState(
     ({ model }) => model.is("panel-collapsed", { panelId: "files" }),
-    { splitterRef: props.splitterRef },
+    { splitterRef: () => props.splitterRef },
 );
 
 function toggle() {

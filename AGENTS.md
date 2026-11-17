@@ -575,5 +575,8 @@ copyright line and the MIT licence, and the guard test lists it.
   - **CI:** the e2e matrix lists every `examples/*/playwright.config.ts`, so the Vue job came with
     the app (only the header comment changed). `scripts/check-package.ts` now reads the Vue smoke
     versions from `examples/vue/package.json` only (the fallback pins are gone).
+  - **A prop reaches a composable as a getter** (`useSplitter(() => props.splitterRef)`, `{
+    splitterRef: () => props.splitterRef }`) in the examples and the docs: `props.splitterRef`
+    read in `setup` would keep the first ref if the parent passed another one.
   - **Library fix:** the engine's `group.measure` run casts its payload to the registry's type:
     vue-tsc (TypeScript 6) compiles the core's sources and refused it; no runtime change.

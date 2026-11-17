@@ -5,7 +5,7 @@ import * as styles from "./styles";
 
 // Buttons that run commands on the group's model: they never touch the DOM.
 const props = defineProps<{ splitterRef: SplitterRef }>();
-const splitter = useSplitter(props.splitterRef);
+const splitter = useSplitter(() => props.splitterRef);
 
 function resizeSidebar(size: string) {
     splitter.value?.model.run("panel.resize", { panelId: "sidebar", size });

@@ -10,11 +10,11 @@ import * as styles from "./styles";
 
 // A button outside the group: it collapses and expands the sidebar through the model.
 const props = defineProps<{ splitterRef: SplitterRef }>();
-const splitter = useSplitter(props.splitterRef);
+const splitter = useSplitter(() => props.splitterRef);
 // undefined until the group holds the ref, then recomputed on every collapse and expand
 const state = useSplitterState(
     ({ model }) => model.is("panel-collapsed", { panelId: "sidebar" }),
-    { splitterRef: props.splitterRef },
+    { splitterRef: () => props.splitterRef },
 );
 const collapsed = computed(() => state.value ?? false);
 

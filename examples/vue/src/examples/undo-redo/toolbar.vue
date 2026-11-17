@@ -18,7 +18,7 @@ const VERBS: Record<string, string> = {
 
 // Undo, redo, and the steps they go through.
 const props = defineProps<{ splitterRef: SplitterRef }>();
-const splitter = useSplitter(props.splitterRef);
+const splitter = useSplitter(() => props.splitterRef);
 const { history, snapshot } = useUndoHistory(splitter);
 
 // the shortcuts, page-wide; never in the middle of a drag (its steps are not committed)

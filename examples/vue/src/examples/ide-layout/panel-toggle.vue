@@ -18,11 +18,11 @@ const props = defineProps<{
     icon: Component;
 }>();
 
-const splitter = useSplitter(props.splitterRef);
+const splitter = useSplitter(() => props.splitterRef);
 // recomputed when the panel collapses or expands, however it happens (a drag, Enter, a button)
 const state = useSplitterState(
     ({ model }) => model.is("panel-collapsed", { panelId: props.panelId }),
-    { splitterRef: props.splitterRef },
+    { splitterRef: () => props.splitterRef },
 );
 const collapsed = computed(() => state.value ?? false);
 
