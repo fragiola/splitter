@@ -624,7 +624,11 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
         if (!force && sameMeasure(group, measure)) {
             return;
         }
-        this.model.run("group.measure", measure, { transient: true });
+        // the measure names the group by the string id the engine bound; TypeScript 6 (the Vue
+        // examples' vue-tsc) does not see it as one of `T`'s group ids without the cast
+        this.model.run("group.measure", measure as GroupMeasurePayload<T>, {
+            transient: true,
+        });
     }
 
     private syncOrder(groupId: string): CommandResult<unknown> {

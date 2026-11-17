@@ -19,6 +19,8 @@ pair. What goes inside each panel is entirely yours.
   `Splitter.Separator` element in document order is its n-th separator. Render one between each
   pair; a separator element beyond the group's count stays unbound.
 
+<Framework name="react">
+
 ```tsx
 function Pane({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
     return (
@@ -42,6 +44,44 @@ export function Mail() {
 }
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+```vue title="pane.vue"
+<script setup lang="ts">
+import { Splitter } from "@fragiola/splitter-vue";
+
+defineProps<{ id: string; title: string }>();
+</script>
+
+<template>
+    <Splitter.Panel :id="id" min-size="15%">
+        <section :aria-label="title" class="h-full overflow-auto p-3">
+            <h2>{{ title }}</h2>
+            <slot />
+        </section>
+    </Splitter.Panel>
+</template>
+```
+
+```vue title="mail.vue"
+<script setup lang="ts">
+import { Splitter } from "@fragiola/splitter-vue";
+import Pane from "./pane.vue";
+</script>
+
+<template>
+    <Splitter.Group class="h-full">
+        <Pane id="folders" title="Folders">…</Pane>
+        <Splitter.Separator aria-label="Resize folders" class="w-1" />
+        <Pane id="messages" title="Messages">…</Pane>
+    </Splitter.Group>
+</template>
+```
+
+</Framework>
+
 ## Nesting
 
 A `Splitter.Group` inside a `Splitter.Panel` nests in it: it joins the outer group's model and
@@ -50,6 +90,8 @@ saves both. No Provider is involved. A nested group given a `model` of its own i
 own instead. See [Nested groups](/docs/guides/nested-groups).
 
 ## Replacing an element: `render`
+
+<Framework name="react">
 
 Each primitive renders a `div`. `render` swaps it, with an element whose props are merged with
 the primitive's, or with a function that receives the props and the part's state:
@@ -63,6 +105,28 @@ the primitive's, or with a function that receives the props and the part's state
 />
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+Each primitive renders a `div`. `as` swaps it for another tag or a component, and the `render`
+slot hands you the props and the part's state to render the element yourself:
+
+```vue
+<Splitter.Group as="main" />
+<Splitter.Panel id="nav" as="nav" aria-label="Main" />
+<Splitter.Separator aria-label="Resize">
+    <template #render="{ props, state }">
+        <div v-bind="props" :title="state.dragging ? 'Release to drop' : undefined" />
+    </template>
+</Splitter.Separator>
+```
+
+The slot also gets `children`, the part's default slot, to render inside your element
+(`<component :is="children" />`).
+
+</Framework>
+
 There is no `asChild`. The rules every primitive follows are on
 [The primitive contract](/docs/concepts/primitive-contract).
 
@@ -71,6 +135,8 @@ There is no `asChild`. The rules every primitive follows are on
 Below each part is a hook that returns its state and the props of its element: `useGroup()` (the
 enclosing group), `usePanel(options)` and `useSeparator(options)`. A part of your own spreads the
 props on any element:
+
+<Framework name="react">
 
 ```tsx
 import { useSeparator } from "@fragiola/splitter-react";
@@ -81,6 +147,26 @@ export function RuleSeparator({ label }: { label: string }) {
     return <hr {...props} aria-label={label} data-active={state.dragging ? "" : undefined} />;
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="rule-separator.vue"
+<script setup lang="ts">
+import { useSeparator } from "@fragiola/splitter-vue";
+
+// A separator drawn as a native <hr>, focusable and resizable like Splitter.Separator.
+defineProps<{ label: string }>();
+const { state, props } = useSeparator();
+</script>
+
+<template>
+    <hr v-bind="props" :aria-label="label" :data-active="state.dragging ? '' : undefined" />
+</template>
+```
+
+</Framework>
 
 `props` carries the ref that binds the element (the engine listens to its pointer, keyboard and
 double clicks through it), the role, the ARIA values, `tabIndex`, the structural style and the

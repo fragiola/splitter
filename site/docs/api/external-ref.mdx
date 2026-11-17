@@ -7,6 +7,8 @@ Code outside the root group cannot read the group's context. An external ref bri
 give it to the root group's `splitterRef`, and anything holding the ref reaches that splitter's
 model, engine and root group id, from anywhere in the tree, or outside React.
 
+<Framework name="react">
+
 ```tsx
 "use client";
 
@@ -36,6 +38,51 @@ export function App() {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="toolbar.vue"
+<script setup lang="ts">
+import { type SplitterRef, useSplitter } from "@fragiola/splitter-vue";
+
+const props = defineProps<{ splitterRef: SplitterRef }>();
+const splitter = useSplitter(() => props.splitterRef); // a computed ref, null until a group holds the ref
+
+function reset() {
+    const current = splitter.value;
+    current?.model.run("group.reset", { groupId: current.groupId });
+}
+</script>
+
+<template>
+    <button v-if="splitter" type="button" @click="reset">Reset the layout</button>
+</template>
+```
+
+```vue title="app.vue"
+<script setup lang="ts">
+import { Splitter, useSplitterRef } from "@fragiola/splitter-vue";
+import Toolbar from "./toolbar.vue";
+
+const splitterRef = useSplitterRef();
+</script>
+
+<template>
+    <Toolbar :splitter-ref="splitterRef" />
+    <Splitter.Group :splitter-ref="splitterRef" class="h-96">
+        <Splitter.Panel id="a">…</Splitter.Panel>
+        <Splitter.Separator aria-label="Resize" class="w-1" />
+        <Splitter.Panel id="b">…</Splitter.Panel>
+    </Splitter.Group>
+</template>
+```
+
+In Vue, `useSplitterRef()` is called in `setup` and kept out of Vue's reactivity (`markRaw`), so
+it stays the core's object inside a `ref()` or a store.
+
+</Framework>
 
 ## `useSplitterRef`
 

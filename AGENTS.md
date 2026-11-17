@@ -21,24 +21,25 @@ wiring.
 |---|---|---|---|
 | `packages/core` | `@fragiola/splitter` | the typed model and its command bus, the JSON document and its JSON Schema, the pure layout rules, units, the engine (measurement, gestures, keyboard, RTL, ARIA values) | DOM only, zero runtime deps |
 | `packages/react` | `@fragiola/splitter-react` | the `Splitter.*` primitives and hooks over the core, and the whole core re-exported | the core (`workspace:*`); peers `react`, `react-dom` (^19) |
-| `packages/vue` | `@fragiola/splitter-vue` | planned (Epic #10) | the core |
+| `packages/vue` | `@fragiola/splitter-vue` | the `Splitter.*` primitives (plain `.ts` render functions, no SFC) and composables over the core, `typedSplitter<Types>()`, and the whole core re-exported | the core (`workspace:*`); peer `vue` (^3.5) |
 | `packages/angular` | `@fragiola/splitter-angular` | planned (Epic #13) | the core |
 
 Private, never published: `apps/playground` (the dev app: the examples in place, scenarios,
 unstyled fixtures for Playwright), `examples/shared` (`examples-shared`: what every framework's
-examples share, framework-free) and `examples/react` (`examples-react`: the site's React examples
-and their embed) and `site` (the export for fragiola.com/splitter: the pages, the export and dev
-scripts, the contract and the repository checks' tests).
+examples share, framework-free), `examples/react` (`examples-react`: the site's React examples
+and their embed), `examples/vue` (`examples-vue`: the same examples in Vue and their embed) and
+`site` (the export for fragiola.com/splitter: the pages, the export and dev scripts, the contract
+and the repository checks' tests).
 
 ## Non-negotiable rules
 
 These are the decisions of Epic #7 (D1 to D10) and the ecosystem rules they build on. A change that
 breaks one is a decision for the maintainer, not an implementation detail.
 
-1. **Names (D1).** Packages `@fragiola/splitter` (core) and `@fragiola/splitter-react`; later
-   `@fragiola/splitter-vue` and `@fragiola/splitter-angular`. Repo `fragiola/splitter`;
+1. **Names (D1).** Packages `@fragiola/splitter` (core), `@fragiola/splitter-react` and
+   `@fragiola/splitter-vue`; later `@fragiola/splitter-angular`. Repo `fragiola/splitter`;
    fragiola.com slug `splitter`, title "Splitter"; www `devUrl` `http://localhost:5184` (5183 is
-   reserved by `dnd`). React namespace `Splitter`. Core creators `createSplitterModel` and
+   reserved by `dnd`). React and Vue namespace `Splitter`. Core creators `createSplitterModel` and
    `createSplitterEngine`; the external ref is `createSplitterRef` / `useSplitterRef`.
 2. **Glossary (D2).** A **group** lays out **panels** along one **orientation**, with a
    **separator** between neighbouring panels. A panel is **collapsed** or **expanded**. A separator
@@ -134,16 +135,16 @@ breaks one is a decision for the maintainer, not an implementation detail.
 | `pnpm check:layout` | the source layout check (`scripts/check-layout.ts`, from Dockable): every tracked name kebab-case, a package's `src/` root holds only its entries |
 | `pnpm check:commands` | builds the core and fails when `site/docs/api/commands.mdx` differs from the registry (`packages/core/scripts/generate-command-docs.ts`; `pnpm --filter @fragiola/splitter generate:commands` rewrites it) |
 | `pnpm check:fix` | Biome check with auto-fix |
-| `pnpm typecheck` | `pnpm -r typecheck` (TypeScript 7, no emit) |
-| `pnpm test` | Vitest across the projects: `core` (node), `react` (jsdom), `playground`, `examples-shared`, `examples-react`, `site` |
+| `pnpm typecheck` | `pnpm -r typecheck` (TypeScript 7, no emit; `examples/vue` runs vue-tsc on TypeScript 6.0.3, pinned in that app only, over the packages' sources too) |
+| `pnpm test` | Vitest across the projects: `core` (node), `react` (jsdom), `vue` (jsdom, `@vue/test-utils`; its server tests in node), `playground`, `examples-shared`, `examples-react`, `examples-vue`, `site` |
 | `pnpm build` | `pnpm -r build` (tsdown for the packages, Vite for the playground and the embed), then the `.d.ts` check (`scripts/check-dts.ts`) |
-| `pnpm e2e` | Playwright, one app after the other: the playground (Chromium and Firefox, its dev server on 5173, `PLAYGROUND_PORT` moves it), then each examples app's shared suite (`examples/shared/e2e`) against a production build of its embed (on 4340 + the framework's index, `EXAMPLES_E2E_PORT` moves it). The examples suite builds against the packages' `dist`: run `pnpm build` first. `pnpm exec playwright install chromium firefox` once |
-| `pnpm dev` | the playground on 5173 (`PLAYGROUND_PORT`): every example with its themes and source, the scenarios, the fixtures. The embed alone: `pnpm --filter examples-react dev` on 5184 (`PORT`) |
-| `pnpm site:export --base /splitter --out <dir>` | the site export, contract v1.2 (`../www/CONTRACT.md`): builds the packages and the React embed for `<base>/embed/react/`, writes `project.json`, `docs/`, `examples.json` and each embed's `manifest.json`, then validates the output (`site/contract.ts`) and exits non-zero on any problem. It only replaces a previous export |
+| `pnpm e2e` | Playwright, one app after the other: the playground (Chromium and Firefox, its dev server on 5173, `PLAYGROUND_PORT` moves it), then each examples app's shared suite (`examples/shared/e2e`) against a production build of its embed (on 4340 + the framework's index: React 4340, Vue 4341; `EXAMPLES_E2E_PORT` moves it). The examples suite builds against the packages' `dist`: run `pnpm build` first. `pnpm exec playwright install chromium firefox` once |
+| `pnpm dev` | the playground on 5173 (`PLAYGROUND_PORT`): every example with its themes and source, the scenarios, the fixtures. The embed alone: `pnpm --filter examples-react dev` on 5184, `pnpm --filter examples-vue dev` on 5185 (`PORT`) |
+| `pnpm site:export --base /splitter --out <dir>` | the site export, contract v1.2 (`../www/CONTRACT.md`): builds the packages and every framework's embed (React, Vue) for `<base>/embed/<framework>/`, writes `project.json`, `docs/`, `examples.json` and each embed's `manifest.json`, then validates the output (`site/contract.ts`) and exits non-zero on any problem. It only replaces a previous export |
 | `pnpm site:dev --base /splitter --port 5184` | every framework's embed with hot reload behind one Node proxy (`site/dev-proxy.ts`, no dependency) under `<base>/embed/<framework>/`, for `www` in dev (`devUrl` `http://localhost:5184`) |
 | `pnpm --filter examples-react vendor` | vendors Fragiola UI into `examples/react/src` (`scripts/vendor-fragiola.ts`; `FRAGIOLA_REGISTRY` points it at a registry URL or a local `public/r` directory); the copies are committed |
 
-| `pnpm check:package` | builds the packages, packs each with pnpm and checks the tarballs (`scripts/check-package.ts`, from Dockable): the packed `exports` are the repo's without the source condition (`types`/`import`/`default`, `dist` targets), publint (strict), attw (`esm-only`), each adapter of `ADAPTERS` pins the core exactly, and its smoke app (React: Vite + React, outside the workspace, the React tarball only) typechecks, builds and loads its dev server. `--tarballs <dir>` checks given tarballs (the release workflow's) |
+| `pnpm check:package` | builds the packages, packs each with pnpm and checks the tarballs (`scripts/check-package.ts`, from Dockable): the packed `exports` are the repo's without the source condition (`types`/`import`/`default`, `dist` targets), publint (strict), attw (`esm-only`), each adapter of `ADAPTERS` pins the core exactly, and its smoke app (outside the workspace, that adapter's tarball only: React, Vite + React checked by `tsc`; Vue, Vite + Vue with a single-file component checked by vue-tsc on TypeScript 6) typechecks, builds and loads its dev server. `--tarballs <dir>` checks given tarballs (the release workflow's) |
 | `pnpm changeset` / `release:version` | Changesets: add a changeset / bump the versions (the release workflow runs the latter); core and adapters are one `fixed` group (`@fragiola/*`). Releasing: `docs/releasing.md` |
 
 ## Repository layout
@@ -151,9 +152,11 @@ breaks one is a decision for the maintainer, not an implementation detail.
 ```
 packages/core/      @fragiola/splitter        src/<domain>/ (state, commands, schema, layout, units, engine, keyboard), tests/ mirroring it, tests/types/
 packages/react/     @fragiola/splitter-react  src/components/, hooks/, utils/; entries index.ts, parts.ts, context.ts
+packages/vue/       @fragiola/splitter-vue    src/components/, composables/ (+ internal.ts), utils/ (primitive.ts, render.ts from Dockable); entries index.ts, parts.ts, typed.ts, context.ts; tests/ (+ tests/types/)
 apps/playground/    playground                src/shell/ (catalog, stage, source), src/scenarios/<area>/<id>.tsx (dev-only), src/fixture/ + fixtures/<name>/index.html (unstyled, for Playwright), e2e/, tests/
 examples/shared/    examples-shared           src/meta/<slug>.ts, src/themes/, src/embed/, src/framework.ts, scripts/ (examples-lib, generate, manifest), e2e/ (every spec, every framework), tests/
 examples/react/     examples-react            src/examples/<slug>/ (index.tsx, styles.ts), src/examples/_kit/ (persistence.ts, undo.ts), src/embed/, vendored Fragiola UI (src/components, lib, styles), scripts/vendor-fragiola.ts, tests/
+examples/vue/       examples-vue              src/examples/<slug>/ (index.vue, kebab-case .vue siblings, styles.ts and _kit/ copied from React), src/embed/, the kit over Reka UI (src/components), src/lib and src/styles copied from React, tests/ (examples, kit, vendored)
 site/               export.ts, dev.ts, dev-proxy.ts, sources.ts, contract.ts, project.json; docs/ (config.json, index.mdx, getting-started/, concepts/, guides/, api/, limitations.mdx); tests/ (contract, docs-reference, dev-proxy, the repository checks)
 site/docs/api/      commands.mdx              generated from the command registry (do not edit)
 docs/               docs-examples-gaps.md     what the docs and examples work around, with the proposed API; releasing.md (the release runbook)
@@ -186,10 +189,11 @@ copyright line and the MIT licence, and the guard test lists it.
 - **Source layout** (guidelines `repository.md#source-layout`, enforced by `pnpm check:layout`):
   every file and folder name is kebab-case (the kebab-case of its main export:
   `useSplitterRef` → `use-splitter-ref.ts`); a `src/` is never flat: its root holds only the
-  entries (`index.ts`, `parts.ts`, `context.ts`), everything else lives in a folder named after
-  what it holds. One public component, hook or function per file, with its types beside it; hooks
-  only the primitives call live in `hooks/internal.ts`. No barrel files inside the folders. A
-  reorganization is its own change.
+  entries (`index.ts`, `parts.ts`, `context.ts`, and Vue's `typed.ts`), everything else lives in
+  a folder named after what it holds. One public component, hook or function per file, with its
+  types beside it; hooks only the primitives call live in `hooks/internal.ts` (Vue:
+  `composables/internal.ts`). No barrel files inside the folders. A reorganization is its own
+  change.
 - Unit tests live in each package's `tests/`, mirroring `src/` in the core; type fixtures in
   `tests/types/` (`@ts-expect-error` marks what must not compile).
 - Every rule a reviewer would otherwise have to remember is a test.
@@ -317,9 +321,10 @@ copyright line and the MIT licence, and the guard test lists it.
     cleanest copies of Dockable's), plus Dockable's scenarios (`src/scenarios/<area>/<id>.tsx`, areas
     `layout` and `api`). Copied files keep a "From Grid Layout / From Dockable" header.
   - **Frameworks:** `examples/shared/src/framework.ts` lists react, vue and angular with their entry
-    files, adapter packages and icon packages; `COMPLETE_FRAMEWORKS` (`e2e/available.ts`) is
+    files, adapter packages and icon packages; `COMPLETE_FRAMEWORKS` (`e2e/available.ts`) was
     `["react"]` only, so a Vue or Angular app may ship a subset while it is written (a spec for an
-    example it lacks is skipped); each joins the list when it has every example.
+    example it lacks is skipped); each joins the list when it has every example (Vue did with
+    Issue #9).
   - **Examples (15):** `basic-horizontal`, `vertical` (getting started); `nested-groups`,
     `conditional-panels` (layouts); `size-constraints`, `fixed-size-panels`, `disabled-panels`
     (constraints); `collapsible-sidebar` (collapsing); `keyboard`; `rtl-layout`,
@@ -471,3 +476,107 @@ copyright line and the MIT licence, and the guard test lists it.
     runs do not count as in flight, so such a command commits at once); its docs only say that
     dry runs must have no side effects, which this enforces. Proposed for Dockable, not changed
     there.
+- **Issue #8 (Vue adapter):**
+  - **Imitated** Dockable's and grid-layout's Vue adapters: components as plain `.ts` render
+    functions (`definePrimitive`, `inheritAttrs: false`), `utils/primitive.ts` and
+    `utils/render.ts` copied (grid-layout's `useExternal`, whose subscription is read reactively and
+    ends with the component, also on the server), the same file names as React (`group.ts`,
+    `panel.ts`, `separator.ts`, `use-*.ts`), and the registration logic ported line for line from
+    React's `hooks/internal.ts` to `composables/internal.ts`. `GroupRegistry`, `panelStyle`,
+    `shallowEqual` and `ADAPTER_RUN` are React's, unchanged.
+  - **Surface.** `Splitter.Group` / `Panel` / `Separator` with React's props; the callbacks are
+    props Vue binds from listeners (no `emits`, as grid-layout): `v-model:layout`
+    (`onUpdate:layout`), `@layout-change` (the same event, React's `onLayoutChange`),
+    `@layout-commit`, and the panel's `@resize`, `@collapse`, `@expand`. Bare boolean attributes
+    (`<Splitter.Panel collapsible>`) are `true`, absent ones `undefined`. Composables `useGroup()`,
+    `usePanel(options)`, `useSeparator(options)` (options a value, a ref or a getter) return
+    `{ state, props }` as computed refs; `useSplitter()` inside a group returns the plain
+    `{ model, engine, groupId }` (it never changes for a mounted group), `useSplitter(splitterRef)`
+    a computed ref (`null` while no root holds the ref); `useSplitterRef()` is
+    `markRaw(createSplitterRef())`; `useSplitterState(selector, { splitterRef?, isEqual? })` a
+    computed ref, recomputed once per model state and when a reactive value the selector reads
+    changes. `typedSplitter<Types>()` (Vue only, as Dockable's `typedDockable`) types the ids in
+    templates. Runtime names are React's plus `typedSplitter` (`tests/exports.test.ts`).
+  - **`as` and the `render` slot** replace `render` (Dockable's Vue): `as` is a tag or a component,
+    the slot gets `{ props, state, children }`. `class` and `style` are plain attributes merged
+    under the structural style, as in Dockable's Vue adapter: state-dependent styling goes through
+    the `data-*` attributes or the `render` slot's `state` (no `(state) => value` form). A template
+    `ref` on a part is its component (`$el` is the element), as in any Vue component. The default
+    slots get `{ state }`.
+  - **A new `id` or `model` remounts the group** (a wrapper keys the group on its id and its
+    model, as Dockable keys its Root on the model): the group's context then never changes, and
+    the panels register again with the new group. A panel's new `id` removes it under the old one
+    and adds it under the new one, without remounting its content; a group nested in it stays
+    mounted and runs `group.update` with the new `parentPanelId` (its panels, layout and layout
+    memory stay). React does the same: its registration effect no longer depends on the parent
+    panel id (it re-registered the nested group, which came back without its panels in the model,
+    `panelIds: []`); a separate layout effect runs the `group.update`. The wrapper read
+    the parent panel id in its render, so every resize of the parent panel rendered the nested
+    group again: it reads nothing of the parent now. Its slots are passed as they come (not forced
+    `$stable`): the wrapper renders again only for new props, attributes or slots, which the group
+    must see.
+  - **Lifecycle.** Vue runs a child's `onMounted` before its parent's and a parent's
+    `onBeforeUnmount` before its children's, as React runs effects and cleanups, so registration is
+    React's: panels wait in the registry, the group registers in one `batch` in its `onMounted`
+    and removes itself (`keepLayout`) in `onBeforeUnmount`. Prop changes are `flush: "post"`
+    watchers (React's layout effects); a controlled `layout` is watched deeply and copied out of
+    any reactive proxy (`toRaw`), and runs nothing when it equals the model's layout (no echo of
+    `update:layout`), so drag steps stay transient and a veto's restore holds.
+  - **Listener order on separators.** The engine binds a separator's listeners when the group
+    syncs it, after Vue attached the element's own; so `Splitter.Separator` takes the consumer's
+    listeners for the engine's events (`onPointerdown`, `onPointermove`, `onPointerup`,
+    `onPointercancel`, `onLostpointercapture`, `onKeydown`, `onDblclick`) out of the attributes and
+    adds them to the element again after each bind: they run after the engine's, as in React.
+    They run through `callWithAsyncErrorHandling` (`ErrorCodes.NATIVE_EVENT_HANDLER`, with the
+    separator's instance), as Vue calls the listeners it attaches itself: an error (or a rejected
+    promise) reaches `app.config.errorHandler` instead of escaping as an uncaught error.
+  - **Tests** (`packages/vue/tests`): contract, nesting, conditional (with remounts), keyboard,
+    pointer (veto, `v-model:layout`), props, SSR (`vue/server-renderer` + `createSSRApp`
+    hydration, no mismatch reported) and a server render in the node environment, the state
+    composable, the exports; type fixtures in `tests/types/`.
+  - **Versions** (7-day rule, 2026-11-17): `vue` 3.5.45, `@vue/test-utils` 2.5.1; the smoke app's
+    `@vitejs/plugin-vue` 6.0.10, `vue-tsc` 3.3.14, TypeScript 6.0.3 (Dockable's pins).
+    `scripts/check-package.ts` takes them from `examples/vue/package.json` once that app exists
+    (Issue #9) and from `VUE_SMOKE_VERSIONS` until then.
+  - **Release.** Nothing is published yet, so the Vue package joins the first release
+    (`.changeset/splitter-vue.md`, `minor`; `docs/releasing.md` steps 1, 4, 5 and *The Vue package*).
+    CI needed no change besides its comment: the Vitest projects glob `packages/*`, and the
+    Package job runs every `ADAPTERS` entry.
+- **Issue #9 (Vue examples and docs):**
+  - **Imitated** Grid Layout's `examples/vue` (the newest copy of Dockable's): `vite.config.ts`,
+    `vite.shared.ts`, `vitest.config.ts`, `tsconfig.json` (vue-tsc on TypeScript 6.0.3, this app
+    only), the embed (`src/embed/main.ts`, React's protocol and markup), the kit's
+    `components/atoms/clickable.ts` and `components/ui/switch.ts` (Fragiola UI over Reka UI 2.11.0
+    with the React kit's classes; Reka's switch also writes Base UI's `data-checked`), and the
+    tests (`examples`, `kit`, `vendored`). Versions are Grid Layout's pins (`@lucide/vue` 1.70.0,
+    `reka-ui` 2.11.0, `@vitejs/plugin-vue` 6.0.10, `vue-tsc` 3.3.14) and this repo's for the rest.
+  - **Every example, same ids (15/15).** Each is `index.vue` (`<script setup>`) plus kebab-case
+    sibling components where React has a second component in the file (`toolbar.vue`,
+    `panel-toggle.vue`) and `undo-redo/use-undo-history.ts` (Grid Layout's composable). The
+    markup keeps React's paths, roles, accessible names and test ids, so the shared suite passes
+    unchanged: no spec was touched. `COMPLETE_FRAMEWORKS` is `["react", "vue"]`, and
+    `tests/examples.test.ts` wants exactly React's ids.
+  - **Copied, not shared:** `_kit/persistence.ts`, `_kit/undo.ts` and every example's `styles.ts`
+    are React's files byte for byte (`tests/vendored.test.ts` compares them), as are `src/styles`
+    and `src/lib/cn.ts` (with a "Copied from" first line). The kit stays inside each app, as the
+    guidelines say (the code panel shows it). `ide-layout/files.ts` differs: its editor shows a
+    Vue file (`workbench.vue`), so the tab reads its name from `ACTIVE`.
+  - **Ports:** the Vue embed's dev server is 5185 (React's is 5184, www's `devUrl`, which the
+    `site:dev` proxy serves; `site:dev` gives each app a free port anyway); its e2e server 4341
+    (4340 + its index in `FRAMEWORKS`).
+  - **Site:** `project.json` `frameworks` is `["react", "vue"]` (keyword `vue` added): the export
+    emits `embed/vue/` with its manifest, and `site:dev` serves both embeds. A Vue example's
+    manifest has `registry: []`: the Vue kit is not a registry item (Grid Layout's does the same).
+  - **Docs:** `<Framework name="vue">` blocks where the code differs (the landing, introduction,
+    installation, first split view, Group's controlled layout, hooks, external ref, composition);
+    `api/vue.mdx` (the React-to-Vue mapping, the composables, `typedSplitter`) in its own sidebar
+    section. `docs-reference.test.ts` checks the Vue reference (`allFields` takes the adapter's
+    files). The Vue snippets were type-checked once with vue-tsc, as Issue #5's were.
+  - **CI:** the e2e matrix lists every `examples/*/playwright.config.ts`, so the Vue job came with
+    the app (only the header comment changed). `scripts/check-package.ts` now reads the Vue smoke
+    versions from `examples/vue/package.json` only (the fallback pins are gone).
+  - **A prop reaches a composable as a getter** (`useSplitter(() => props.splitterRef)`, `{
+    splitterRef: () => props.splitterRef }`) in the examples and the docs: `props.splitterRef`
+    read in `setup` would keep the first ref if the parent passed another one.
+  - **Library fix:** the engine's `group.measure` run casts its payload to the registry's type:
+    vue-tsc (TypeScript 6) compiles the core's sources and refused it; no runtime change.

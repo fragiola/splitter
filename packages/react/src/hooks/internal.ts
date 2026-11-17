@@ -160,7 +160,10 @@ export function useGroupRoot(options: GroupRootOptions): GroupContextValue {
         [joins, model, engineOptions],
     );
     const engine = joins ? parent.engine : (ownEngine as SplitterEngine);
+    // the panel the group sits in: a new id moves the group in place (`group.update`), read from
+    // a ref by the registration so that it does not register the group again
     const parentPanelId = joins ? parent.panelId : undefined;
+    const sentParent = React.useRef(parentPanelId);
     const registry = React.useMemo(
         () => new GroupRegistry(model, engine, groupId),
         [model, engine, groupId],
@@ -229,6 +232,7 @@ export function useGroupRoot(options: GroupRootOptions): GroupContextValue {
 
     React.useLayoutEffect(() => {
         const { orientation, disabled, layout, defaultLayout } = latest.current;
+        const parentId = sentParent.current;
         const commands: BatchEntry[] = [
             {
                 command: "group.add",
@@ -236,7 +240,9 @@ export function useGroupRoot(options: GroupRootOptions): GroupContextValue {
                     id: groupId,
                     orientation,
                     disabled,
-                    ...(parentPanelId === undefined ? {} : { parentPanelId }),
+                    ...(parentId === undefined
+                        ? {}
+                        : { parentPanelId: parentId }),
                 },
             },
             ...registry.takeQueue().map(
@@ -302,7 +308,23 @@ export function useGroupRoot(options: GroupRootOptions): GroupContextValue {
             registry.setRegistered(false);
             registry.sync();
         };
-    }, [model, engine, registry, groupId, parentPanelId]);
+    }, [model, engine, registry, groupId]);
+
+    // a new parent panel id (the panel the group sits in got another id) moves the group in place,
+    // with its panels, its layout and its layout memory
+    React.useLayoutEffect(() => {
+        if (parentPanelId === sentParent.current) {
+            return;
+        }
+        sentParent.current = parentPanelId;
+        if (sent.current && registry.registered()) {
+            model.run(
+                "group.update",
+                { groupId, parentPanelId: parentPanelId ?? null },
+                ADAPTER_RUN,
+            );
+        }
+    }, [model, registry, groupId, parentPanelId]);
 
     // props that changed since they were sent
     React.useLayoutEffect(() => {

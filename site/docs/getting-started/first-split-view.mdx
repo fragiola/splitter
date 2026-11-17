@@ -9,6 +9,8 @@ keyboard; the markup, the styles and the names are yours.
 
 ## Panels and separators
 
+<Framework name="react">
+
 ```tsx title="three-panes.tsx"
 "use client";
 
@@ -33,6 +35,34 @@ export function ThreePanes() {
 }
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+```vue title="three-panes.vue"
+<script setup lang="ts">
+import { Splitter } from "@fragiola/splitter-vue";
+</script>
+
+<template>
+    <Splitter.Group class="h-96 border">
+        <Splitter.Panel id="navigation" default-size="25%">
+            <nav aria-label="Navigation">…</nav>
+        </Splitter.Panel>
+        <Splitter.Separator aria-label="Resize navigation" class="w-1.5 bg-gray-200" />
+        <Splitter.Panel id="content" default-size="50%">
+            <main>…</main>
+        </Splitter.Panel>
+        <Splitter.Separator aria-label="Resize content" class="w-1.5 bg-gray-200" />
+        <Splitter.Panel id="details" default-size="25%">
+            <aside aria-label="Details">…</aside>
+        </Splitter.Panel>
+    </Splitter.Group>
+</template>
+```
+
+</Framework>
+
 What this produces:
 
 - the group is a flex row (`display: flex`, written inline: it is structural); you give it its
@@ -52,11 +82,25 @@ A panel without a `defaultSize` shares what the others leave, equally. A size is
 the group as a string (`"25%"`, or `"25"`), pixels as a number (`240`), or a string in `px`,
 `em`, `rem`, `vh` or `vw`. The layout itself is always in percent and always sums to 100.
 
+<Framework name="react">
+
 ```tsx
 <Splitter.Panel id="sidebar" defaultSize={240} minSize="12rem" maxSize="40%">
     …
 </Splitter.Panel>
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Splitter.Panel id="sidebar" :default-size="240" min-size="12rem" max-size="40%">
+    …
+</Splitter.Panel>
+```
+
+</Framework>
 
 [Size constraints and units](/docs/guides/size-constraints) covers the limits and how each unit
 resolves.
@@ -66,6 +110,8 @@ resolves.
 `orientation="vertical"` stacks the panels. The separator between them is then horizontal
 (`aria-orientation="horizontal"`): it drags up and down, and its arrow keys are Up and Down. A
 vertical group needs a height.
+
+<Framework name="react">
 
 ```tsx
 <Splitter.Group orientation="vertical" className="h-[32rem]">
@@ -79,9 +125,29 @@ vertical group needs a height.
 </Splitter.Group>
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Splitter.Group orientation="vertical" class="h-[32rem]">
+    <Splitter.Panel id="editor" default-size="65%" min-size="20%">
+        …
+    </Splitter.Panel>
+    <Splitter.Separator aria-label="Resize editor" class="h-1.5 bg-gray-200" />
+    <Splitter.Panel id="terminal" min-size="15%">
+        …
+    </Splitter.Panel>
+</Splitter.Group>
+```
+
+</Framework>
+
 <Example id="vertical" />
 
 ## Reading the layout
+
+<Framework name="react">
 
 `onLayoutChange` receives the layout (each panel's size in percent, by panel id) on every
 change, drag steps included; `onLayoutCommit` only when a change is final: a drag released, a key
@@ -105,6 +171,35 @@ export function WithReadout() {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+`v-model:layout` keeps a ref of the layout (each panel's size in percent, by panel id), updated
+on every change, drag steps included; `@layout-commit` fires only when a change is final: a drag
+released, a key pressed, a command run (not the layout the group registers with). The ref also
+drives the group: a value of your own is applied as a `group.set-layout`.
+
+```vue title="with-readout.vue"
+<script setup lang="ts">
+import { type Layout, Splitter } from "@fragiola/splitter-vue";
+import { ref } from "vue";
+
+const layout = ref<Readonly<Layout>>({ left: 30, right: 70 });
+</script>
+
+<template>
+    <output>{{ JSON.stringify(layout) }}</output>
+    <Splitter.Group id="main" v-model:layout="layout" class="h-80">
+        <Splitter.Panel id="left">Left</Splitter.Panel>
+        <Splitter.Separator aria-label="Resize left" class="w-1 bg-gray-300" />
+        <Splitter.Panel id="right">Right</Splitter.Panel>
+    </Splitter.Group>
+</template>
+```
+
+</Framework>
 
 The ids are optional: without one, a group or panel gets a generated id, stable across the server
 and the client. Give explicit ids to anything you save or drive from code.

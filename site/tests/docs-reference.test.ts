@@ -24,6 +24,7 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = join(import.meta.dirname, "../..");
 const REACT_SRC = join(ROOT, "packages/react/src");
+const VUE_SRC = join(ROOT, "packages/vue/src");
 const CORE_SRC = join(ROOT, "packages/core/src");
 const API = join(import.meta.dirname, "../docs/api");
 
@@ -120,17 +121,25 @@ function sourceFiles(dir: string): string[] {
 }
 
 const REACT_FILES = sourceFiles(REACT_SRC).map(read);
+const VUE_FILES = sourceFiles(VUE_SRC).map(read);
 const CORE_FILES = sourceFiles(CORE_SRC).map(read);
 
-/** Fields of an interface, following `extends` into the interfaces the packages declare. */
-function allFields(source: string, name: string): string[] {
+/**
+ * Fields of an interface, following `extends` into the interfaces the packages declare: the
+ * adapter's own (`adapterFiles`, React's by default), then the core's.
+ */
+function allFields(
+    source: string,
+    name: string,
+    adapterFiles: readonly string[] = REACT_FILES,
+): string[] {
     const found = interfaceFields(source, name);
     if (!found) return [];
     const inherited = found.extendsNames.flatMap((base) => {
-        const declaring = [...REACT_FILES, ...CORE_FILES].find((file) =>
+        const declaring = [...adapterFiles, ...CORE_FILES].find((file) =>
             interfaceFields(file, base),
         );
-        return declaring ? allFields(declaring, base) : [];
+        return declaring ? allFields(declaring, base, adapterFiles) : [];
     });
     return [...found.fields, ...inherited];
 }
@@ -305,6 +314,88 @@ describe("the React reference", () => {
             const mdx = page(slug);
             expect(mdx, `api/${slug}.mdx`).toContain("`data-splitter-path`");
             expect(mdx, `api/${slug}.mdx`).toContain("`data-splitter-part`");
+        }
+    });
+});
+
+describe("the Vue reference", () => {
+    const vueIndex = read(join(VUE_SRC, "index.ts"));
+    const vueParts = namedExports(read(join(VUE_SRC, "parts.ts")));
+    const vuePage = page("vue");
+    const vueSourceOf = (module: string) =>
+        read(join(VUE_SRC, `${module.replace(/^\.\//, "")}.ts`));
+
+    it("re-exports the core and exports the same Splitter namespace as React", () => {
+        expect(vueIndex).toMatch(/^export \* from "@fragiola\/splitter";$/m);
+        expect(vueIndex).toMatch(/export \* as Splitter from "\.\/parts"/);
+        expect(vueParts.map((entry) => entry.name)).toEqual(
+            partExports.map((entry) => entry.name),
+        );
+    });
+
+    it("mentions every named export of the Vue package on api/vue.mdx", () => {
+        const exports = namedExports(vueIndex);
+        expect(exports.length).toBeGreaterThan(30);
+        for (const { name } of exports) {
+            expect(mentions(vuePage, name), `${name} on api/vue.mdx`).toBe(
+                true,
+            );
+        }
+    });
+
+    it("has a row for every prop of every part: on api/vue.mdx, or on the part's React page", () => {
+        let checked = 0;
+        for (const { name, module } of vueParts) {
+            const fields = allFields(
+                vueSourceOf(module),
+                `${name}Props`,
+                VUE_FILES,
+            );
+            expect(fields, `${name}Props`).toContain("as");
+            const reactPage =
+                MODULE_PAGES[
+                    partExports.find((entry) => entry.name === name)?.module ??
+                        ""
+                ];
+            const rows = new Set([
+                ...tableRowNames(vuePage),
+                ...tableRowNames(page(reactPage ?? "")),
+            ]);
+            for (const field of fields) {
+                checked++;
+                expect(rows.has(field), `Vue ${name}.${field}`).toBe(true);
+            }
+        }
+        expect(checked).toBeGreaterThan(20);
+    });
+
+    it("documents every slot and what the render slot receives", () => {
+        const rows = tableRowNames(vuePage);
+        const render = read(join(VUE_SRC, "utils/render.ts"));
+        for (const field of [
+            ...allFields(render, "RenderSlot", VUE_FILES),
+            ...allFields(render, "RenderSlotProps", VUE_FILES),
+        ]) {
+            expect(rows.has(field), field).toBe(true);
+        }
+        expect(rows.has("default")).toBe(true);
+    });
+
+    it("is in the sidebar, and the pages with code show it in Vue too", () => {
+        expect(read(join(API, "../config.json"))).toContain(
+            '"path": "api/vue"',
+        );
+        for (const slug of [
+            "getting-started/installation",
+            "getting-started/first-split-view",
+            "api/group",
+            "api/hooks",
+            "api/external-ref",
+            "concepts/composition",
+        ]) {
+            expect(read(join(API, "..", `${slug}.mdx`)), slug).toContain(
+                '<Framework name="vue">',
+            );
         }
     });
 });

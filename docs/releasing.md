@@ -4,7 +4,8 @@
 
 **The maintainer's npm account is suspended, so nothing of Splitter is on npm.** Everything in the
 repository is ready: the changesets of the first release (`.changeset/splitter-core.md`,
-`.changeset/splitter-react.md`, a `minor` each: `0.0.0` to `0.1.0`), the release workflow, the
+`.changeset/splitter-react.md`, `.changeset/splitter-vue.md`, a `minor` each: `0.0.0` to
+`0.1.0`), the release workflow, the
 package check and the CI jobs. Until the steps below are done, nothing can publish:
 
 - the pending changesets only make the release workflow open (or update) the **Version Packages**
@@ -19,8 +20,8 @@ the repository changes.
 ## How a release works
 
 Releasing is a merge. [Changesets](https://changesets.dev) versions every package under
-`packages/` (`@fragiola/splitter` and `@fragiola/splitter-react` today; `@fragiola/splitter-vue`
-and `@fragiola/splitter-angular` with Epics #10 and #13) together (one `fixed` group,
+`packages/` (`@fragiola/splitter`, `@fragiola/splitter-react` and `@fragiola/splitter-vue` today;
+`@fragiola/splitter-angular` with Epic #13) together (one `fixed` group,
 `@fragiola/*`, so they always share a version) and writes their changelogs. The release workflow,
 [`.github/workflows/release.yml`](../.github/workflows/release.yml), publishes them with pnpm
 through npm **trusted publishing** (OIDC, with provenance): there is no npm token anywhere.
@@ -48,7 +49,7 @@ before that.
 
 1. **The scope.** Make sure the npm scope `@fragiola` exists and that your npm account owns it
    (`npm org ls fragiola`, or <https://www.npmjs.com/settings/fragiola/members>), and that the
-   names `@fragiola/splitter` and `@fragiola/splitter-react` are free
+   names `@fragiola/splitter`, `@fragiola/splitter-react` and `@fragiola/splitter-vue` are free
    (`npm view @fragiola/splitter` answers `E404`). Your account has 2FA enabled.
 
 2. **Let the workflow open PRs.** First in the **organization**: *Settings → Actions → General →
@@ -66,7 +67,7 @@ before that.
    release run reaches the publish job: GitHub creates a missing environment on its first use,
    with no branch rule.
 
-4. **The stub.** From a clean checkout of `main`, with both packages at `0.0.0`:
+4. **The stub.** From a clean checkout of `main`, with every package at `0.0.0`:
 
    ```sh
    git switch main && git pull && git status   # clean, up to date
@@ -75,8 +76,8 @@ before that.
    pnpm build && pnpm --filter "./packages/*" publish --access public
    ```
 
-   pnpm asks for your 2FA code. It publishes the core first, then the React package, which depends
-   on the core at exactly `0.0.0`.
+   pnpm asks for your 2FA code. It publishes the core first, then the React and Vue packages,
+   which depend on the core at exactly `0.0.0`.
 
 5. **The trusted publisher.** With npm 11.15 or later (`npm --version`; `npm install -g
    npm@latest` updates it) and your account's 2FA, for each package:
@@ -84,6 +85,7 @@ before that.
    ```sh
    npm trust github @fragiola/splitter --file release.yml --repo fragiola/splitter --environment npm --allow-publish
    npm trust github @fragiola/splitter-react --file release.yml --repo fragiola/splitter --environment npm --allow-publish
+   npm trust github @fragiola/splitter-vue --file release.yml --repo fragiola/splitter --environment npm --allow-publish
    ```
 
    `--allow-publish` is required: since 2026-09-03 a trusted publisher only gets staged publishing
@@ -102,15 +104,15 @@ before that.
    see `../www/README.md`. This step is independent of npm and can be done any time.
 
 7. **The Version Packages PR.** It exists once the changesets are on `main` and step 2 is done
-   (`changeset-release/main`: both packages at `0.1.0`, both changelogs). If the *Release* run of
+   (`changeset-release/main`: every package at `0.1.0`, every changelog). If the *Release* run of
    that push failed because step 2 was not done yet, open it in the Actions tab and choose
    *Re-run all jobs*. A PR opened with the workflow's token starts no other workflow, so CI does
    not run on it by itself: close and reopen the PR (or run *CI* on its branch from the Actions
    tab) to get the checks.
 
 8. **Merge the Version Packages PR.** The release workflow publishes `0.1.0` with provenance. Merge
-   nothing else until that run is over (see *While a release runs*). Then check both packages on
-   npm (`0.1.0` is `latest`, with provenance), the two tags and the two GitHub releases.
+   nothing else until that run is over (see *While a release runs*). Then check every package on
+   npm (`0.1.0` is `latest`, with provenance), its tag and its GitHub release.
 
 9. **Lock it down.** On npm, for each package, *Settings → Publishing access*: **Require
    two-factor authentication and disallow tokens**. From now on only the workflow publishes (and
@@ -164,6 +166,21 @@ package is versioned with the others from its first release. What it does need:
 Without steps 2 and 3, the first publish of the new package fails with `E404` or `ENEEDAUTH`
 while the others publish: the release is then half published (see *When a publish fails*).
 
+### The Vue package (`@fragiola/splitter-vue`)
+
+Added by Epic #10, before anything was published: it is one of the packages of
+[The first release](#the-first-release-010), which stubs (step 4, `./packages/*`), trusts (step 5)
+and locks down (step 9) it with the others. Its changeset is `.changeset/splitter-vue.md`, and its
+entry in `ADAPTERS` smoke-tests it in a Vite + Vue app with a single-file component checked by
+vue-tsc on TypeScript 6. Only if the first release ever goes out without it, take the steps above
+for it alone:
+
+```sh
+pnpm --filter @fragiola/splitter-vue publish --access public --dry-run   # what would be published
+pnpm --filter @fragiola/splitter-vue build && pnpm --filter @fragiola/splitter-vue publish --access public
+npm trust github @fragiola/splitter-vue --file release.yml --repo fragiola/splitter --environment npm --allow-publish
+```
+
 ## While a release runs
 
 From the merge of the Version Packages PR until its *Release* run has finished, merge nothing
@@ -191,7 +208,7 @@ lacks that version for one package or both. The release workflow publishes it on
   run into a version run, which bumps past the stuck version (`0.2.1`), and that version would
   never be published. If that is what you want (give up on the stuck version), deprecate whatever
   part of it reached npm (below) and release the next one.
-- **Half published** (the core is on npm, the React package is not): any of the above publishes
+- **Half published** (the core is on npm, an adapter is not): any of the above publishes
   the rest. Changesets skips a version npm already has; the failed run already pushed the tags
   and created the releases of what it did publish.
 - **Published, but a tag or a release is missing** (the run failed after npm): the workflow will
@@ -202,5 +219,5 @@ lacks that version for one package or both. The release workflow publishes it on
   the environment `npm`, publishing allowed. The packages' `repository.url` must point to this
   repository.
 - **A broken version went out:** npm versions cannot be reused. Deprecate it
-  (`npm deprecate @fragiola/splitter@<version> "<why>"`, the same for the React package) and
+  (`npm deprecate @fragiola/splitter@<version> "<why>"`, the same for each adapter) and
   release a fix with a new changeset.

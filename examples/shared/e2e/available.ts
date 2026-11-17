@@ -10,10 +10,10 @@
 import { FRAMEWORKS, type Framework, isFramework } from "../src/framework.ts";
 
 /**
- * The frameworks whose app has every example: for them, a spec never skips. React only until the
- * Vue (Epic #10) and Angular (Epic #13) apps ship every example; each joins here when it does.
+ * The frameworks whose app has every example: for them, a spec never skips. React, and Vue since
+ * Epic #10; Angular (Epic #13) joins here when its app ships every example.
  */
-export const COMPLETE_FRAMEWORKS: readonly Framework[] = ["react"];
+export const COMPLETE_FRAMEWORKS: readonly Framework[] = ["react", "vue"];
 
 /** The framework of `EXAMPLES_FRAMEWORK`; anything else throws (a config that forgot to set it). */
 export function frameworkOf(value: string | undefined): Framework {
