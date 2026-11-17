@@ -19,18 +19,31 @@ export const title = "truncate font-(--sp-title-weight)";
 export const text = "text-palette-accent/85";
 
 /**
- * A hit area of `--sp-separator-size` with a hairline drawn in its middle. The cursor follows the
+ * The theme draws it: a box of `--sp-separator-size` (what the engine measures) filled with
+ * `--sp-separator-bg`, a line of `--sp-separator-line` in the middle of a grab area of
+ * `--sp-separator-grab` (`::before`, centred on the box, so a hairline still takes the pointer)
+ * and, in the themes that show one (`--sp-grip`), a grip (`::after`). The cursor follows the
  * separator's own orientation (`vertical` between side by side panels), the colours its state:
  * hovered (never while disabled), dragged (`data-dragging`), focused.
  */
 export const separator = cn(
-    "palette-raised relative flex shrink-0 items-center justify-center bg-palette-base outline-none select-none",
+    "palette-raised relative z-10 flex shrink-0 items-center justify-center bg-(--sp-separator-bg) outline-none select-none",
     "data-[orientation=vertical]:w-(--sp-separator-size) data-[orientation=vertical]:cursor-col-resize",
     "data-[orientation=horizontal]:h-(--sp-separator-size) data-[orientation=horizontal]:cursor-row-resize",
-    "before:absolute before:bg-(--sp-separator-color) before:transition-colors before:duration-(--sp-motion)",
-    "data-[orientation=vertical]:before:inset-y-0 data-[orientation=vertical]:before:w-(--sp-separator-line)",
-    "data-[orientation=horizontal]:before:inset-x-0 data-[orientation=horizontal]:before:h-(--sp-separator-line)",
+    // the grab area: its padding leaves the line in its middle (the background stops at the content)
+    "before:absolute before:bg-(--sp-separator-color) before:bg-clip-content before:transition-colors before:duration-(--sp-motion)",
+    "data-[orientation=vertical]:before:inset-y-0 data-[orientation=vertical]:before:inset-x-[calc((var(--sp-separator-size)-var(--sp-separator-grab))/2)]",
+    "data-[orientation=vertical]:before:px-[calc((var(--sp-separator-grab)-var(--sp-separator-line))/2)]",
+    "data-[orientation=horizontal]:before:inset-x-0 data-[orientation=horizontal]:before:inset-y-[calc((var(--sp-separator-size)-var(--sp-separator-grab))/2)]",
+    "data-[orientation=horizontal]:before:py-[calc((var(--sp-separator-grab)-var(--sp-separator-line))/2)]",
     "not-data-disabled:hover:before:bg-(--sp-separator-hover) data-dragging:before:bg-(--sp-separator-active)",
-    "focus-visible:before:bg-(--sp-focus-line) focus-visible:data-[orientation=vertical]:before:w-(--sp-focus-width) focus-visible:data-[orientation=horizontal]:before:h-(--sp-focus-width)",
+    "focus-visible:before:bg-(--sp-focus-line)",
+    "focus-visible:data-[orientation=vertical]:before:px-[calc((var(--sp-separator-grab)-max(var(--sp-separator-line),var(--sp-focus-width)))/2)]",
+    "focus-visible:data-[orientation=horizontal]:before:py-[calc((var(--sp-separator-grab)-max(var(--sp-separator-line),var(--sp-focus-width)))/2)]",
+    // the grip, centred on the box
+    "after:pointer-events-none after:[display:var(--sp-grip)] after:rounded-(--sp-radius) after:bg-(--sp-separator-color) after:transition-colors after:duration-(--sp-motion)",
+    "data-[orientation=vertical]:after:h-8 data-[orientation=vertical]:after:w-1",
+    "data-[orientation=horizontal]:after:h-1 data-[orientation=horizontal]:after:w-8",
+    "not-data-disabled:hover:after:bg-(--sp-separator-hover) data-dragging:after:bg-(--sp-separator-active) focus-visible:after:bg-(--sp-focus-line)",
     "data-disabled:cursor-not-allowed",
 );
