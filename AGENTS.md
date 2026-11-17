@@ -143,7 +143,8 @@ breaks one is a decision for the maintainer, not an implementation detail.
 | `pnpm site:dev --base /splitter --port 5184` | every framework's embed with hot reload behind one Node proxy (`site/dev-proxy.ts`, no dependency) under `<base>/embed/<framework>/`, for `www` in dev (`devUrl` `http://localhost:5184`) |
 | `pnpm --filter examples-react vendor` | vendors Fragiola UI into `examples/react/src` (`scripts/vendor-fragiola.ts`; `FRAGIOLA_REGISTRY` points it at a registry URL or a local `public/r` directory); the copies are committed |
 
-Coming with the later Issues of Epic #7: `pnpm check:package`, `pnpm changeset` / `release:version`.
+| `pnpm check:package` | builds the packages, packs each with pnpm and checks the tarballs (`scripts/check-package.ts`, from Dockable): the packed `exports` are the repo's without the source condition (`types`/`import`/`default`, `dist` targets), publint (strict), attw (`esm-only`), each adapter of `ADAPTERS` pins the core exactly, and its smoke app (React: Vite + React, outside the workspace, the React tarball only) typechecks, builds and loads its dev server. `--tarballs <dir>` checks given tarballs (the release workflow's) |
+| `pnpm changeset` / `release:version` | Changesets: add a changeset / bump the versions (the release workflow runs the latter); core and adapters are one `fixed` group (`@fragiola/*`). Releasing: `docs/releasing.md` |
 
 ## Repository layout
 
@@ -155,9 +156,11 @@ examples/shared/    examples-shared           src/meta/<slug>.ts, src/themes/, s
 examples/react/     examples-react            src/examples/<slug>/ (index.tsx, styles.ts), src/examples/_kit/ (persistence.ts, undo.ts), src/embed/, vendored Fragiola UI (src/components, lib, styles), scripts/vendor-fragiola.ts, tests/
 site/               export.ts, dev.ts, dev-proxy.ts, sources.ts, contract.ts, project.json; docs/ (config.json, index.mdx, getting-started/, concepts/, guides/, api/, limitations.mdx); tests/ (contract, docs-reference, dev-proxy, the repository checks)
 site/docs/api/      commands.mdx              generated from the command registry (do not edit)
-docs/               docs-examples-gaps.md     what the docs and examples work around, with the proposed API
-scripts/                                      check-layout.ts, check-dts.ts, source-condition.ts
-.github/workflows/  ci.yml                    check, typecheck, test, build; the playground's e2e; one e2e job per examples app
+docs/               docs-examples-gaps.md     what the docs and examples work around, with the proposed API; releasing.md (the release runbook)
+scripts/                                      check-layout.ts, check-dts.ts, check-package.ts, source-condition.ts
+.changeset/         config.json               one fixed group @fragiola/*, changedFilePatterns; the pending changesets
+.github/workflows/  ci.yml                    check, typecheck, test, build; package; changesets; the playground's e2e; one e2e job per examples app; site export; the www trigger
+                    release.yml               Version Packages PR, then pack, check --tarballs and publish over OIDC from the `npm` environment
 ```
 
 ## Provenance: React Resizable Panels
@@ -190,7 +193,7 @@ copyright line and the MIT licence, and the guard test lists it.
 - Unit tests live in each package's `tests/`, mirroring `src/` in the core; type fixtures in
   `tests/types/` (`@ts-expect-error` marks what must not compile).
 - Every rule a reviewer would otherwise have to remember is a test.
-- Every PR that changes what a package ships carries a changeset (once Changesets lands).
+- Every PR that changes what a package ships carries a changeset (`pnpm changeset`; CI's Changesets job fails without one).
 
 ## Decisions taken during implementation
 
@@ -407,3 +410,33 @@ copyright line and the MIT licence, and the guard test lists it.
     constant is `utils/adapter-run.ts` (not exported). A controlled `layout` counts as the
     markup's, since undoing it would fight the prop. `_kit/undo.ts` dropped its list of layout
     commands and its `steps` option.
+- **Release readiness (Issue #6):**
+  - **Not published.** The maintainer's npm account is suspended: nothing was published, no `npm
+    trust`, no `npm` environment, no secret. `docs/releasing.md` opens with a *Status* section and
+    the steps 1 to 9 the maintainer takes when the account is back; the packages stay at `0.0.0`
+    and the two pending changesets (`minor` each) make the first release `0.1.0`. One changeset
+    per package (`.changeset/splitter-core.md`, `splitter-react.md`).
+  - **Copies of Dockable's**, names changed: `.changeset/config.json` (its `changedFilePatterns`
+    kept whole, `ng-package.json` and `scripts/publish-manifest.ts` included, so the Angular
+    adapter needs no edit), `release.yml` (only the repository guard differs, plus a header note
+    on why nothing publishes yet), the CI Changesets, Package and trigger jobs, and
+    `scripts/check-package.ts` with React only in `ADAPTERS` (the Vue and Angular smoke apps come
+    with their Epics from Dockable's) but the `publishConfig.directory` support kept for Angular.
+    Its tests are `site/tests/check-package.test.ts`. `scripts/exported-names.ts` was not copied:
+    nothing here uses it yet.
+  - **What prevents a publish today:** the publish mode runs only after the Version Packages PR is
+    merged; no npm token exists; npm accepts the OIDC token only once `npm trust` names
+    `fragiola/splitter`, `release.yml` and `npm`. GitHub would create a missing `npm` environment
+    on its first use without a branch rule, so the runbook creates it (step 3) before that PR is
+    merged.
+  - **CI.** This repository's CI keeps running the checks on a push to `main` too (Dockable's runs
+    only the trigger there); the Package and Site export jobs follow the same rule. The Site export
+    job, announced since Issue #4, landed here. The trigger's step is skipped, not failed, without
+    `WWW_DISPATCH_TOKEN`.
+  - **actionlint** is not installed: the workflows were reviewed against Dockable's (`diff`) and
+    parsed as YAML.
+  - **Tool versions** (7-day rule, 2026-11-16): `@changesets/cli` 3.0.3, `@changesets/changelog-github`
+    1.0.1, `@arethetypeswrong/cli` 0.18.5 (Dockable's), `publint` 0.3.25 (2026-10-01).
+  - **`useSeparator`** sends only the props that changed since it last sent them, and the default
+    (`disabled: false`, `resetOnDoubleClick: true`) for one that went back to `undefined`; it used
+    to send nothing when both were `undefined`, so a separator stayed disabled.
