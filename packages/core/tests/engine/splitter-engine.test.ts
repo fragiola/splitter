@@ -781,6 +781,36 @@ describe("panel order from the document", () => {
         ]);
     });
 
+    it("lets content inside a separator stop or prevent its events, and handles the others", () => {
+        const { engine, separators, sizes } = render([
+            { id: "a", defaultSize: "30%" },
+            { id: "b" },
+        ]);
+        const separator = element(separators, "a:b");
+        const stopped = document.createElement("button");
+        const prevented = document.createElement("button");
+        const plain = document.createElement("span");
+        separator.append(stopped, prevented, plain);
+        for (const type of ["pointerdown", "keydown", "dblclick"]) {
+            stopped.addEventListener(type, (event) => event.stopPropagation());
+            prevented.addEventListener(type, (event) => event.preventDefault());
+        }
+        for (const content of [stopped, prevented]) {
+            pointer(content, "pointerdown", { clientX: 150 });
+            expect(engine.get("dragging-separator-id")).toBeUndefined();
+            key(content, "ArrowRight");
+            content.dispatchEvent(
+                new MouseEvent("dblclick", { bubbles: true, cancelable: true }),
+            );
+            expect(sizes()).toEqual([30, 70]);
+        }
+        // an event from content that lets it through reaches the engine, as on the separator
+        key(plain, "ArrowRight");
+        expect(sizes()).toEqual([35, 65]);
+        pointer(plain, "pointerdown", { clientX: 150 });
+        expect(engine.get("dragging-separator-id")).toBe("a:b");
+    });
+
     it("keeps a separator element's listeners when it is rebound under a new id", () => {
         const { model, engine, separators, sizes } = render([
             { id: "a" },

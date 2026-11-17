@@ -635,11 +635,19 @@ copyright line and the MIT licence, and the guard test lists it.
     place (`group.update { parentPanelId }`), as React and Vue: the nested group's effect reads only
     the parent panel's id signal, so a resize of the parent changes nothing of it (tested).
   - **Listener order (core change).** Angular attaches a template's `(keydown)` when it creates the
-    element, before the engine binds the separator. The engine now listens to a separator in the
-    capture phase: on the target, capture listeners run first whatever the order they were added
-    in, so the app's listeners run after the engine's (`defaultPrevented` set) in every framework,
-    and through Angular's `ErrorHandler` (template listeners). React and Vue are unchanged (React
-    delegates at the root; Vue's re-added listeners still run after).
+    element, before the engine binds the separator. The engine now handles an event aimed at the
+    separator itself in the capture phase (`event.target === element`): on the target, capture
+    listeners run first whatever the order they were added in, so the separator's own listeners
+    run after the engine's (`defaultPrevented` set) in every framework, and through Angular's
+    `ErrorHandler` (template listeners). An event from content inside the separator is handled by
+    a second, bubble-phase listener, after the content's own listeners, so the content can still
+    stop or prevent it, as on `main` (review: capture alone ran the engine before the content;
+    `splitter-engine.test.ts`, "lets content inside a separator stop or prevent its events").
+    The contract in each framework (`concepts/primitive-contract.mdx`): the separator's own
+    handlers run after the engine's (React's delegate at the root; Vue's and Angular's are on the
+    element); content stops the engine with its ordinary listeners in Vue and Angular, and with
+    capture handlers (`onKeyDownCapture`, …) in React, whose bubble handlers run at the root after
+    the engine (as on `main`). An ancestor's capture listener still runs before the engine.
   - **Not done:** server rendering (optional for this Issue): no SSR test; a group registers in
     `afterNextRender`, which never runs on the server, so the server HTML has the structural style
     and no paths, as React's.

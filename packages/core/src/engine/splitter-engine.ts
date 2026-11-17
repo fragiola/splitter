@@ -768,23 +768,33 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
                 ["keydown", onKeyDown],
                 ["dblclick", onDoubleClick],
             ];
-            // in the capture phase: on the separator itself, capture listeners run before the
-            // others, so the element's own listeners run after the engine's (its key handled,
-            // `defaultPrevented` set) even when a framework added them first, as Angular does
+            // an event aimed at the separator itself is handled in the capture phase: on the
+            // target, capture listeners run before the others, so the element's own listeners
+            // run after the engine's (its key handled, `defaultPrevented` set) even when a
+            // framework added them first, as Angular does. An event from content inside the
+            // separator (a button) is handled as it bubbles, after that content's listeners, so
+            // the content can still stop or prevent it
+            const bound: [string, EventListener, boolean][] = [];
             for (const [type, listener] of listeners) {
-                element.addEventListener(type, listener as EventListener, {
-                    capture: true,
-                });
+                const handle = listener as EventListener;
+                const onTarget: EventListener = (event) => {
+                    if (event.target === element) handle(event);
+                };
+                const fromContent: EventListener = (event) => {
+                    if (event.target !== element) handle(event);
+                };
+                bound.push([type, onTarget, true], [type, fromContent, false]);
+            }
+            for (const [type, listener, capture] of bound) {
+                element.addEventListener(type, listener, { capture });
             }
             this.separatorElements.set(element, {
                 id: separatorId,
                 remove: () => {
-                    for (const [type, listener] of listeners) {
-                        element.removeEventListener(
-                            type,
-                            listener as EventListener,
-                            { capture: true },
-                        );
+                    for (const [type, listener, capture] of bound) {
+                        element.removeEventListener(type, listener, {
+                            capture,
+                        });
                     }
                 },
             });
