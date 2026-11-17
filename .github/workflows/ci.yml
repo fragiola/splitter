@@ -15,7 +15,7 @@
 #   E2E               the Playwright suites, in parallel jobs: the playground (Chromium and
 #                     Firefox: the shell, the scenarios and the unstyled fixtures), and one job per
 #                     framework's examples app (every `examples/<framework>` with a
-#                     playwright.config.ts, found by the Examples apps job: react and vue today),
+#                     playwright.config.ts, found by the Examples apps job: react, vue and angular),
 #                     each running the shared specs of examples/shared/e2e against its own embed.
 #                     The playground's dev server serves the packages from source, so its job
 #                     builds nothing; an examples suite builds its embed against the packages'
