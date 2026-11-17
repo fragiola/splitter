@@ -95,6 +95,52 @@ written the Vue way: [Vue](/docs/api/vue) maps each React prop. They render on t
 
 </Framework>
 
+<Framework name="angular">
+
+An Angular app installs one package, `@fragiola/splitter-angular`: the directives, the injection
+functions and the whole framework-free core, re-exported.
+
+<Tabs items={["pnpm", "npm", "yarn"]}>
+<Tab value="pnpm">
+
+```bash
+pnpm add @fragiola/splitter-angular
+```
+
+</Tab>
+<Tab value="npm">
+
+```bash
+npm install @fragiola/splitter-angular
+```
+
+</Tab>
+<Tab value="yarn">
+
+```bash
+yarn add @fragiola/splitter-angular
+```
+
+</Tab>
+</Tabs>
+
+It needs `@angular/core` 22 as a peer. Nothing else: the package has no runtime dependency of its
+own and ships no stylesheet to import. The directives run on signals, so they need no zone.js.
+
+## Importing
+
+```ts
+import { createSplitterModel, SPLITTER, type SplitterJson } from "@fragiola/splitter-angular";
+```
+
+`SPLITTER` lists the directives (`[splitterGroup]`, `[splitterPanel]`, `[splitterSeparator]`) for a
+standalone component's `imports`; you put them on your own elements. The injection functions
+(`injectSplitter`, `injectSplitterState`, `injectGroup`, ...) are named exports beside it. They
+are the React package's primitives and hooks, written the Angular way:
+[Angular](/docs/api/angular) maps each React prop.
+
+</Framework>
+
 ## The core alone
 
 `@fragiola/splitter` is the framework-free core: the model, its commands, the JSON document and

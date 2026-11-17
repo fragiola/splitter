@@ -1,0 +1,193 @@
+---
+title: Angular directives
+description: The same primitives and hooks for Angular 22, from @fragiola/splitter-angular, as directives on your own elements, inputs, outputs and injection functions.
+---
+
+`@fragiola/splitter-angular` has every primitive of the React package as a standalone attribute
+directive, and every hook as an injection function, over the same core (re-exported whole). The
+behaviour, the `data-*` attributes, the paths and the ARIA of every element are the same, so every
+page of these docs applies: this page says how the React API is written in Angular. The directives
+run on signals and need no zone.js.
+
+```ts
+import {
+    createSplitterModel,
+    createSplitterRef,
+    type Layout,
+    injectSplitter,
+    injectSplitterState,
+    SPLITTER,
+} from "@fragiola/splitter-angular";
+```
+
+## A split view in a template
+
+The directives go on your own elements: there is no wrapper element and no `render` to swap one.
+`SPLITTER` lists them for a standalone component's `imports`.
+
+```ts title="workbench.ts"
+import { Component, signal } from "@angular/core";
+import { type Layout, SPLITTER } from "@fragiola/splitter-angular";
+
+@Component({
+    selector: "app-workbench",
+    imports: [SPLITTER],
+    template: `
+        <div splitterGroup id="workbench" [(layout)]="layout" class="h-96">
+            <nav
+                splitterPanel
+                id="files"
+                minSize="10rem"
+                collapsible
+                collapsedSize="3rem"
+                aria-label="Files"
+            >
+                …
+            </nav>
+            <div
+                splitterSeparator
+                aria-label="Resize files"
+                class="w-1.5 data-dragging:bg-blue-500"
+            ></div>
+            <main
+                splitterPanel
+                id="editor"
+                minSize="30%"
+                #editor="splitterPanel"
+                [attr.data-wide]="(editor.state().size ?? 0) > 60 ? '' : null"
+            >
+                …
+            </main>
+        </div>
+    `,
+})
+export class Workbench {
+    readonly layout = signal<Readonly<Layout> | undefined>({ files: 25, editor: 75 });
+}
+```
+
+`[(layout)]` gives you the layout on every change, drag steps included; a value you write to it is
+applied as a `group.set-layout`. A value that comes back from the group equals the model's layout
+and runs nothing, so a drag stays one step and a veto still holds.
+
+<Example id="basic-horizontal" />
+
+## How React's props map
+
+| React | Angular |
+| --- | --- |
+| `Splitter.Group`, `Splitter.Panel`, `Splitter.Separator` | the `splitterGroup`, `splitterPanel` and `splitterSeparator` attributes on your own elements (`SplitterGroup`, `SplitterPanel`, `SplitterSeparator`; `SPLITTER` lists the three) |
+| the parts' props | inputs of the same name (`[defaultSize]="240"`, `minSize="10rem"`, `groupResizeBehavior`); a bare boolean attribute is `true` (`collapsible`, `disabled`) |
+| `layout` + `onLayoutChange` | `[(layout)]`: the `layout` model input and its `layoutChange` output, on every change |
+| `onLayoutCommit` | `(layoutCommit)` |
+| `onResize(size, previous)`, `onCollapse`, `onExpand` | `(resize)` (a `PanelResizeEvent`), `(collapse)`, `(expand)` on `splitterPanel` |
+| `splitterRef`, `model`, `keyboardStep`, `resetOnDoubleClick` | the same inputs (`[splitterRef]`, `[model]`, …) |
+| `id`, `model` on a group | read once: create the group again for another one (`@for (id of [groupId]; track id)`) |
+| `render={<nav />}` | put the directive on the `<nav>` itself |
+| `render={(props, state) => …}` | the part's state in the template, through `exportAs`: `#p="splitterPanel"`, then `p.state()` |
+| `className`, `style` | `class` and `style` on your element, under the structural style |
+| `className={(state) => …}`, `style={(state) => …}` | a `data-*` selector (`data-dragging:bg-blue-500`, `in-data-collapsed:hidden`), or a binding that reads `state()` |
+| `onPointerDown`, `onKeyDown`, `onDoubleClick` on a separator | `(pointerdown)`, `(keydown)`, `(dblclick)`: they run after the engine's, as in React |
+| `children` | the element's content |
+| `ref` on a part | a template reference: `#group="splitterGroup"` is the directive, `#el` the element |
+| `<Splitter.Group<Types> id="main">` | nothing to write: a strict template types the group's `id` by the registry of its `[model]` |
+
+## Directives
+
+`splitterGroup`, `splitterPanel` and `splitterSeparator` take the props of their React pages
+([Group](/docs/api/group#props), [Panel](/docs/api/panel#props),
+[Separator](/docs/api/separator#props)) as inputs, except `render`, `className`, `style` and
+`children` (see the table above). Each is exported as its selector (`exportAs`) and has a `state`
+signal: `GroupPartState`, `PanelPartState` or `SeparatorPartState`, the fields of the React state
+on each part's page.
+
+| input or output | of | description |
+| --- | --- | --- |
+| `layout` | `splitterGroup` | the model input of `[(layout)]`: the layout to apply, and the layout on every change |
+| `layoutChange` | `splitterGroup` | the layout changed, drag steps included (the output of `[(layout)]`) |
+| `layoutCommit` | `splitterGroup` | a layout was committed: a drag released, a key pressed, a command run |
+| `resize` | `splitterPanel` | its size changed: a `PanelResizeEvent` |
+| `collapse`, `expand` | `splitterPanel` | it collapsed, it expanded |
+| `state` | every directive | the part's state, as a signal |
+
+| field | of | description |
+| --- | --- | --- |
+| `size` | `PanelResizeEvent` | the panel's size: `percentage`, and `pixels` once its group is measured |
+| `previous` | `PanelResizeEvent` | the size before, undefined the first time |
+
+A group's `id` and `model` are read once, when its inputs are first set: a directive cannot
+create itself again, so another value is reported in the console. Create the group again for
+another one:
+
+```html
+@for (id of [groupId()]; track id) {
+    <div splitterGroup [id]="id">…</div>
+}
+```
+
+Another `id` on a panel moves it to the new id without creating its content again, and a group
+nested in that panel follows it in place, with its layout.
+
+## Injection functions
+
+The hooks are injection functions, called in an injection context (a field initializer). What
+changes is a signal. An input is passed as a function (`() => this.splitterRef()`): a signal input
+has no value yet when the field initializers run.
+
+| React | Angular |
+| --- | --- |
+| `useSplitter()` | `injectSplitter()`: a signal of the enclosing group's `SplitterContextValue` (`model`, `engine`, `groupId`); read it once the group has its inputs (in a template, a handler, an effect) |
+| `useSplitter(splitterRef)` | `injectSplitter(splitterRef)` or `injectSplitter(() => this.splitterRef())`: `null` while no root group holds the ref |
+| `useSplitterState(selector, options?)` | `injectSplitterState(selector, options?)`: a signal that changes only when the answer changes; the selector runs once per model state, and again when a signal it reads changes. `InjectSplitterStateOptions` takes `splitterRef` (a ref or a function) and `isEqual` |
+| `useGroup()` | `injectGroup()`: `{ state }`, a signal of the enclosing group's `GroupPartState` |
+| `usePanel(options)` | `injectPanel()`: `{ state }` of the enclosing `splitterPanel`; the directive registers the panel |
+| `useSeparator(options)` | `injectSeparator()`: `{ state }` of the enclosing `splitterSeparator`; the directive binds the separator |
+| `useSplitterRef()` | `createSplitterRef()`, the core's, made once in a field |
+
+`injectGroup`, `injectPanel` and `injectSeparator` return an `InjectPartResult` (its `state`
+field). They register nothing: in Angular the directive on the element is the lower layer, and any
+element can carry it (`<hr splitterSeparator>`).
+
+```ts title="sidebar-toggle.ts"
+import { Component, computed, input } from "@angular/core";
+import {
+    injectSplitter,
+    injectSplitterState,
+    type SplitterRef,
+} from "@fragiola/splitter-angular";
+
+@Component({
+    selector: "app-sidebar-toggle",
+    template: `
+        <button type="button" [attr.aria-pressed]="!collapsed()" (click)="toggle()">Files</button>
+    `,
+})
+export class SidebarToggle {
+    readonly splitterRef = input.required<SplitterRef>();
+    private readonly splitter = injectSplitter(() => this.splitterRef());
+    private readonly state = injectSplitterState(
+        ({ model }) => model.is("panel-collapsed", { panelId: "files" }),
+        { splitterRef: () => this.splitterRef() },
+    );
+    protected readonly collapsed = computed(() => this.state() ?? false);
+
+    toggle() {
+        this.splitter()?.model.run(this.collapsed() ? "panel.expand" : "panel.collapse", {
+            panelId: "files",
+        });
+    }
+}
+```
+
+## Typed ids
+
+A template cannot pass a type argument, and needs none: with `createSplitterModel<Types>()` bound
+to `[model]`, a group `id` that is not one of `Types`' does not compile in a strict template
+(`strictTemplates`). In code, `injectSplitter<Types>()` and `injectSplitterState<Types>(…)` type
+the ids of the commands you run.
+
+## Server rendering
+
+A group registers after its first render (`afterNextRender`), which never runs on the server: the
+server HTML has the structural style, so the layout does not shift, and no paths until the browser
+takes over, as React's. See [Server rendering](/docs/guides/server-rendering).

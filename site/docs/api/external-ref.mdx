@@ -84,6 +84,60 @@ it stays the core's object inside a `ref()` or a store.
 
 </Framework>
 
+<Framework name="angular">
+
+```ts title="toolbar.ts"
+import { Component, input } from "@angular/core";
+import { injectSplitter, type SplitterRef } from "@fragiola/splitter-angular";
+
+@Component({
+    selector: "app-toolbar",
+    template: `
+        @if (splitter()) {
+            <button type="button" (click)="reset()">Reset the layout</button>
+        }
+    `,
+})
+export class Toolbar {
+    readonly splitterRef = input.required<SplitterRef>();
+    // a signal, null until a group holds the ref
+    protected readonly splitter = injectSplitter(() => this.splitterRef());
+
+    reset() {
+        const current = this.splitter();
+        current?.model.run("group.reset", { groupId: current.groupId });
+    }
+}
+```
+
+```ts title="app.ts"
+import { Component } from "@angular/core";
+import { createSplitterRef, SPLITTER } from "@fragiola/splitter-angular";
+import { Toolbar } from "./toolbar";
+
+@Component({
+    selector: "app-root",
+    imports: [SPLITTER, Toolbar],
+    template: `
+        <app-toolbar [splitterRef]="splitterRef" />
+        <div splitterGroup [splitterRef]="splitterRef" class="h-96">
+            <div splitterPanel id="a">…</div>
+            <div splitterSeparator aria-label="Resize" class="w-1"></div>
+            <div splitterPanel id="b">…</div>
+        </div>
+    `,
+})
+export class App {
+    readonly splitterRef = createSplitterRef();
+}
+```
+
+In Angular the ref is the core's `createSplitterRef()`, made once in a field. An injection function
+reads an input through a function (`() => this.splitterRef()`): a signal input has no value yet
+when the field initializers run.
+
+</Framework>
+
 ## `useSplitterRef`
 
 `useSplitterRef()` returns a `SplitterRef`, the same object for the component's life. Pass it to

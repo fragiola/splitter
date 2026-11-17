@@ -1,11 +1,11 @@
 ---
-title: Splitter — headless resizable panel groups for React and Vue
-description: Headless resizable panel groups for React and Vue, with drag, keyboard, collapse, nested groups and a saved JSON layout. Every pixel is yours.
+title: Splitter — headless resizable panel groups
+description: Headless resizable panel groups for React, Vue and Angular, with drag, keyboard, collapse, nested groups and a saved JSON layout. Every pixel is yours.
 layout: landing
 ---
 
 <Hero
-    eyebrow="@fragiola/splitter · React · Vue"
+    eyebrow="@fragiola/splitter · React · Vue · Angular"
     title="Resizable split views, without a single line of CSS from us."
     description="Panels side by side or stacked, resized by pointer, keyboard or code, collapsible and nested, with a typed model and a JSON layout. It ships the behaviour and the accessibility. Every pixel is yours."
     actions={[
@@ -90,6 +90,28 @@ import { Splitter } from "@fragiola/splitter-vue";
         <Splitter.Panel id="editor">…</Splitter.Panel>
     </Splitter.Group>
 </template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts
+import { Component } from "@angular/core";
+import { SPLITTER } from "@fragiola/splitter-angular";
+
+@Component({
+    selector: "app-editor",
+    imports: [SPLITTER],
+    template: `
+        <div splitterGroup class="h-96">
+            <div splitterPanel id="files" defaultSize="25%" minSize="10%" collapsible>…</div>
+            <div splitterSeparator aria-label="Resize files" class="w-1.5 bg-gray-200"></div>
+            <div splitterPanel id="editor">…</div>
+        </div>
+    `,
+})
+export class Editor {}
 ```
 
 </Framework>

@@ -63,6 +63,32 @@ import { Splitter } from "@fragiola/splitter-vue";
 
 </Framework>
 
+<Framework name="angular">
+
+```ts title="three-panes.ts"
+import { Component } from "@angular/core";
+import { SPLITTER } from "@fragiola/splitter-angular";
+
+@Component({
+    selector: "app-three-panes",
+    imports: [SPLITTER],
+    template: `
+        <div splitterGroup class="h-96 border">
+            <nav splitterPanel id="navigation" defaultSize="25%" aria-label="Navigation">…</nav>
+            <div splitterSeparator aria-label="Resize navigation" class="w-1.5 bg-gray-200"></div>
+            <main splitterPanel id="content" defaultSize="50%">…</main>
+            <div splitterSeparator aria-label="Resize content" class="w-1.5 bg-gray-200"></div>
+            <aside splitterPanel id="details" defaultSize="25%" aria-label="Details">…</aside>
+        </div>
+    `,
+})
+export class ThreePanes {}
+```
+
+The directives go on your own elements, so a panel can be the `<nav>` itself.
+
+</Framework>
+
 What this produces:
 
 - the group is a flex row (`display: flex`, written inline: it is structural); you give it its
@@ -98,6 +124,14 @@ the group as a string (`"25%"`, or `"25"`), pixels as a number (`240`), or a str
 <Splitter.Panel id="sidebar" :default-size="240" min-size="12rem" max-size="40%">
     …
 </Splitter.Panel>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<div splitterPanel id="sidebar" [defaultSize]="240" minSize="12rem" maxSize="40%">…</div>
 ```
 
 </Framework>
@@ -139,6 +173,18 @@ vertical group needs a height.
         …
     </Splitter.Panel>
 </Splitter.Group>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<div splitterGroup orientation="vertical" class="h-[32rem]">
+    <div splitterPanel id="editor" defaultSize="65%" minSize="20%">…</div>
+    <div splitterSeparator aria-label="Resize editor" class="h-1.5 bg-gray-200"></div>
+    <div splitterPanel id="terminal" minSize="15%">…</div>
+</div>
 ```
 
 </Framework>
@@ -197,6 +243,39 @@ const layout = ref<Readonly<Layout>>({ left: 30, right: 70 });
         <Splitter.Panel id="right">Right</Splitter.Panel>
     </Splitter.Group>
 </template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+`[(layout)]` keeps a signal of the layout (each panel's size in percent, by panel id), updated
+on every change, drag steps included; `(layoutCommit)` fires only when a change is final: a drag
+released, a key pressed, a command run (not the layout the group registers with). The signal also
+drives the group: a value of your own is applied as a `group.set-layout`.
+
+```ts title="with-readout.ts"
+import { Component, signal } from "@angular/core";
+import { type Layout, SPLITTER } from "@fragiola/splitter-angular";
+
+@Component({
+    selector: "app-with-readout",
+    imports: [SPLITTER],
+    template: `
+        <output>{{ text() }}</output>
+        <div splitterGroup id="main" [(layout)]="layout" class="h-80">
+            <div splitterPanel id="left">Left</div>
+            <div splitterSeparator aria-label="Resize left" class="w-1 bg-gray-300"></div>
+            <div splitterPanel id="right">Right</div>
+        </div>
+    `,
+})
+export class WithReadout {
+    readonly layout = signal<Readonly<Layout> | undefined>({ left: 30, right: 70 });
+    text() {
+        return JSON.stringify(this.layout());
+    }
+}
 ```
 
 </Framework>

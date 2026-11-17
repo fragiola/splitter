@@ -6,7 +6,8 @@ description: What the package does for a split view (resizing, the keyboard, col
 A split view puts panels side by side, or stacks them, with a separator between each pair that
 the user drags to share the room. `@fragiola/splitter-react` and `@fragiola/splitter-vue` give you that
 behaviour as three headless primitives, `Splitter.Group`, `Splitter.Panel` and `Splitter.Separator`, over a
-framework-free core, `@fragiola/splitter`.
+framework-free core, `@fragiola/splitter`; `@fragiola/splitter-angular` gives it as three directives on
+your own elements.
 
 What the package gives you:
 
@@ -66,12 +67,34 @@ import { Splitter } from "@fragiola/splitter-vue";
 
 </Framework>
 
+<Framework name="angular">
+
+```ts title="editor-layout.ts"
+import { Component } from "@angular/core";
+import { SPLITTER } from "@fragiola/splitter-angular";
+
+@Component({
+    selector: "app-editor-layout",
+    imports: [SPLITTER],
+    template: `
+        <div splitterGroup class="h-96">
+            <div splitterPanel id="files" defaultSize="25%" minSize="10%">Files</div>
+            <div splitterSeparator aria-label="Resize files" class="w-1 bg-gray-300"></div>
+            <div splitterPanel id="editor">Editor</div>
+        </div>
+    `,
+})
+export class EditorLayout {}
+```
+
+</Framework>
+
 <Example id="basic-horizontal" />
 
 ## Where to go next
 
 <Cards>
-<Card title="Installation" href="/docs/getting-started/installation" description="One package for React or Vue, the core re-exported." />
+<Card title="Installation" href="/docs/getting-started/installation" description="One package for React, Vue or Angular, the core re-exported." />
 <Card title="Your first split view" href="/docs/getting-started/first-split-view" description="Panels, separators, sizes and orientation." />
 <Card title="Model and engine" href="/docs/concepts/model-and-engine" description="The two objects behind the primitives, and their five verbs." />
 <Card title="Limitations" href="/docs/limitations" description="What React Resizable Panels has that this package does not, and why." />
