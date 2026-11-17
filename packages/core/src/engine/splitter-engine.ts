@@ -759,29 +759,33 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
                     this.onDoubleClick(id, event);
                 }
             };
-            element.addEventListener("pointerdown", onPointerDown);
-            element.addEventListener("pointermove", onPointerMove);
-            element.addEventListener("pointerup", onPointerUp);
-            element.addEventListener("pointercancel", onPointerCancel);
-            element.addEventListener("lostpointercapture", onPointerCancel);
-            element.addEventListener("keydown", onKeyDown);
-            element.addEventListener("dblclick", onDoubleClick);
+            const listeners: [string, (event: never) => void][] = [
+                ["pointerdown", onPointerDown],
+                ["pointermove", onPointerMove],
+                ["pointerup", onPointerUp],
+                ["pointercancel", onPointerCancel],
+                ["lostpointercapture", onPointerCancel],
+                ["keydown", onKeyDown],
+                ["dblclick", onDoubleClick],
+            ];
+            // in the capture phase: on the separator itself, capture listeners run before the
+            // others, so the element's own listeners run after the engine's (its key handled,
+            // `defaultPrevented` set) even when a framework added them first, as Angular does
+            for (const [type, listener] of listeners) {
+                element.addEventListener(type, listener as EventListener, {
+                    capture: true,
+                });
+            }
             this.separatorElements.set(element, {
                 id: separatorId,
                 remove: () => {
-                    element.removeEventListener("pointerdown", onPointerDown);
-                    element.removeEventListener("pointermove", onPointerMove);
-                    element.removeEventListener("pointerup", onPointerUp);
-                    element.removeEventListener(
-                        "pointercancel",
-                        onPointerCancel,
-                    );
-                    element.removeEventListener(
-                        "lostpointercapture",
-                        onPointerCancel,
-                    );
-                    element.removeEventListener("keydown", onKeyDown);
-                    element.removeEventListener("dblclick", onDoubleClick);
+                    for (const [type, listener] of listeners) {
+                        element.removeEventListener(
+                            type,
+                            listener as EventListener,
+                            { capture: true },
+                        );
+                    }
                 },
             });
         }
