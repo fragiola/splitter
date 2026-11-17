@@ -15,8 +15,10 @@
 // - each adapter's smoke test: a scratch app outside the workspace installs that adapter's tarball
 //   (the core tarball comes as its dependency) and imports from it, typechecks with the repo's
 //   TypeScript, builds, and its dev server serves the entry with every import resolved. For
-//   React, a Vite + React app. A consumer's dev server adds the `development` condition, which
-//   once pointed Dockable's published `exports` at sources that are not in the tarball.
+//   React, a Vite + React app; for Vue, a Vite + Vue app with a single-file component, checked by
+//   vue-tsc on TypeScript 6 (vue-tsc does not run on TypeScript 7 yet). A consumer's dev server
+//   adds the `development` condition, which once pointed Dockable's published `exports` at
+//   sources that are not in the tarball.
 //
 // `--tarballs <dir>` checks the tarballs found in `dir` (at any depth) instead of packing: the
 // release workflow passes the directory `changeset pack` wrote, so what is checked is what is
@@ -24,6 +26,7 @@
 // packed from the repo, as without the option.
 import { execFileSync, spawn } from "node:child_process";
 import {
+    existsSync,
     mkdirSync,
     mkdtempSync,
     readdirSync,
@@ -455,6 +458,169 @@ async function reactSmoke(
     await loadThroughDevServer(app, "/src/main.tsx");
 }
 
+// The Vue smoke app: its entry mounts the single-file component with a model made from the Vue
+// package (the core included); the component renders the typed primitives with a nested group
+// and `v-model:layout`, checked by vue-tsc.
+const VUE_SMOKE_MAIN = `import {
+    createSplitterModel,
+    type SplitterJson,
+} from "@fragiola/splitter-vue";
+import { createApp } from "vue";
+import App, { type Types } from "./App.vue";
+
+const json: SplitterJson = {
+    version: 1,
+    groups: [{ id: "main", panels: [{ id: "left", size: 30 }, { id: "right", size: 70 }] }],
+};
+
+createApp(App, { model: createSplitterModel<Types>(json) }).mount("#root");
+`;
+
+const VUE_SMOKE_APP = `<script lang="ts">
+import type { SplitterTypes } from "@fragiola/splitter-vue";
+
+export interface Types extends SplitterTypes {
+    readonly groupId: "main" | "side";
+    readonly panelId: "left" | "right" | "top" | "bottom";
+}
+</script>
+
+<script setup lang="ts">
+import {
+    type Layout,
+    type SplitterModel,
+    typedSplitter,
+} from "@fragiola/splitter-vue";
+import { ref } from "vue";
+
+const Splitter = typedSplitter<Types>();
+const props = defineProps<{ model: SplitterModel<Types> }>();
+const side = ref<Readonly<Layout>>({ top: 50, bottom: 50 });
+
+function save(): void {
+    console.log(JSON.stringify(props.model.get("splitter-json")));
+}
+</script>
+
+<template>
+    <Splitter.Group id="main" :model="model" :style="{ height: '100vh' }" @layout-commit="save">
+        <Splitter.Panel id="left" default-size="30%" :min-size="120">
+            <button type="button" @click="save">Save</button>
+        </Splitter.Panel>
+        <Splitter.Separator aria-label="Resize left" />
+        <Splitter.Panel id="right">
+            <Splitter.Group id="side" v-model:layout="side" orientation="vertical">
+                <Splitter.Panel id="top" collapsible />
+                <Splitter.Separator aria-label="Resize top" />
+                <Splitter.Panel id="bottom" v-slot="{ state }">
+                    {{ state.collapsed ? "collapsed" : "" }}
+                </Splitter.Panel>
+            </Splitter.Group>
+        </Splitter.Panel>
+    </Splitter.Group>
+</template>
+`;
+
+/**
+ * The versions the Vue smoke app installs: examples/vue's pins, once that app exists (it comes
+ * after the package); vue-tsc runs on TypeScript 6, which only these apps pin.
+ */
+const VUE_SMOKE_VERSIONS: Readonly<Record<string, string>> = {
+    vue: "3.5.45",
+    "@vitejs/plugin-vue": "6.0.10",
+    typescript: "6.0.3",
+    vite: "8.3.1",
+    "vue-tsc": "3.3.14",
+};
+
+/** A Vue smoke app's version of `name`: examples/vue's pin when it exists, else the one above. */
+function vueVersion(name: string): string {
+    if (existsSync(join(root, "examples/vue/package.json"))) {
+        return examplesVersion("vue", name);
+    }
+    const version = VUE_SMOKE_VERSIONS[name];
+    if (version === undefined)
+        throw new Error(`no Vue smoke version of ${name}`);
+    return version;
+}
+
+/**
+ * A scratch Vite + Vue app in `dir` that depends on the Vue tarball only (the core tarball comes
+ * as its dependency). It typechecks with vue-tsc on TypeScript 6 (vue-tsc does not run on
+ * TypeScript 7 yet).
+ */
+function writeVueSmokeApp(dir: string, core: string, vue: string): void {
+    const manifest = {
+        name: "splitter-smoke",
+        private: true,
+        type: "module",
+        dependencies: {
+            "@fragiola/splitter-vue": `file:${vue}`,
+            vue: vueVersion("vue"),
+        },
+        devDependencies: {
+            "@vitejs/plugin-vue": vueVersion("@vitejs/plugin-vue"),
+            typescript: vueVersion("typescript"),
+            vite: vueVersion("vite"),
+            "vue-tsc": vueVersion("vue-tsc"),
+        },
+    };
+    writeFileSync(
+        join(dir, "package.json"),
+        `${JSON.stringify(manifest, null, 4)}\n`,
+    );
+    writeFileSync(
+        join(dir, "pnpm-workspace.yaml"),
+        `overrides:\n  "@fragiola/splitter": "file:${core}"\n`,
+    );
+    writeFileSync(
+        join(dir, "vite.config.js"),
+        `import vue from "@vitejs/plugin-vue";\nimport { defineConfig } from "vite";\n\nexport default defineConfig({ plugins: [vue()] });\n`,
+    );
+    writeFileSync(
+        join(dir, "index.html"),
+        `<!doctype html>\n<html lang="en">\n<body>\n<div id="root"></div>\n<script type="module" src="/src/main.ts"></script>\n</body>\n</html>\n`,
+    );
+    // strict, with the published declarations checked too (no skipLibCheck)
+    const tsconfig = {
+        compilerOptions: {
+            target: "ES2022",
+            lib: ["ES2022", "DOM", "DOM.Iterable"],
+            module: "ESNext",
+            moduleResolution: "bundler",
+            jsx: "preserve",
+            strict: true,
+            noUncheckedIndexedAccess: true,
+            verbatimModuleSyntax: true,
+            noEmit: true,
+            types: [],
+        },
+        include: ["src/**/*.ts", "src/**/*.vue"],
+    };
+    writeFileSync(
+        join(dir, "tsconfig.json"),
+        `${JSON.stringify(tsconfig, null, 4)}\n`,
+    );
+    mkdirSync(join(dir, "src"));
+    writeFileSync(join(dir, "src/main.ts"), VUE_SMOKE_MAIN);
+    writeFileSync(join(dir, "src/App.vue"), VUE_SMOKE_APP);
+}
+
+/**
+ * The Vue smoke test: the scratch Vite + Vue app installs the Vue tarball, typechecks (vue-tsc),
+ * builds and loads its dev server.
+ */
+async function vueSmoke(
+    app: string,
+    tarballs: { core: string; adapter: string },
+): Promise<void> {
+    writeVueSmokeApp(app, tarballs.core, tarballs.adapter);
+    run("pnpm", ["install", "--no-frozen-lockfile"], app);
+    run("pnpm", ["exec", "vue-tsc", "--noEmit"], app);
+    run("pnpm", ["exec", "vite", "build"], app);
+    await loadThroughDevServer(app, "/src/main.ts");
+}
+
 /** What `check:package` checks of an adapter, besides what every package gets. */
 export interface AdapterCheck {
     /** its directory, `packages/<dir>` */
@@ -475,6 +641,7 @@ export interface AdapterCheck {
 /** Every adapter, one per package under packages/ but the core (`unlistedPackages` checks it). */
 export const ADAPTERS: readonly AdapterCheck[] = [
     { dir: "react", framework: "react", smoke: reactSmoke },
+    { dir: "vue", framework: "vue", smoke: vueSmoke },
 ];
 
 /** The packages/ directories that are neither the core nor an adapter of `adapters`. */

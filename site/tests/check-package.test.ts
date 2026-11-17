@@ -165,6 +165,13 @@ describe("the adapters the package check covers", () => {
         expect(ADAPTERS[0]?.dir).toBe("react");
     });
 
+    it("smoke-test each adapter with its own framework's app", () => {
+        expect(ADAPTERS.map(({ dir, framework }) => [dir, framework])).toEqual([
+            ["react", "react"],
+            ["vue", "vue"],
+        ]);
+    });
+
     it("finds a package that is neither the core nor a listed adapter", () => {
         const dirs = ["core", "react", "solid"];
         expect(unlistedPackages(dirs)).toEqual(["solid"]);

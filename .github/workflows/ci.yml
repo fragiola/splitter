@@ -5,8 +5,8 @@
 #   Package           `pnpm check:package`: builds and packs every package with pnpm, lints the
 #                     tarballs (dist-only exports, publint, attw), checks each adapter pins the
 #                     core's exact version, then installs each adapter into its own scratch app
-#                     outside the workspace (Vite + React for React) that typechecks, builds and
-#                     loads its dev server.
+#                     outside the workspace (Vite + React for React, Vite + Vue with an SFC checked
+#                     by vue-tsc for Vue) that typechecks, builds and loads its dev server.
 #   Changesets        on a pull request, `pnpm changeset status` fails when the PR changes what a
 #                     package ships (`changedFilePatterns` in .changeset/config.json) without
 #                     adding a changeset. Skipped for the Version Packages PR (changeset-release/*),
