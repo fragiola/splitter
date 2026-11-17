@@ -420,7 +420,7 @@ function Header({ splitterRef }: { splitterRef: SplitterRef }) {
         <div role="toolbar" aria-label="Chat" className={styles.toolbar}>
             <span className={styles.workspace}>
                 <MessagesSquare aria-hidden="true" className={styles.logo} />
-                Northwind team
+                Product team
             </span>
             <Clickable.Button
                 size="sm"

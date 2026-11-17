@@ -17,7 +17,7 @@ import * as styles from "./styles";
         <div role="toolbar" aria-label="Chat" [class]="styles.toolbar">
             <span [class]="styles.workspace">
                 <svg lucideMessagesSquare aria-hidden="true" [class]="styles.logo"></svg>
-                Northwind team
+                Product team
             </span>
             <button
                 kitClickable

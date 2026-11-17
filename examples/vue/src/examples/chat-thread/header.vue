@@ -31,7 +31,7 @@ function toggle() {
     <div role="toolbar" aria-label="Chat" :class="styles.toolbar">
         <span :class="styles.workspace">
             <MessagesSquare aria-hidden="true" :class="styles.logo" />
-            Northwind team
+            Product team
         </span>
         <Clickable.Button
             size="sm"
