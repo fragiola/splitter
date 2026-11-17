@@ -22,7 +22,7 @@ wiring.
 | `packages/core` | `@fragiola/splitter` | the typed model and its command bus, the JSON document and its JSON Schema, the pure layout rules, units, the engine (measurement, gestures, keyboard, RTL, ARIA values) | DOM only, zero runtime deps |
 | `packages/react` | `@fragiola/splitter-react` | the `Splitter.*` primitives and hooks over the core, and the whole core re-exported | the core (`workspace:*`); peers `react`, `react-dom` (^19) |
 | `packages/vue` | `@fragiola/splitter-vue` | the `Splitter.*` primitives (plain `.ts` render functions, no SFC) and composables over the core, `typedSplitter<Types>()`, and the whole core re-exported | the core (`workspace:*`); peer `vue` (^3.5) |
-| `packages/angular` | `@fragiola/splitter-angular` | planned (Epic #13) | the core |
+| `packages/angular` | `@fragiola/splitter-angular` | standalone attribute directives on the app's own elements (`splitterGroup`, `splitterPanel`, `splitterSeparator`, the `SPLITTER` array; signals, zoneless), the injection functions over the core, and the whole core re-exported; built by ng-packagr, published from `dist` | the core (`workspace:*`); peer `@angular/core` (^22) |
 
 Private, never published: `apps/playground` (the dev app: the examples in place, scenarios,
 unstyled fixtures for Playwright), `examples/shared` (`examples-shared`: what every framework's
@@ -36,8 +36,8 @@ and the repository checks' tests).
 These are the decisions of Epic #7 (D1 to D10) and the ecosystem rules they build on. A change that
 breaks one is a decision for the maintainer, not an implementation detail.
 
-1. **Names (D1).** Packages `@fragiola/splitter` (core), `@fragiola/splitter-react` and
-   `@fragiola/splitter-vue`; later `@fragiola/splitter-angular`. Repo `fragiola/splitter`;
+1. **Names (D1).** Packages `@fragiola/splitter` (core), `@fragiola/splitter-react`,
+   `@fragiola/splitter-vue` and `@fragiola/splitter-angular`. Repo `fragiola/splitter`;
    fragiola.com slug `splitter`, title "Splitter"; www `devUrl` `http://localhost:5184` (5183 is
    reserved by `dnd`). React and Vue namespace `Splitter`. Core creators `createSplitterModel` and
    `createSplitterEngine`; the external ref is `createSplitterRef` / `useSplitterRef`.
@@ -135,16 +135,16 @@ breaks one is a decision for the maintainer, not an implementation detail.
 | `pnpm check:layout` | the source layout check (`scripts/check-layout.ts`, from Dockable): every tracked name kebab-case, a package's `src/` root holds only its entries |
 | `pnpm check:commands` | builds the core and fails when `site/docs/api/commands.mdx` differs from the registry (`packages/core/scripts/generate-command-docs.ts`; `pnpm --filter @fragiola/splitter generate:commands` rewrites it) |
 | `pnpm check:fix` | Biome check with auto-fix |
-| `pnpm typecheck` | `pnpm -r typecheck` (TypeScript 7, no emit; `examples/vue` runs vue-tsc on TypeScript 6.0.3, pinned in that app only, over the packages' sources too) |
-| `pnpm test` | Vitest across the projects: `core` (node), `react` (jsdom), `vue` (jsdom, `@vue/test-utils`; its server tests in node), `playground`, `examples-shared`, `examples-react`, `examples-vue`, `site` |
-| `pnpm build` | `pnpm -r build` (tsdown for the packages, Vite for the playground and the embed), then the `.d.ts` check (`scripts/check-dts.ts`) |
+| `pnpm typecheck` | `pnpm -r typecheck` (TypeScript 7, no emit; `examples/vue` runs vue-tsc on TypeScript 6.0.3, pinned in that app only, over the packages' sources too; `packages/angular` runs `ngc` with strict templates on TypeScript 6.0.3, pinned in that package only) |
+| `pnpm test` | Vitest across the projects: `core` (node), `react` (jsdom), `vue` (jsdom, `@vue/test-utils`; its server tests in node), `angular` (jsdom, `@analogjs/vitest-angular`, a zoneless TestBed), `playground`, `examples-shared`, `examples-react`, `examples-vue`, `site` |
+| `pnpm build` | `pnpm -r build` (tsdown for the core, React and Vue; ng-packagr then `scripts/publish-manifest.ts` for Angular; Vite for the playground and the embed), then the `.d.ts` check (`scripts/check-dts.ts`, which ignores only the Angular compiler's `ɵ` metadata) |
 | `pnpm e2e` | Playwright, one app after the other: the playground (Chromium and Firefox, its dev server on 5173, `PLAYGROUND_PORT` moves it), then each examples app's shared suite (`examples/shared/e2e`) against a production build of its embed (on 4340 + the framework's index: React 4340, Vue 4341; `EXAMPLES_E2E_PORT` moves it). The examples suite builds against the packages' `dist`: run `pnpm build` first. `pnpm exec playwright install chromium firefox` once |
 | `pnpm dev` | the playground on 5173 (`PLAYGROUND_PORT`): every example with its themes and source, the scenarios, the fixtures. The embed alone: `pnpm --filter examples-react dev` on 5184, `pnpm --filter examples-vue dev` on 5185 (`PORT`) |
 | `pnpm site:export --base /splitter --out <dir>` | the site export, contract v1.2 (`../www/CONTRACT.md`): builds the packages and every framework's embed (React, Vue) for `<base>/embed/<framework>/`, writes `project.json`, `docs/`, `examples.json` and each embed's `manifest.json`, then validates the output (`site/contract.ts`) and exits non-zero on any problem. It only replaces a previous export |
 | `pnpm site:dev --base /splitter --port 5184` | every framework's embed with hot reload behind one Node proxy (`site/dev-proxy.ts`, no dependency) under `<base>/embed/<framework>/`, for `www` in dev (`devUrl` `http://localhost:5184`) |
 | `pnpm --filter examples-react vendor` | vendors Fragiola UI into `examples/react/src` (`scripts/vendor-fragiola.ts`; `FRAGIOLA_REGISTRY` points it at a registry URL or a local `public/r` directory); the copies are committed |
 
-| `pnpm check:package` | builds the packages, packs each with pnpm and checks the tarballs (`scripts/check-package.ts`, from Dockable): the packed `exports` are the repo's without the source condition (`types`/`import`/`default`, `dist` targets), publint (strict), attw (`esm-only`), each adapter of `ADAPTERS` pins the core exactly, and its smoke app (outside the workspace, that adapter's tarball only: React, Vite + React checked by `tsc`; Vue, Vite + Vue with a single-file component checked by vue-tsc on TypeScript 6) typechecks, builds and loads its dev server. `--tarballs <dir>` checks given tarballs (the release workflow's) |
+| `pnpm check:package` | builds the packages, packs each with pnpm and checks the tarballs (`scripts/check-package.ts`, from Dockable): the packed `exports` are the repo's without the source condition (`types`/`import`/`default`, `dist` targets), publint (strict), attw (`esm-only`), each adapter of `ADAPTERS` pins the core exactly, and its smoke app (outside the workspace, that adapter's tarball only: React, Vite + React checked by `tsc`; Vue, Vite + Vue with a single-file component checked by vue-tsc on TypeScript 6; Angular, Vite + `@analogjs/vite-plugin-angular` with a standalone component checked by `ngc` on TypeScript 6, packed from its `dist`) typechecks, builds and loads its dev server. `--tarballs <dir>` checks given tarballs (the release workflow's) |
 | `pnpm changeset` / `release:version` | Changesets: add a changeset / bump the versions (the release workflow runs the latter); core and adapters are one `fixed` group (`@fragiola/*`). Releasing: `docs/releasing.md` |
 
 ## Repository layout
@@ -153,6 +153,7 @@ breaks one is a decision for the maintainer, not an implementation detail.
 packages/core/      @fragiola/splitter        src/<domain>/ (state, commands, schema, layout, units, engine, keyboard), tests/ mirroring it, tests/types/
 packages/react/     @fragiola/splitter-react  src/components/, hooks/, utils/; entries index.ts, parts.ts, context.ts
 packages/vue/       @fragiola/splitter-vue    src/components/, composables/ (+ internal.ts), utils/ (primitive.ts, render.ts from Dockable); entries index.ts, parts.ts, typed.ts, context.ts; tests/ (+ tests/types/)
+packages/angular/   @fragiola/splitter-angular src/public-api.ts, src/lib/ (splitter.ts, context.ts, directives/*.directive.ts, inject/, utils/); ng-package.json, tsconfig.build.json, scripts/publish-manifest.ts; tests/ (+ tests/types/)
 apps/playground/    playground                src/shell/ (catalog, stage, source), src/scenarios/<area>/<id>.tsx (dev-only), src/fixture/ + fixtures/<name>/index.html (unstyled, for Playwright), e2e/, tests/
 examples/shared/    examples-shared           src/meta/<slug>.ts, src/themes/, src/embed/, src/framework.ts, scripts/ (examples-lib, generate, manifest), e2e/ (every spec, every framework), tests/
 examples/react/     examples-react            src/examples/<slug>/ (index.tsx, styles.ts), src/examples/_kit/ (persistence.ts, undo.ts), src/embed/, vendored Fragiola UI (src/components, lib, styles), scripts/vendor-fragiola.ts, tests/
@@ -580,3 +581,62 @@ copyright line and the MIT licence, and the guard test lists it.
     read in `setup` would keep the first ref if the parent passed another one.
   - **Library fix:** the engine's `group.measure` run casts its payload to the registry's type:
     vue-tsc (TypeScript 6) compiles the core's sources and refused it; no runtime change.
+- **Issue #11 (Angular adapter):**
+  - **Imitated** Grid Layout's Angular adapter (the newest copy of Dockable's): `ng-package.json`,
+    `tsconfig.json` / `tsconfig.spec.json` / `tsconfig.build.json`, `vitest.config.ts`,
+    `scripts/publish-manifest.ts`, `tests/setup.ts`, the `fromStore` signal helper, the
+    `inject-part.ts` shape and the exports test; Dockable's `dataAttr`, `bindStructuralStyle` and
+    boolean inputs (`utils/helpers.ts`). The registration logic is the Vue adapter's
+    (`composables/internal.ts`, `use-panel.ts`, `use-separator.ts`) ported to the directives;
+    `ADAPTER_RUN`, `shallowEqual` and `panelStyle` are React's (the style as a record).
+  - **Surface.** Attribute directives on the app's own elements, no template directives (the app
+    writes nested groups in its markup, so there is no recursion to own): `[splitterGroup]`
+    (inputs `id`, `orientation`, `disabled`, `model`, the model input `layout` (`[(layout)]`, its
+    `layoutChange` is React's `onLayoutChange`), `defaultLayout`, `splitterRef`, `keyboardStep`,
+    `resetOnDoubleClick`; output `layoutCommit`), `[splitterPanel]` (`id` and the eight
+    constraints; outputs `resize` (`{ size, previous }`), `collapse`, `expand`),
+    `[splitterSeparator]` (`disabled`, `resetOnDoubleClick`), each `exportAs` its selector with a
+    `state()` signal (`GroupPartState`, `PanelPartState`, `SeparatorPartState`); `SPLITTER` lists
+    them (React's `Splitter` namespace). Injection functions: `injectSplitter()` /
+    `injectSplitter(splitterRef | () => splitterRef)` (a signal: inside a group it throws when read
+    before the group has its inputs), `injectSplitterState(selector, { splitterRef?, isEqual? })`,
+    and `injectGroup()`, `injectPanel()`, `injectSeparator()` (`{ state }` of the enclosing part:
+    in Angular the directive is the lower layer, so they register nothing). `useSplitterRef` is the
+    core's `createSplitterRef`. Bare boolean attributes are `true`. Runtime names are React's
+    counterparts (`tests/exports.test.ts`); `typedSplitter` has none: a strict template infers a
+    group's registry from its `[model]` (`id="nope"` does not compile).
+  - **Rendering.** `data-*`, ARIA, `role`, `tabindex` and the panel's DOM `id` are host bindings;
+    the structural style is written by an effect (`bindStructuralStyle`, Dockable's): Angular's
+    styling precedence puts the app's static `style` above a directive's host style binding, so a
+    host binding could not win over it, as the structural style must.
+  - **Lifecycle.** A group makes its model, engine and registry in its `ngOnInit` (its inputs are
+    set; its parts' `ngOnInit` run after it) and registers in `afterNextRender`, once the panels
+    of the first render (in an `@for`, in a child component) wait in its registry: one `batch`, as
+    React and Vue. A panel binds its element and registers in its `ngOnInit`; a separator gives the
+    registry its element there. Input changes are effects compared with what was last sent (Vue's
+    watchers). Angular destroys a group's child views (an `@for` of panels) before the group, so a
+    destroyed panel's `panel.remove` waits for a microtask (`GroupRegistry.removePanelLater`); a
+    group destroyed meanwhile drops it and its `group.remove { keepLayout }` takes the panels with
+    their layout (React and Vue tear the parent down first). A panel created again under the same
+    id before that microtask removes the old one first.
+  - **A group's `id` and `model` are read once** (a directive cannot remount itself): a change is
+    reported with `console.error`; the app creates the group again for another one
+    (`@for (id of [groupId]; track id)`, tested). A new parent panel id moves a nested group in
+    place (`group.update { parentPanelId }`), as React and Vue: the nested group's effect reads only
+    the parent panel's id signal, so a resize of the parent changes nothing of it (tested).
+  - **Listener order (core change).** Angular attaches a template's `(keydown)` when it creates the
+    element, before the engine binds the separator. The engine now listens to a separator in the
+    capture phase: on the target, capture listeners run first whatever the order they were added
+    in, so the app's listeners run after the engine's (`defaultPrevented` set) in every framework,
+    and through Angular's `ErrorHandler` (template listeners). React and Vue are unchanged (React
+    delegates at the root; Vue's re-added listeners still run after).
+  - **Not done:** server rendering (optional for this Issue): no SSR test; a group registers in
+    `afterNextRender`, which never runs on the server, so the server HTML has the structural style
+    and no paths, as React's.
+  - **Versions** (Dockable's and Grid Layout's pins, 7-day rule, 2026-11-17): Angular 22.2.5
+    (`@angular/build` and `ng-packagr` 22.2.6), `@analogjs/vite-plugin-angular` and
+    `@analogjs/vitest-angular` 2.9.6, `rxjs` 7.8.2, TypeScript 6.0.3 in `packages/angular` only.
+    `pnpm-workspace.yaml` gives `@analogjs/vite-plugin-angular` a `typescript` peer and leaves
+    `@angular/build`'s native helpers unbuilt (Grid Layout's). `@angular/build` depends on Vite
+    8.3.5, which pnpm then picked for the root's Vitest and broke two Vue tests run from the root:
+    the root pins `vite` 8.3.1, the repo's Vite.
