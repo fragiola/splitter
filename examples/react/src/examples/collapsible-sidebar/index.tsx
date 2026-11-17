@@ -5,9 +5,9 @@ import {
     type SplitterRef,
     useSplitter,
     useSplitterRef,
+    useSplitterState,
 } from "@fragiola/splitter-react";
 import { FileText, Folder, Search, Settings } from "lucide-react";
-import { useState } from "react";
 import { Clickable } from "#/components/atoms/clickable";
 import * as styles from "./styles";
 
@@ -21,13 +21,13 @@ const ITEMS = [
 // A collapsible panel collapses when a drag takes it past half its minimum, down to its collapsed
 // size (a rail of 3rem here), and remembers the size it had: dragging it back, Enter on the
 // separator or `panel.expand` restores it. The sidebar shows its labels only while expanded,
-// styled from its `data-collapsed`.
+// styled from its `data-collapsed`. The toolbar outside the group follows the panel with
+// `useSplitterState`.
 export default function CollapsibleSidebar() {
     const splitterRef = useSplitterRef();
-    const [collapsed, setCollapsed] = useState(false);
     return (
         <div className={styles.frame}>
-            <Toolbar splitterRef={splitterRef} collapsed={collapsed} />
+            <Toolbar splitterRef={splitterRef} />
             <Splitter.Group splitterRef={splitterRef} className={styles.group}>
                 <Splitter.Panel
                     id="sidebar"
@@ -35,8 +35,6 @@ export default function CollapsibleSidebar() {
                     minSize="10rem"
                     collapsible
                     collapsedSize="3rem"
-                    onCollapse={() => setCollapsed(true)}
-                    onExpand={() => setCollapsed(false)}
                     className={styles.sidebar}
                 >
                     <nav aria-label="Sidebar" className={styles.nav}>
@@ -74,14 +72,14 @@ export default function CollapsibleSidebar() {
 }
 
 /** A button outside the group: it collapses and expands the sidebar through the model. */
-function Toolbar({
-    splitterRef,
-    collapsed,
-}: {
-    splitterRef: SplitterRef;
-    collapsed: boolean;
-}) {
+function Toolbar({ splitterRef }: { splitterRef: SplitterRef }) {
     const splitter = useSplitter(splitterRef);
+    // undefined until the group holds the ref, then re-rendered on every collapse and expand
+    const collapsed =
+        useSplitterState(
+            ({ model }) => model.is("panel-collapsed", { panelId: "sidebar" }),
+            { splitterRef },
+        ) ?? false;
     function toggle() {
         if (!splitter) return;
         if (collapsed) {

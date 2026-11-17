@@ -16,8 +16,8 @@ reports the change; the button, the icon and what the panel shows while collapse
     minSize="10rem"
     collapsible
     collapsedSize="3rem"
-    onCollapse={() => setCollapsed(true)}
-    onExpand={() => setCollapsed(false)}
+    onCollapse={() => console.log("collapsed")}
+    onExpand={() => console.log("expanded")}
 >
     …
 </Splitter.Panel>
@@ -31,7 +31,8 @@ reports the change; the button, the icon and what the panel shows while collapse
 - `onCollapse` and `onExpand` fire when its state changes, whatever changed it.
 
 While collapsed the panel carries `data-collapsed`, and `model.is("panel-collapsed", { panelId })`
-answers `true`.
+answers `true`: a component follows it with
+[`useSplitterState`](/docs/api/hooks#usesplitterstate).
 
 <Example id="collapsible-sidebar" />
 
@@ -50,19 +51,22 @@ under an editor), drag it or use code.
 
 ## A toggle button
 
-Outside the group, reach the model through an external ref and follow the state with the
-callbacks:
+Outside the group, reach the model through an external ref and follow the state with
+`useSplitterState`, which re-renders the button whenever the panel collapses or expands, however
+that happens:
 
 ```tsx
 "use client";
 
-import { Splitter, useSplitter, useSplitterRef } from "@fragiola/splitter-react";
-import { useState } from "react";
+import { Splitter, useSplitter, useSplitterRef, useSplitterState } from "@fragiola/splitter-react";
 
 export function Workbench() {
     const splitterRef = useSplitterRef();
     const splitter = useSplitter(splitterRef);
-    const [collapsed, setCollapsed] = useState(false);
+    const collapsed =
+        useSplitterState(({ model }) => model.is("panel-collapsed", { panelId: "sidebar" }), {
+            splitterRef,
+        }) ?? false; // undefined until the group holds the ref
     function toggle() {
         splitter?.model.run(collapsed ? "panel.expand" : "panel.collapse", { panelId: "sidebar" });
     }
@@ -77,8 +81,6 @@ export function Workbench() {
                     defaultSize="25%"
                     minSize="15%"
                     collapsible
-                    onCollapse={() => setCollapsed(true)}
-                    onExpand={() => setCollapsed(false)}
                 >
                     …
                 </Splitter.Panel>
@@ -101,12 +103,25 @@ expands to the size it had.
 ## When it is refused
 
 `panel.collapse` and `panel.expand` are `refused` on a panel that is not collapsible, and when
-the other panels cannot make room within their own constraints. Ask first with `model.can`:
+the other panels cannot make room within their own constraints. Ask first with `model.can`, and
+follow the answer with `useSplitterState`:
 
 ```tsx
-<button type="button" disabled={!model.can("panel.expand", { panelId: "terminal" })}>
-    Show the terminal
-</button>
+function ShowTerminal() {
+    const { model } = useSplitter();
+    const canExpand = useSplitterState(({ model }) =>
+        model.can("panel.expand", { panelId: "terminal" }),
+    );
+    return (
+        <button
+            type="button"
+            disabled={!canExpand}
+            onClick={() => model.run("panel.expand", { panelId: "terminal" })}
+        >
+            Show the terminal
+        </button>
+    );
+}
 ```
 
 ## Hiding what is collapsed

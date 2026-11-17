@@ -11,7 +11,6 @@ page.
 
 | # | needed by | needed | workaround | proposed API |
 |---|---|---|---|---|
-| S2 | `collapsible-sidebar`, `ide-layout`, guides *Collapsible panels*, *Undo and redo* | Follow a model value (a panel collapsed, a layout) from a component. `useSplitter()` returns stable objects and does not re-render on a model change. | `onCollapse` / `onExpand` / `onLayoutChange` copied into React state; `model.subscribe` in an effect for the history. | A `useSplitterState(selector, { splitterRef? })` hook that re-renders only when its answer changes (Dockable's `useModelState`). |
 | S3 | every example's separator, guide *Styling with CSS* | A pointer target wider than the visible line, larger on coarse pointers (React Resizable Panels' `resizeTargetMinimumSize`, panel-edge targets, crossing separators of nested groups dragged together). | A 9px separator with a 1px line drawn by `::before`; `@media (pointer: coarse)` can widen it. | Out of scope for now (AGENTS.md, provenance). Revisit with an optional hit-area option on the engine. |
 | S4 | every example's separator and group, guide *Styling with CSS* | Cursors (a separator's, and one that stays during a drag). The package sets none: a cursor is cosmetic. | `data-[orientation=…]:cursor-*-resize` on the separator, `data-disabled:cursor-not-allowed`; the guide adds a cursor on `[data-dragging]` groups. | None: by design (rule 15). |
 | S5 | guide *Size constraints and units*, *Limitations* | `em` against the panel's own font size, as React Resizable Panels resolves it. The engine measures the group's font size. | The docs advise `rem`, or setting the font size on the group. | Measure each panel's font size when one of its constraints is in `em`. |
@@ -26,6 +25,7 @@ page.
 | # | closed by | API |
 |---|---|---|
 | S1 | the core: a group remembers a layout per panel set | `GroupState.layoutMemory` (by the JSON of the set's sorted panel ids, in the state, out of the JSON document): a set the group had before takes back the layout the user last gave it, clamped to the current constraints; a new set takes its default layout. `conditional-panels` shows it and its spec asserts it. |
+| S2 | the React adapter | `useSplitterState(selector, { splitterRef?, isEqual? })`: an answer of the model (`get`, `is`, `can`), re-rendering only when it changes, from inside a group or through an external ref (`undefined` while none holds it). `collapsible-sidebar`, `ide-layout` and the *Collapsible panels* guide follow the collapsed state with it instead of `onCollapse` / `onExpand` copied into React state. The undo history keeps its own `model.subscribe`: its steps are the app's state, not an answer of the model. |
 
 ## 3. Documentation decisions
 

@@ -12,6 +12,7 @@ export default {
         "panel.collapse",
         "panel.expand",
         "data-collapsed",
+        "useSplitterState",
     ],
     docs: "/docs/guides/collapsible-panels",
 } satisfies ExampleMeta;

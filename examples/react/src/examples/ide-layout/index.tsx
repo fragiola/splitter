@@ -5,9 +5,9 @@ import {
     type SplitterRef,
     useSplitter,
     useSplitterRef,
+    useSplitterState,
 } from "@fragiola/splitter-react";
 import { FileCode, PanelBottom, PanelLeft, PanelRight } from "lucide-react";
-import { useState } from "react";
 import { Clickable } from "#/components/atoms/clickable";
 import { CODE, FILES, OUTLINE, TERMINAL } from "./files";
 import * as styles from "./styles";
@@ -17,21 +17,12 @@ type Collapsible = "explorer" | "outline" | "terminal";
 
 // A workbench as an editor lays it out: three groups in one model. The explorer and the outline
 // have minimums in rem, the terminal in pixels, and all three collapse; the toolbar toggles them
-// through the external ref, and its buttons follow `onCollapse` / `onExpand`.
+// through the external ref, and each button follows its panel with `useSplitterState`.
 export default function IdeLayout() {
     const splitterRef = useSplitterRef();
-    const [collapsed, setCollapsed] = useState<Record<Collapsible, boolean>>({
-        explorer: false,
-        outline: false,
-        terminal: false,
-    });
-    const follow = (panelId: Collapsible) => ({
-        onCollapse: () => setCollapsed((c) => ({ ...c, [panelId]: true })),
-        onExpand: () => setCollapsed((c) => ({ ...c, [panelId]: false })),
-    });
     return (
         <div className={styles.frame}>
-            <Toolbar splitterRef={splitterRef} collapsed={collapsed} />
+            <Toolbar splitterRef={splitterRef} />
             <Splitter.Group
                 id="ide"
                 splitterRef={splitterRef}
@@ -43,7 +34,6 @@ export default function IdeLayout() {
                     minSize="10rem"
                     maxSize="40%"
                     collapsible
-                    {...follow("explorer")}
                     className={styles.side}
                 >
                     <nav aria-label="Explorer" className={styles.pane}>
@@ -104,7 +94,6 @@ export default function IdeLayout() {
                                     defaultSize="26%"
                                     minSize="9rem"
                                     collapsible
-                                    {...follow("outline")}
                                     className={styles.side}
                                 >
                                     <section
@@ -137,7 +126,6 @@ export default function IdeLayout() {
                             defaultSize="30%"
                             minSize={96}
                             collapsible
-                            {...follow("terminal")}
                             className={styles.side}
                         >
                             <section
@@ -166,37 +154,48 @@ const TOGGLES: {
 ];
 
 /** One toggle per collapsible panel: pressed while the panel shows. */
-function Toolbar({
-    splitterRef,
-    collapsed,
-}: {
-    splitterRef: SplitterRef;
-    collapsed: Record<Collapsible, boolean>;
-}) {
-    const splitter = useSplitter(splitterRef);
-    function toggle(panelId: Collapsible) {
-        if (!splitter) return;
-        if (collapsed[panelId]) {
-            splitter.model.run("panel.expand", { panelId });
-        } else {
-            splitter.model.run("panel.collapse", { panelId });
-        }
-    }
+function Toolbar({ splitterRef }: { splitterRef: SplitterRef }) {
     return (
         <div role="toolbar" aria-label="Panels" className={styles.toolbar}>
-            {TOGGLES.map(({ panelId, label, icon: Icon }) => (
-                <Clickable.Button
-                    key={panelId}
-                    size="sm"
-                    variant="ghost"
-                    aria-pressed={!collapsed[panelId]}
-                    onClick={() => toggle(panelId)}
-                    className={styles.toggle}
-                >
-                    <Icon aria-hidden="true" />
-                    {label}
-                </Clickable.Button>
+            {TOGGLES.map((toggle) => (
+                <PanelToggle
+                    key={toggle.panelId}
+                    splitterRef={splitterRef}
+                    {...toggle}
+                />
             ))}
         </div>
+    );
+}
+
+function PanelToggle({
+    splitterRef,
+    panelId,
+    label,
+    icon: Icon,
+}: (typeof TOGGLES)[number] & { splitterRef: SplitterRef }) {
+    const splitter = useSplitter(splitterRef);
+    // re-renders when the panel collapses or expands, however it happens (a drag, Enter, a button)
+    const collapsed =
+        useSplitterState(
+            ({ model }) => model.is("panel-collapsed", { panelId }),
+            { splitterRef },
+        ) ?? false;
+    function toggle() {
+        splitter?.model.run(collapsed ? "panel.expand" : "panel.collapse", {
+            panelId,
+        });
+    }
+    return (
+        <Clickable.Button
+            size="sm"
+            variant="ghost"
+            aria-pressed={!collapsed}
+            onClick={toggle}
+            className={styles.toggle}
+        >
+            <Icon aria-hidden="true" />
+            {label}
+        </Clickable.Button>
     );
 }

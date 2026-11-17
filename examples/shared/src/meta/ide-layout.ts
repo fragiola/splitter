@@ -11,6 +11,7 @@ export default {
         "collapsible",
         "px and rem constraints",
         "external ref",
+        "useSplitterState",
     ],
     height: 560,
 } satisfies ExampleMeta;
