@@ -27,8 +27,8 @@ wiring.
 Private, never published: `apps/playground` (the dev app: the examples in place, scenarios,
 unstyled fixtures for Playwright), `examples/shared` (`examples-shared`: what every framework's
 examples share, framework-free) and `examples/react` (`examples-react`: the site's React examples
-and their embed). Coming in Epic #7: `site` (the export for fragiola.com/splitter); today `site/`
-holds only the repository checks' tests.
+and their embed) and `site` (the export for fragiola.com/splitter: the pages, the export and dev
+scripts, the contract and the repository checks' tests).
 
 ## Non-negotiable rules
 
@@ -139,11 +139,11 @@ breaks one is a decision for the maintainer, not an implementation detail.
 | `pnpm build` | `pnpm -r build` (tsdown for the packages, Vite for the playground and the embed), then the `.d.ts` check (`scripts/check-dts.ts`) |
 | `pnpm e2e` | Playwright, one app after the other: the playground (Chromium and Firefox, its dev server on 5173, `PLAYGROUND_PORT` moves it), then each examples app's shared suite (`examples/shared/e2e`) against a production build of its embed (on 4340 + the framework's index, `EXAMPLES_E2E_PORT` moves it). The examples suite builds against the packages' `dist`: run `pnpm build` first. `pnpm exec playwright install chromium firefox` once |
 | `pnpm dev` | the playground on 5173 (`PLAYGROUND_PORT`): every example with its themes and source, the scenarios, the fixtures. The embed alone: `pnpm --filter examples-react dev` on 5184 (`PORT`) |
+| `pnpm site:export --base /splitter --out <dir>` | the site export, contract v1.2 (`../www/CONTRACT.md`): builds the packages and the React embed for `<base>/embed/react/`, writes `project.json`, `docs/`, `examples.json` and each embed's `manifest.json`, then validates the output (`site/contract.ts`) and exits non-zero on any problem. It only replaces a previous export |
+| `pnpm site:dev --base /splitter --port 5184` | every framework's embed with hot reload behind one Node proxy (`site/dev-proxy.ts`, no dependency) under `<base>/embed/<framework>/`, for `www` in dev (`devUrl` `http://localhost:5184`) |
 | `pnpm --filter examples-react vendor` | vendors Fragiola UI into `examples/react/src` (`scripts/vendor-fragiola.ts`; `FRAGIOLA_REGISTRY` points it at a registry URL or a local `public/r` directory); the copies are committed |
 
-Coming with the later Issues of Epic #7: `pnpm site:export --base /splitter --out <dir>` and
-`pnpm site:dev --base /splitter --port 5184` (contract v1.2, `../www/CONTRACT.md`),
-`pnpm check:package`, `pnpm changeset` / `release:version`.
+Coming with the later Issues of Epic #7: `pnpm check:package`, `pnpm changeset` / `release:version`.
 
 ## Repository layout
 
@@ -153,8 +153,9 @@ packages/react/     @fragiola/splitter-react  src/components/, hooks/, utils/; e
 apps/playground/    playground                src/shell/ (catalog, stage, source), src/scenarios/<area>/<id>.tsx (dev-only), src/fixture/ + fixtures/<name>/index.html (unstyled, for Playwright), e2e/, tests/
 examples/shared/    examples-shared           src/meta/<slug>.ts, src/themes/, src/embed/, src/framework.ts, scripts/ (examples-lib, generate, manifest), e2e/ (every spec, every framework), tests/
 examples/react/     examples-react            src/examples/<slug>/ (index.tsx, styles.ts), src/examples/_kit/ (persistence.ts, undo.ts), src/embed/, vendored Fragiola UI (src/components, lib, styles), scripts/vendor-fragiola.ts, tests/
-site/               tests/                    the repository checks' tests; later docs/, export.ts, contract.ts, dev.ts
+site/               export.ts, dev.ts, dev-proxy.ts, sources.ts, contract.ts, project.json; docs/ (config.json, index.mdx, getting-started/, concepts/, guides/, api/, limitations.mdx); tests/ (contract, docs-reference, dev-proxy, the repository checks)
 site/docs/api/      commands.mdx              generated from the command registry (do not edit)
+docs/               docs-examples-gaps.md     what the docs and examples work around, with the proposed API
 scripts/                                      check-layout.ts, check-dts.ts, source-condition.ts
 .github/workflows/  ci.yml                    check, typecheck, test, build; the playground's e2e; one e2e job per examples app
 ```
@@ -352,3 +353,29 @@ copyright line and the MIT licence, and the guard test lists it.
     6px. Its specs cover drags (transient steps, one commit, veto puts the origin back),
     the keyboard in both directions, collapse thresholds, conditional order and the part
     contract. `site/tests/noindex.test.ts` checks every HTML page for `robots: noindex`.
+- **Issue #5 (site export and documentation):**
+  - **Imitated** grid-layout's `site/` (the newest copy of Dockable's): `contract.ts` byte for byte
+    plus one check, `export.ts`, `sources.ts`, `dev.ts` (default port 5184), `dev-proxy.ts`, and
+    the `contract` and `dev-proxy` tests; `docs-reference.test.ts` is Dockable's, rewritten for
+    this package (it follows `extends` into the package's own interfaces, so `PanelProps` is
+    checked through `UsePanelOptions`).
+  - **Added check:** a page's title never contains the project's title ("Splitter"): `www`
+    appends it (CONTRACT §3.6). So the part pages are titled `Group`, `Panel`, `Separator` (the
+    sidebar labels them `Splitter.Group`, …), and the docs-reference test checks that title.
+  - **`examples.json` is generated**, not committed: `sources.ts` builds it from
+    `examples/shared` (`CATEGORIES` as the levels, `THEMES` with their CSS), as grid-layout and
+    Dockable do, so the levels and themes can never drift from the examples.
+  - **Pages (37 plus the landing):** Getting started (5), Concepts (8), Guides (13), API
+    primitives (5: `group`, `panel`, `separator`, `hooks`, `external-ref`), API core (5: `model`,
+    `command-bus`, `commands` (generated), `json-document`, `engine`), More (`limitations` and the
+    external "Found a problem?" link). The common primitive props live on `api/group#common-props`.
+    The landing's showcase is `ide-layout`.
+  - **Example docs links** now name these pages (`/docs/getting-started/first-split-view`,
+    `/docs/guides/collapsible-panels`, `/docs/guides/size-constraints`, …); `disabled-panels`
+    links `/docs/guides/size-constraints#disabled-panels-and-separators`. `ide-layout` has none.
+  - **Snippets** were type-checked once against the packages' sources (a scratch tsconfig over the
+    extracted `ts`/`tsx` blocks); the testing guide's two Vitest snippets were run. There is no
+    permanent snippet check: it would need a compiler run per test.
+  - The export is not run inside `pnpm test` (it builds every package and the embed); its
+    validation is the same `validateSite` the contract test runs on the sources.
+  - `docs/docs-examples-gaps.md` lists the workarounds (S1 to S10) with a proposed API each.
