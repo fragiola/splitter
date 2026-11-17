@@ -17,6 +17,7 @@ page.
 | S7 | `persistent-layout`, guide *Saving a layout* | One commit callback for the whole model. `onLayoutCommit` is per group, so nested groups each need it. | The example passes the same `persist` to both groups; the guide uses one `model.subscribe` skipping `event.transient`. | Document `model.subscribe` as the way (done), or an `onCommit` on the root group. |
 | S9 | `undo-redo` | Skip a shortcut during a drag. | The example reads `engine.get("dragging-separator-id")` in its `keydown` listener. | None needed: the key exists. |
 | S10 | `collapsible-sidebar`, guides *Accessible names*, *Collapsible panels* | Hide a collapsed panel's content from assistive technology. A collapsed panel stays in the document at its collapsed size. | `in-data-collapsed:hidden` on the content (labels, here). | None: the content is the app's; documented. |
+| S11 | `separator-collapse-button` | Style a separator from the state of the panels beside it (an icon that turns when the panel before it is collapsed). A separator carries only its own state. | The panel is the separator's previous sibling, so `[[data-collapsed]+*_&]:rotate-180` (`[data-collapsed] + * &`) reads it; the button's name follows `useSplitterState`. | `data-collapsed-before` / `data-collapsed-after` on the separator (both boolean, D7), if more examples need it. |
 
 ## 2. Closed gaps
 

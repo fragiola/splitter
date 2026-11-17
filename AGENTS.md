@@ -754,3 +754,35 @@ copyright line and the MIT licence, and the guard test lists it.
     `e2e/themes.spec.ts` checks on computed styles that an example's separator reads the tokens
     and is drawn differently in `light`, `ide`, `paper` and `terminal`, and that a hairline takes
     the pointer beside its line. The smoke and iframe specs run in the five themes.
+- **Issue #19 (Epic #22, separator styles):**
+  - **Six examples** in `styling` (orders 3 to 8, after `rtl-layout` and `styling-showcase`, `docs`
+    `/docs/guides/styling-css`), one style each, in React, Vue and Angular with React's
+    `styles.ts` byte for byte: `separator-three-dots` (three dots, `data-testid="dot"`, a column or
+    a row from the separator's `data-orientation`), `separator-sash` (a 1px box; `::before` a
+    constant 9px hit area, `::after` the sash: 1px, then 4px in `--sp-separator-active` after a
+    300ms `transition-delay` on hover and at once while `data-dragging` or focused),
+    `separator-collapse-button` (a button inside the separator runs `panel.collapse` /
+    `panel.expand`; its name and `aria-expanded` follow `useSplitterState`, its icon turns from the
+    panel's `data-collapsed`), `separator-gutter` (panels as cards on the canvas; the separator is
+    the `--sp-panel-padding` gap, its line transparent at rest), `separator-size-readout` (a badge,
+    `data-testid="readout"`, `aria-hidden`, with `panel-size-by` read by `useSplitterState`, shown
+    while `data-dragging` or `focus-visible`) and `separator-drawer-tab` (a vertical group, a line
+    of `max(--sp-separator-line, 1px)` with a pull tab, `data-testid="drawer-tab"`).
+  - **They read the theme**, not its separator shape: each example draws its own separator (its
+    sizes are the example's), with the theme's fonts, radii (a dot or button is round, square
+    where `--sp-radius` is 0, from `rounded-[calc(var(--sp-radius)*100)]`), palettes, colour
+    tokens (`--sp-separator-color`, `-hover`, `-active`, `--sp-focus-line`) and `--sp-motion`.
+    `separator-collapse-button` and `separator-size-readout` keep the theme's separator (its box,
+    line and grab area); the button replaces the theme's grip.
+  - **Content inside a separator** keeps its events from it (`primitive-contract.mdx`): React's
+    capture handlers (`onPointerDownCapture`, `onKeyDownCapture`, `onDoubleClickCapture`) stop
+    them, Vue's `.stop` listeners and Angular's `$event.stopPropagation()` likewise; the spec
+    fails without them (checked once by removing them). A real double click on the button cannot
+    be asserted (its second press lands where the moved button no longer is), so the spec
+    dispatches `dblclick` on the button, then on the separator, which still resets.
+  - **Workaround S11** (`docs/docs-examples-gaps.md`): a separator carries none of its panels'
+    state, so the button's icon reads the panel before it with `[[data-collapsed]+*_&]:` (the
+    panel is the separator's previous sibling in every framework's markup).
+  - **Specs** (`e2e/examples/separator-*.spec.ts`) read computed styles and boxes and poll
+    (`expect.poll`), never a fixed wait: the sash's delay is read as `transitionDelay` and its
+    width polled until 4px.

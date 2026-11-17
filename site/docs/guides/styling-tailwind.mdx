@@ -101,5 +101,23 @@ theme file changes every example:
 export const separator = "data-[orientation=vertical]:w-(--sp-separator-size) before:bg-(--sp-separator-color)";
 ```
 
+## More separator styles
+
+A separator is an element you style like any other, and it can hold content of its own. Each of
+these examples is one style, short enough to copy:
+
+- [Three-dot grip](/examples/separator-three-dots): three dots that line up along the separator,
+  turning with its `data-orientation`.
+- [Sash](/examples/separator-sash): a 1px line that thickens after a short hover delay
+  (`transition-delay`) and while `data-dragging`, over a hit area that never changes.
+- [Collapse button](/examples/separator-collapse-button): a button inside the separator that
+  collapses and expands the panel before it; it stops its own events, so pressing it never drags
+  nor resets (see [Primitive contract](/docs/concepts/primitive-contract)).
+- [Gutter between cards](/examples/separator-gutter): panels as cards, the gap between them
+  transparent at rest and drawn on hover, drag and focus.
+- [Size readout](/examples/separator-size-readout): a badge with the size of the panel before the
+  separator, read from the model, shown while dragging or focused.
+- [Drawer tab](/examples/separator-drawer-tab): a thin line with a pull tab for a bottom panel.
+
 Open any example's code panel in the [gallery](/examples) to see its `styles.ts` and its theme's
 CSS.
