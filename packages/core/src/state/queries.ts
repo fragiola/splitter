@@ -155,8 +155,9 @@ export interface ModelIsMap<T extends SplitterTypes = AnyTypes> {
     /** the separator cannot be used: it, or its group, is disabled */
     "separator-disabled": { separatorId: string };
     /**
-     * a double click on the separator resets a panel: it allows it, it is not disabled, and the
-     * panel before it (else the one after) has a default size that resolves
+     * a double click on the separator resets a panel: it allows it, neither it nor a panel beside
+     * it is disabled, and the panel before it (else the one after) has a default size that
+     * resolves
      */
     "separator-resettable": { separatorId: string };
 }
@@ -202,12 +203,22 @@ function constraintsFor(
     return group && item ? { group, item } : undefined;
 }
 
-/** The separator a double click resets a panel of: that panel, with its default size. */
+/**
+ * The panel a double click on the separator resets, with its default size: none when the
+ * separator is disabled or does not reset, or when a panel beside it is disabled (a disabled
+ * panel is resized neither directly nor by its neighbours).
+ */
 export function resettablePanel(
     reader: EntityReader,
     separator: SeparatorState,
 ): { panelId: string; defaultSize: number } | undefined {
-    if (separator.disabled || !separator.resetOnDoubleClick) {
+    if (
+        separator.disabled ||
+        !separator.resetOnDoubleClick ||
+        separator.panelIds.some(
+            (panelId) => reader.panel(panelId)?.disabled === true,
+        )
+    ) {
         return undefined;
     }
     for (const panelId of separator.panelIds) {

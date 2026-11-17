@@ -92,8 +92,8 @@ the whole change:
 
 Three ways to keep part of a layout still:
 
-- `disabled` on a **panel**: no separator resizes it, so a separator beside it cannot move it, and
-  it carries `data-disabled`;
+- `disabled` on a **panel**: no separator resizes it, so a separator beside it cannot move it
+  (a double click on that separator resets nothing), and it carries `data-disabled`;
 - `disabled` on a **separator**: it ignores the pointer, leaves the tab order and carries
   `aria-disabled`; its panels can still change through another separator;
 - `disabled` on the **group**: none of its separators can be used.

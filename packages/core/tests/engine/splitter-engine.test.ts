@@ -652,6 +652,29 @@ describe("double click", () => {
         expect(sizes()).toEqual([30, 70]);
     });
 
+    it("does not reset when a panel beside the separator is disabled", () => {
+        for (const disabled of ["a", "b"]) {
+            const { model, separators, sizes } = render([
+                { id: "a", defaultSize: "30%", disabled: disabled === "a" },
+                { id: "b", disabled: disabled === "b" },
+            ]);
+            model.run("group.set-layout", {
+                groupId: "g",
+                layout: { a: 60, b: 40 },
+            });
+            const event = new MouseEvent("dblclick", {
+                bubbles: true,
+                cancelable: true,
+            });
+            element(separators, "a:b").dispatchEvent(event);
+            expect(sizes()).toEqual([60, 40]);
+            expect(event.defaultPrevented).toBe(false);
+            expect(
+                model.is("separator-resettable", { separatorId: "a:b" }),
+            ).toBe(false);
+        }
+    });
+
     it("can be turned off for the engine or for one separator", () => {
         for (const off of ["engine", "separator"] as const) {
             const { model, separators, sizes } = render(

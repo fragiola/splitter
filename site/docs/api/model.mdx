@@ -77,7 +77,7 @@ Every member is one verb, and every method is bound (it can be passed around on 
 | `"group-disabled"` | `{ groupId }` | none of its separators can be used |
 | `"group-measured"` | `{ groupId }` | the engine reported its size, so every unit resolves |
 | `"separator-disabled"` | `{ separatorId }` | it, or its group, is disabled |
-| `"separator-resettable"` | `{ separatorId }` | a double click on it would reset a panel |
+| `"separator-resettable"` | `{ separatorId }` | a double click on it would reset a panel (never when a panel beside it is disabled) |
 
 The key types are `ModelGetKey`, `ModelGetMap<T>`, `ModelGetPayload<T, K>` and
 `ModelGetResult<T, K>`, and `ModelIsKey`, `ModelIsMap<T>` and `ModelIsPayload<T, K>`. A key that

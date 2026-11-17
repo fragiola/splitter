@@ -255,7 +255,8 @@ copyright line and the MIT licence, and the guard test lists it.
     to its restore size, else its minimum, 1% when 0), as React Resizable Panels'
     `adjustLayoutForSeparator`, so disabled panels keep their sizes (it used to run
     `panel.collapse` / `panel.expand`, code semantics); F6 cycles focus. A double click resizes the panel before the
-    separator (else after) that declares a `defaultSize` back to it. The engine writes nothing to
+    separator (else after) that declares a `defaultSize` back to it, unless a panel beside the
+    separator is disabled (`separator-resettable` says no then). The engine writes nothing to
     the DOM besides pointer capture and focus; ARIA comes from `engine.get("separator-aria-by")`
     (`aria-orientation` is across the group's). `engine.use` / `subscribe` / `dispatch` wrap the
     engine actions (`measure`, `focus-separator`) and its view events.
