@@ -494,6 +494,55 @@ describe("the keyboard (Window Splitter)", () => {
         expect(sizes()).toEqual([40, 60]);
     });
 
+    it("collapses and expands with Enter across that separator only, as a keyboard move", () => {
+        const { model, separators, sizes, events } = render([
+            { id: "a" },
+            { id: "b", collapsible: true, minSize: "20%" },
+            { id: "c", maxSize: "50%" },
+        ]);
+        model.run("group.set-layout", {
+            groupId: "g",
+            layout: { a: 25, b: 25, c: 50 },
+        });
+        events.length = 0;
+        // c cannot take b's space, and a is behind another separator
+        key(element(separators, "b:c"), "Enter");
+        expect(sizes()).toEqual([25, 25, 50]);
+        model.run("panel.update", { panelId: "c", maxSize: null });
+        model.run("group.set-layout", {
+            groupId: "g",
+            layout: { a: 40, b: 30, c: 30 },
+        });
+        events.length = 0;
+        key(element(separators, "b:c"), "Enter");
+        expect(sizes()).toEqual([40, 0, 60]);
+        expect(
+            events.map(({ command, payload }) => [command, payload]),
+        ).toEqual([
+            [
+                "separator.move",
+                { separatorId: "b:c", delta: -30, source: "keyboard" },
+            ],
+        ]);
+        key(element(separators, "b:c"), "Enter");
+        expect(sizes()).toEqual([40, 30, 30]);
+    });
+
+    it("leaves disabled panels alone on Enter", () => {
+        const before = render([
+            { id: "a", collapsible: true, minSize: "20%", disabled: true },
+            { id: "b" },
+        ]);
+        key(element(before.separators, "a:b"), "Enter");
+        expect(before.sizes()).toEqual([50, 50]);
+        const after = render([
+            { id: "c", collapsible: true, minSize: "20%" },
+            { id: "d", disabled: true },
+        ]);
+        key(element(after.separators, "c:d"), "Enter");
+        expect(after.sizes()).toEqual([50, 50]);
+    });
+
     it("does nothing on Enter when the panel before is not collapsible", () => {
         const { separators, events } = render([{ id: "a" }, { id: "b" }]);
         key(element(separators, "a:b"), "Enter");

@@ -250,8 +250,11 @@ copyright line and the MIT licence, and the guard test lists it.
     start, then one non-transient move (none for a click without movement); when that commit is
     refused, a transient `group.set-layout` with `meta.restore` puts the origin back.
     `pointercancel` / `lostpointercapture` commit the last step, as RRP does. Keyboard step 5% by
-    default; only handled keys are `preventDefault`ed; Enter runs `panel.collapse` / `panel.expand`
-    on the panel before the separator; F6 cycles focus. A double click resizes the panel before the
+    default; only handled keys are `preventDefault`ed; Enter runs a keyboard `separator.move` on
+    that separator by the distance from the panel before it to its collapsed size (or, collapsed,
+    to its restore size, else its minimum, 1% when 0), as React Resizable Panels'
+    `adjustLayoutForSeparator`, so disabled panels keep their sizes (it used to run
+    `panel.collapse` / `panel.expand`, code semantics); F6 cycles focus. A double click resizes the panel before the
     separator (else after) that declares a `defaultSize` back to it. The engine writes nothing to
     the DOM besides pointer capture and focus; ARIA comes from `engine.get("separator-aria-by")`
     (`aria-orientation` is across the group's). `engine.use` / `subscribe` / `dispatch` wrap the

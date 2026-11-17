@@ -954,16 +954,33 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
                 });
                 return;
             case "toggle": {
+                // the panel before collapses, or expands to its restore size (else its minimum,
+                // 1% when that is 0), by moving this separator only: a keyboard move, so
+                // disabled panels and the panels behind other separators keep their sizes
                 const [panelId] = separator.panelIds;
-                if (!this.model.is("panel-collapsible", { panelId })) {
+                const item = this.model.get("panel-constraints-by", {
+                    panelId,
+                });
+                const size = group.layout[panelId];
+                if (!item?.collapsible || size === undefined) {
                     return;
                 }
-                this.model.run(
-                    this.model.is("panel-collapsed", { panelId })
-                        ? "panel.expand"
-                        : "panel.collapse",
-                    { panelId },
-                );
+                const restore =
+                    this.model.get("panel-by", { id: panelId })?.restoreSize ??
+                    item.minSize;
+                const target = this.model.is("panel-collapsed", { panelId })
+                    ? restore === 0
+                        ? 1
+                        : restore
+                    : item.collapsedSize;
+                if (target === size) {
+                    return;
+                }
+                this.model.run("separator.move", {
+                    separatorId,
+                    delta: target - size,
+                    source: "keyboard",
+                });
                 return;
             }
             case "cycle": {

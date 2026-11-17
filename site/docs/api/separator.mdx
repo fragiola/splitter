@@ -73,5 +73,6 @@ that panel, F6 and Shift+F6 move to the next and previous separator. See
 
 A drag runs `separator.move` steps with `{ transient: true }` measured from where it started,
 then one final commit that middleware can veto (a veto puts the panels back). A key runs one
-`separator.move`, Enter `panel.collapse` or `panel.expand`, a double click `panel.resize` to the
-default size. Its `disabled` and `resetOnDoubleClick` props run `separator.update`.
+`separator.move`, Enter too (`source: "keyboard"`, by the distance to the collapsed size, or
+back to the restore size): it moves this separator only, so disabled panels keep their sizes. A
+double click runs `panel.resize` to the default size. Its `disabled` and `resetOnDoubleClick` props run `separator.update`.
