@@ -23,6 +23,7 @@ test("each mode button collapses the pane it hides, and the pressed one follows 
     const separator = page.getByRole("separator", { name: "Resize editor" });
     await expect(mode(page, "Split")).toHaveAttribute("aria-pressed", "true");
     await dragBy(page, separator, -80, 0);
+    await expect.poll(() => valueNow(separator)).not.toBe(50);
     const split = await valueNow(separator);
 
     await mode(page, "Editor").click();
@@ -56,6 +57,7 @@ test("the switch stacks the panes and keeps their sizes", async ({ page }) => {
     const separator = page.getByRole("separator", { name: "Resize editor" });
     const stacked = page.getByRole("switch", { name: "Stacked" });
     await dragBy(page, separator, -100, 0);
+    await expect.poll(() => valueNow(separator)).not.toBe(50);
     const size = await valueNow(separator);
     await expect(group).toHaveAttribute("data-orientation", "horizontal");
 
