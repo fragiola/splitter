@@ -1,5 +1,6 @@
+import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
-import { h, shallowRef, type VNodeChild } from "vue";
+import { defineComponent, h, shallowRef, type VNodeChild } from "vue";
 import { Splitter } from "../src";
 import { at, doubleClick, grows, press, render, settle } from "./helpers";
 
@@ -135,5 +136,43 @@ describe("the keyboard", () => {
         await press(separator, "ArrowRight");
         await doubleClick(separator);
         expect(grows(container)).toEqual([35, 65]);
+    });
+
+    it("a separator's own keydown listener runs after the engine's, and its error reaches Vue's error handler", async () => {
+        const errorHandler = vi.fn();
+        const seen: boolean[] = [];
+        const host = document.createElement("div");
+        document.body.append(host);
+        const wrapper = mount(
+            defineComponent({
+                setup: () => () =>
+                    h(Splitter.Group, { id: "g" }, () => [
+                        h(Splitter.Panel, { id: "a" }),
+                        h(Splitter.Separator, {
+                            onKeydown: (event: KeyboardEvent) => {
+                                seen.push(event.defaultPrevented);
+                                throw new Error("listener failed");
+                            },
+                        }),
+                        h(Splitter.Panel, { id: "b" }),
+                    ]),
+            }),
+            { attachTo: host, global: { config: { errorHandler } } },
+        );
+        await settle();
+        const uncaught = vi.fn((event: ErrorEvent) => event.preventDefault());
+        window.addEventListener("error", uncaught);
+        try {
+            await press(at(host, "/g0/s0"), "ArrowRight");
+        } finally {
+            window.removeEventListener("error", uncaught);
+        }
+        expect(seen).toEqual([true]);
+        expect(grows(host)).toEqual([55, 45]);
+        expect(
+            errorHandler.mock.calls.map(([error]) => (error as Error).message),
+        ).toEqual(["listener failed"]);
+        expect(uncaught).not.toHaveBeenCalled();
+        wrapper.unmount();
     });
 });

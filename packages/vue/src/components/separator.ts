@@ -1,4 +1,9 @@
-import { onScopeDispose } from "vue";
+import {
+    callWithAsyncErrorHandling,
+    ErrorCodes,
+    getCurrentInstance,
+    onScopeDispose,
+} from "vue";
 import {
     type SeparatorPartState,
     type UseSeparatorOptions,
@@ -51,17 +56,6 @@ type ListenerKey = keyof typeof ENGINE_EVENTS;
 const isListenerKey = (key: string): key is ListenerKey =>
     Object.hasOwn(ENGINE_EVENTS, key);
 
-/** Calls an attribute's listener (a function, or the list `mergeProps` makes of several). */
-function callListener(listener: unknown, event: Event): void {
-    if (typeof listener === "function") {
-        listener(event);
-    } else if (Array.isArray(listener)) {
-        for (const each of listener) {
-            callListener(each, event);
-        }
-    }
-}
-
 /**
  * The separator between two neighbouring panels (`role="separator"`, Window Splitter): drag it
  * with the pointer, or focus it and use the arrows, Home, End and Enter; double click it to reset
@@ -75,6 +69,8 @@ export const Separator: SplitterComponent<SeparatorProps, SeparatorSlots> =
         (props, { attrs, slots }) => {
             const { registry } = useGroupContext("Splitter.Separator");
             const separator = useSeparator(() => props);
+            // the consumer's listeners run through Vue's error handling, as Vue's own listeners do
+            const instance = getCurrentInstance();
 
             // The engine listens to the element once it binds it, after Vue attached the
             // element's own listeners: the consumer's listeners for the engine's events are added
@@ -93,8 +89,23 @@ export const Separator: SplitterComponent<SeparatorProps, SeparatorSlots> =
                     return;
                 }
                 for (const [key, type] of Object.entries(ENGINE_EVENTS)) {
-                    const listener = (event: Event) =>
-                        callListener(attrs[key], event);
+                    const listener = (event: Event) => {
+                        // a function, or the list `mergeProps` makes of several
+                        const value = attrs[key];
+                        if (
+                            typeof value === "function" ||
+                            Array.isArray(value)
+                        ) {
+                            callWithAsyncErrorHandling(
+                                value as
+                                    | ((event: Event) => unknown)
+                                    | ((event: Event) => unknown)[],
+                                instance,
+                                ErrorCodes.NATIVE_EVENT_HANDLER,
+                                [event],
+                            );
+                        }
+                    };
                     element.addEventListener(type, listener);
                     added.push([type, listener]);
                 }

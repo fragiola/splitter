@@ -527,6 +527,9 @@ copyright line and the MIT licence, and the guard test lists it.
     listeners for the engine's events (`onPointerdown`, `onPointermove`, `onPointerup`,
     `onPointercancel`, `onLostpointercapture`, `onKeydown`, `onDblclick`) out of the attributes and
     adds them to the element again after each bind: they run after the engine's, as in React.
+    They run through `callWithAsyncErrorHandling` (`ErrorCodes.NATIVE_EVENT_HANDLER`, with the
+    separator's instance), as Vue calls the listeners it attaches itself: an error (or a rejected
+    promise) reaches `app.config.errorHandler` instead of escaping as an uncaught error.
   - **Tests** (`packages/vue/tests`): contract, nesting, conditional (with remounts), keyboard,
     pointer (veto, `v-model:layout`), props, SSR (`vue/server-renderer` + `createSSRApp`
     hydration, no mismatch reported) and a server render in the node environment, the state
