@@ -223,9 +223,9 @@ copyright line and the MIT licence, and the guard test lists it.
   - **Registration needs the group first:** `panel.add` on a missing group is `not_found`. An adapter
     registers a group and its panels in one `batch` (effects run child first). `parentPanelId` is
     recorded but not checked, and `group.remove` does not cascade to nested groups.
-  - **Layout on structural change** (panel added or removed): the default layout of the new panel
-    set (RRP's behaviour without its in-memory per-set cache), or the saved layout once the group
-    holds exactly the saved panels. A group remembers whether its layout is still the default
+  - **Layout on structural change** (panel added or removed): the saved layout once the group
+    holds exactly the saved panels, else the layout the group last had with the new panel set
+    (`layoutMemory`, see the S1 decision), else the default layout of the new set. A group remembers whether its layout is still the default
     (`pristine`); a pristine layout is derived again when constraints or the measure change.
   - **Document v1:** `{ version: 1, groups: [{ id, panels: [{ id, size, collapsed?, restoreSize? }] }] }`,
     ids required (they must match the markup, so none is generated at load). A loaded group is
@@ -333,7 +333,7 @@ copyright line and the MIT licence, and the guard test lists it.
     once) and a dedicated spec in `e2e/examples/<slug>.spec.ts`.
   - **Kit:** `_kit/persistence.ts` (guarded `localStorage` load/save/forget) and `_kit/undo.ts`
     (a history over `model.subscribe`: a whole drag is one step, measured from the last committed
-    layouts; registration batches are not steps; undo and redo run one `batch` of
+    layouts; what carries `meta.source: "adapter"` is not a step; undo and redo run one `batch` of
     `group.set-layout`). The kit describes the model structurally and never imports the package.
     `persistent-layout` validates the saved document with `validateSplitter` before
     `createSplitterModel(json)`, so a corrupt entry falls back to the defaults.
@@ -379,3 +379,31 @@ copyright line and the MIT licence, and the guard test lists it.
   - The export is not run inside `pnpm test` (it builds every package and the embed); its
     validation is the same `validateSite` the contract test runs on the sources.
   - `docs/docs-examples-gaps.md` lists the workarounds (S1 to S10) with a proposed API each.
+- **Package gaps S1, S2, S6 and S8** (`docs/docs-examples-gaps.md`, *Closed gaps*):
+  - **S1, layout memory.** `GroupState.layoutMemory` maps the JSON of a panel set's sorted ids
+    (safe for any id) to the last layout the user gave the group with that set. It is written when
+    the set changes, only for a non-pristine layout (a default one is derived again anyway), and
+    read when the group enters a set it had: the remembered layout validated against the current
+    constraints, not pristine. It lives in the state only, out of the JSON document (the document
+    keeps one layout per group), and is lost with the group (`group.remove`, a remount): React
+    Resizable Panels' memory is in-memory per mounted group too. No new key: it is a state field
+    (`group-by`).
+  - **S2, `useSplitterState(selector, { splitterRef?, isEqual? })`.** Dockable's `useModelState`
+    shape over `useSyncExternalStore`: the selector gets `(splitter, state)` (`splitter` being what
+    `useSplitter` returns), runs once per model state or new selector, and an `isEqual` answer keeps
+    the previous one. With a `splitterRef` it answers `undefined` while no group holds the ref (the
+    overloads type it `S | undefined`); without one it throws outside a group, as `useSplitter`. It
+    follows the model only, not the engine's view state. The undo guide and example keep their
+    history's own store: its steps are app state, not a model answer.
+  - **S6, `dir` at runtime.** Each bound group has a `MutationObserver` from its element's
+    `defaultView` on its `ownerDocument` (`attributeFilter: ["dir"]`, subtree), measuring the group
+    again when a mutated element contains it (one observer per group, the smallest change; a `dir`
+    inside its content is ignored). A direction set through CSS alone still needs
+    `engine.run("measure", {})`, documented.
+  - **S8, `meta: { source: "adapter" }`.** There was no core convention besides the engine's
+    `meta.restore`, so the adapter's commands for the markup (registration batch, `panel.add` /
+    `panel.remove`, `group.update`, `panel.update`, `separator.update`, a controlled `layout`'s
+    `group.set-layout`, `group.remove`) and the engine's `syncOrder` batch carry it; the React
+    constant is `utils/adapter-run.ts` (not exported). A controlled `layout` counts as the
+    markup's, since undoing it would fight the prop. `_kit/undo.ts` dropped its list of layout
+    commands and its `steps` option.
