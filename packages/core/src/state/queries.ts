@@ -100,6 +100,25 @@ export interface ModelGetMap<T extends SplitterTypes = AnyTypes> {
         payload: { separatorId: string };
         result: SeparatorValues | undefined;
     };
+    /**
+     * a registered group's path from its root: `/g<n>` for the n-th root group (no parent panel),
+     * `<parent panel's path>/g<n>` for the n-th group in a panel, n in registration order. Paths
+     * name elements for tooling and end-to-end tests (`data-splitter-path`)
+     */
+    "group-path-by": {
+        payload: { groupId: GroupIdOf<T> };
+        result: string | undefined;
+    };
+    /** a registered panel's path: its group's path and `/p<index>` (`/g0/p1`) */
+    "panel-path-by": {
+        payload: { panelId: PanelIdOf<T> };
+        result: string | undefined;
+    };
+    /** a separator's path: its group's path and `/s<index>` (`/g0/s0`) */
+    "separator-path-by": {
+        payload: { separatorId: string };
+        result: string | undefined;
+    };
     /** the JSON document of the state: what `createSplitterModel(json)` restores */
     "splitter-json": { payload: NoPayload; result: SplitterJson };
     /** every command, with its description and JSON Schemas (ready for tool definitions) */
@@ -203,6 +222,47 @@ export function resettablePanel(
 // memoized per state: the JSON is the same object until the state changes
 const jsonCache = new WeakMap<SplitterState, SplitterJson>();
 
+/** A group's path: its parent panel's path (none for a root group) and its index there. */
+function groupPath(
+    state: SplitterState,
+    group: GroupState,
+    seen: ReadonlySet<string> = new Set(),
+): string {
+    const parentId = group.parentPanelId;
+    const parent =
+        parentId !== undefined && Object.hasOwn(state.panels, parentId)
+            ? state.panels[parentId]
+            : undefined;
+    const parentGroup =
+        parent && Object.hasOwn(state.groups, parent.groupId)
+            ? state.groups[parent.groupId]
+            : undefined;
+    // a parent panel that is not registered (yet), or a cycle, makes the group a root
+    const nested =
+        parent !== undefined &&
+        parentGroup !== undefined &&
+        !seen.has(parentGroup.id);
+    const siblings = Object.values(state.groups).filter((other) =>
+        nested ? other.parentPanelId === parentId : !isNestedIn(state, other),
+    );
+    const index = siblings.indexOf(group);
+    if (!nested || !parentGroup || !parent) {
+        return `/g${index}`;
+    }
+    const prefix = groupPath(state, parentGroup, new Set([...seen, group.id]));
+    return `${prefix}/p${parentGroup.panelIds.indexOf(parent.id)}/g${index}`;
+}
+
+/** Whether a group sits in a registered panel of a registered group. */
+function isNestedIn(state: SplitterState, group: GroupState): boolean {
+    const parentId = group.parentPanelId;
+    if (parentId === undefined || !Object.hasOwn(state.panels, parentId)) {
+        return false;
+    }
+    const parent = state.panels[parentId];
+    return parent !== undefined && Object.hasOwn(state.groups, parent.groupId);
+}
+
 /** Answers `model.get` on a state. */
 export function queryGet(
     state: SplitterState,
@@ -279,6 +339,31 @@ export function queryGet(
                       constraintsOf(reader, group),
                       separator.index,
                   )
+                : undefined;
+        }
+        case "group-path-by": {
+            const groupId = stringField(payload, "groupId");
+            const group =
+                groupId === undefined ? undefined : reader.group(groupId);
+            return group ? groupPath(state, group) : undefined;
+        }
+        case "panel-path-by": {
+            const panel = reader.panel(stringField(payload, "panelId") ?? "");
+            const group = panel && reader.group(panel.groupId);
+            const index = group?.panelIds.indexOf(panel?.id ?? "") ?? -1;
+            return group && index >= 0
+                ? `${groupPath(state, group)}/p${index}`
+                : undefined;
+        }
+        case "separator-path-by": {
+            const separatorId = stringField(payload, "separatorId");
+            const separator =
+                separatorId === undefined
+                    ? undefined
+                    : findSeparator(reader, separatorId);
+            const group = separator && reader.group(separator.groupId);
+            return group && separator
+                ? `${groupPath(state, group)}/s${separator.index}`
                 : undefined;
         }
         case "splitter-json": {
