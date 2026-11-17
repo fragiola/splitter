@@ -1,6 +1,7 @@
 import { defaultLayout } from "../layout/default-layout";
 import { validateLayout } from "../layout/validate-layout";
 import { idField, layoutField, orientationField } from "../schema/fragments";
+import { groupJsonOf } from "../state/document";
 import { commitLayout, constraintsOf, remeasure } from "../state/group-layout";
 import type { GroupState } from "../state/types";
 import { defineCommand, fail, ok } from "./define";
@@ -120,11 +121,18 @@ export const groupUpdate = defineCommand({
 export const groupRemove = defineCommand({
     name: "group.remove",
     description:
-        "Unregisters a group and its panels. Groups nested in its panels stay: they are removed on their own.",
+        "Unregisters a group and its panels. Groups nested in its panels stay: they are removed on their own. With keepLayout, a layout the user changed is kept as a saved group (it stays in the JSON document) and comes back when the group registers again with the same panels: a view that unmounts and mounts again keeps its layout.",
     transient: false,
     payloadSchema: {
         type: "object",
-        properties: { groupId: idField("the group to remove") },
+        properties: {
+            groupId: idField("the group to remove"),
+            keepLayout: {
+                type: "boolean",
+                description:
+                    "keep the group's layout, when it is not the default one, until it registers again",
+            },
+        },
         required: ["groupId"],
         additionalProperties: false,
     },
@@ -145,6 +153,9 @@ export const groupRemove = defineCommand({
         const group = requireGroup(draft, payload.groupId);
         if (isFailure(group)) {
             return group;
+        }
+        if (payload.keepLayout === true && !group.pristine) {
+            draft.setPending(groupJsonOf(draft, group));
         }
         for (const panelId of group.panelIds) {
             draft.deletePanel(panelId);

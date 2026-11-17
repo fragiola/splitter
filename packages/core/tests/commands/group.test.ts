@@ -139,6 +139,46 @@ describe("registering groups and panels", () => {
         expect(model.get("panel-by", { id: "a" })).toBeUndefined();
     });
 
+    it("keeps a changed layout on removal with keepLayout, until the group registers again", () => {
+        const model = group([{ id: "a" }, { id: "b" }]);
+        model.run("panel.resize", { panelId: "a", size: "30%" });
+        model.run("group.remove", { groupId: "g", keepLayout: true });
+        expect(model.get("groups")).toEqual([]);
+        expect(model.get("splitter-json")).toEqual({
+            version: 1,
+            groups: [
+                {
+                    id: "g",
+                    panels: [
+                        { id: "a", size: 30 },
+                        { id: "b", size: 70 },
+                    ],
+                },
+            ],
+        });
+        model.run("batch", {
+            commands: [
+                { command: "group.add", payload: { id: "g" } },
+                { command: "panel.add", payload: { id: "a", groupId: "g" } },
+                { command: "panel.add", payload: { id: "b", groupId: "g" } },
+            ],
+        });
+        expect(model.get("layout-by", { groupId: "g" })).toEqual({
+            a: 30,
+            b: 70,
+        });
+    });
+
+    it("keeps nothing for a default layout, or without keepLayout", () => {
+        const model = group([{ id: "a" }, { id: "b" }]);
+        model.run("group.remove", { groupId: "g", keepLayout: true });
+        expect(model.get("state").pending).toEqual({});
+        const changed = group([{ id: "a" }, { id: "b" }]);
+        changed.run("panel.resize", { panelId: "a", size: "30%" });
+        changed.run("group.remove", { groupId: "g" });
+        expect(changed.get("state").pending).toEqual({});
+    });
+
     it("updates a group's orientation, nesting and disabled flag", () => {
         const model = group([{ id: "a" }, { id: "b" }]);
         model.run("group.update", {

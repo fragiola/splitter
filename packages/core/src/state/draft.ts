@@ -122,6 +122,11 @@ export class Draft {
         }
     }
 
+    setPending(group: GroupJson): void {
+        put(this.pending, group.id, deepFreeze(group));
+        this.changed = true;
+    }
+
     deletePending(id: string): void {
         if (Object.hasOwn(this.pending, id)) {
             delete this.pending[id];

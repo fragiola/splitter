@@ -79,13 +79,14 @@ model.run("group.update", {
 
 ### `group.remove`
 
-Unregisters a group and its panels. Groups nested in its panels stay: they are removed on their own.
+Unregisters a group and its panels. Groups nested in its panels stay: they are removed on their own. With keepLayout, a layout the user changed is kept as a saved group (it stays in the JSON document) and comes back when the group registers again with the same panels: a view that unmounts and mounts again keeps its layout.
 
-**Payload** (`{ groupId: GroupIdOf<T> }`)
+**Payload** (`{ groupId: GroupIdOf<T>; keepLayout?: boolean }`)
 
 | field | type | required | description |
 | --- | --- | --- | --- |
 | `groupId` | `string` | yes | the group to remove |
+| `keepLayout` | `boolean` | no | keep the group's layout, when it is not the default one, until it registers again |
 
 **Result** (`{ groupId: string; panelIds: string[] }`)
 

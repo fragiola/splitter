@@ -94,7 +94,7 @@ export interface CommandMap<T extends SplitterTypes = AnyTypes> {
         result: { groupId: string };
     };
     "group.remove": {
-        payload: { groupId: GroupIdOf<T> };
+        payload: { groupId: GroupIdOf<T>; keepLayout?: boolean };
         result: { groupId: string; panelIds: string[] };
     };
     "group.set-layout": {

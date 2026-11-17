@@ -3,9 +3,10 @@ import { splitterJsonSchema } from "../schema/document";
 import type { ValidationIssue } from "../schema/types";
 import { validate } from "../schema/validator";
 import { deepFreeze } from "./draft";
-import { constraintsOf, readerOf } from "./group-layout";
+import { constraintsOf, type EntityReader, readerOf } from "./group-layout";
 import type {
     GroupJson,
+    GroupState,
     PanelJson,
     SplitterJson,
     SplitterState,
@@ -85,29 +86,37 @@ function structuredCopy(group: GroupJson): GroupJson {
     };
 }
 
+/** A registered group as the document saves it: its layout, collapsed panels and restore sizes. */
+export function groupJsonOf(
+    reader: EntityReader,
+    group: GroupState,
+): GroupJson {
+    const constraints = constraintsOf(reader, group);
+    return {
+        id: group.id,
+        panels: constraints.map((item): PanelJson => {
+            const restoreSize = reader.panel(item.panelId)?.restoreSize;
+            return {
+                id: item.panelId,
+                size: group.layout[item.panelId] ?? 0,
+                ...(isCollapsedIn(item, group.layout)
+                    ? { collapsed: true }
+                    : {}),
+                ...(restoreSize === undefined ? {} : { restoreSize }),
+            };
+        }),
+    };
+}
+
 /**
  * The document of a state: each registered group's layout, which of its panels are collapsed and
  * their restore sizes, then the saved groups not registered yet, as loaded.
  */
 export function toSplitterJson(state: SplitterState): SplitterJson {
     const reader = readerOf(state);
-    const groups: GroupJson[] = Object.values(state.groups).map((group) => {
-        const constraints = constraintsOf(reader, group);
-        return {
-            id: group.id,
-            panels: constraints.map((item): PanelJson => {
-                const restoreSize = reader.panel(item.panelId)?.restoreSize;
-                return {
-                    id: item.panelId,
-                    size: group.layout[item.panelId] ?? 0,
-                    ...(isCollapsedIn(item, group.layout)
-                        ? { collapsed: true }
-                        : {}),
-                    ...(restoreSize === undefined ? {} : { restoreSize }),
-                };
-            }),
-        };
-    });
+    const groups: GroupJson[] = Object.values(state.groups).map((group) =>
+        groupJsonOf(reader, group),
+    );
     for (const [id, saved] of Object.entries(state.pending)) {
         if (!Object.hasOwn(state.groups, id)) {
             groups.push(structuredCopy(saved));
