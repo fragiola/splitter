@@ -273,7 +273,11 @@ export function useGroupRoot(options: GroupRootOptions): GroupContextValue {
             previous.disabled = disabled;
         }
         if (layout && !shallowEqual(layout, previous.layout)) {
-            model.run("group.set-layout", { groupId, layout }, ADAPTER_RUN);
+            // a prop that comes back from onLayoutChange is the model's layout already: setting
+            // it again would turn each transient drag step into a commit
+            if (!shallowEqual(layout, model.get("layout-by", { groupId }))) {
+                model.run("group.set-layout", { groupId, layout }, ADAPTER_RUN);
+            }
             previous.layout = layout;
         }
     });

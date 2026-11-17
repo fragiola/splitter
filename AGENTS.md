@@ -292,7 +292,8 @@ copyright line and the MIT licence, and the guard test lists it.
     console and does not register. Unmount undoes every step (React tears a parent down before its
     children, so `group.remove` takes the panels with it).
   - **Controlled layout:** `layout` is applied when the group registers and whenever its values
-    change; the adapter does not snap the model back when the parent ignores `onLayoutChange`
+    change to other than the model's layout (a prop fed back by `onLayoutChange` runs nothing, so
+    drag steps stay transient and a veto's restore holds); the adapter does not snap the model back when the parent ignores `onLayoutChange`
     (that would fight a drag mid-gesture). A middleware vetoes changes the app refuses.
     `onLayoutChange` fires on every commit that changes the layout (drag steps and the registration
     included), `onLayoutCommit` on every non-transient commit that leaves a layout other than the

@@ -38,7 +38,7 @@ component.
 | `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | panels side by side, or stacked |
 | `disabled` | `boolean` | `false` | none of its separators can be used (code can still resize its panels) |
 | `model` | `SplitterModel<T>` | a new one (root), the parent's (nested) | the model to register in; a nested group given one is a root of its own |
-| `layout` | `Layout` | none | the layout (each panel's size in percent, by panel id), applied when the group registers and whenever its values change (`group.set-layout`); pair it with `onLayoutChange` |
+| `layout` | `Layout` | none | the layout (each panel's size in percent, by panel id), applied when the group registers and whenever its values change to other than the model's layout (`group.set-layout`); pair it with `onLayoutChange` |
 | `defaultLayout` | `Layout` | none | the layout it starts with, unless the model has a saved one for it |
 | `onLayoutChange` | `(layout: Readonly<Layout>) => void` | none | the layout changed: on every commit, drag steps and the registration included |
 | `onLayoutCommit` | `(layout: Readonly<Layout>) => void` | none | a layout was committed: a drag released, a key pressed, a command run (never a drag step) |
@@ -48,8 +48,10 @@ component.
 | `children` | `ReactNode` | none | its panels and separators, at any depth of your components |
 
 A `layout` the model refuses (it does not name the group's panels) is ignored; a valid one is
-clamped to the constraints. The adapter does not snap the model back when you ignore
-`onLayoutChange`: a middleware vetoes the changes your app refuses.
+clamped to the constraints. A `layout` that comes back from `onLayoutChange` equals the model's
+layout and runs nothing, so drag steps stay transient and a veto still puts the drag's origin
+back. The adapter does not snap the model back when you ignore `onLayoutChange`: a middleware
+vetoes the changes your app refuses.
 
 ## State
 
