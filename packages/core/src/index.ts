@@ -38,6 +38,12 @@ export {
     type SplitterEngineAdapter,
     type SplitterEngineOptions,
 } from "./engine/splitter-engine";
+export {
+    attachSplitterRef,
+    createSplitterRef,
+    type SplitterHandle,
+    type SplitterRef,
+} from "./engine/splitter-ref";
 export type {
     EngineActionContext,
     EngineActionKey,
