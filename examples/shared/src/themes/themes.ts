@@ -1,5 +1,7 @@
 // From Grid Layout (fragiola/grid-layout, examples/shared/src/themes/themes.ts), same author and licence.
-// The example themes, in switcher order. Each has a CSS file next to this one.
+// The example themes, in switcher order. Each has a CSS file next to this one. The names, titles,
+// schemes and swatches are Dockable's and Grid Layout's; the descriptions say what a theme does to
+// a split view.
 // The CSS is the source; `swatch` repeats a few of its values for the site's theme switcher.
 
 export const THEMES = [
@@ -25,6 +27,45 @@ export const THEMES = [
             "oklch(0.19 0.01 250)",
             "oklch(0.7 0.18 250)",
             "oklch(0.75 0.16 55)",
+        ],
+    },
+    {
+        name: "ide",
+        title: "IDE",
+        description:
+            "A dense code-editor workbench: hairline separators, square corners, no motion.",
+        scheme: "dark",
+        swatch: [
+            "oklch(0.2 0.006 260)",
+            "oklch(0.235 0.006 260)",
+            "oklch(0.55 0.16 245)",
+            "oklch(0.72 0.15 60)",
+        ],
+    },
+    {
+        name: "paper",
+        title: "Paper",
+        description:
+            "Warm and spacious: serif type, rounded frames, wide gutters with a grip.",
+        scheme: "light",
+        swatch: [
+            "oklch(0.955 0.014 85)",
+            "oklch(0.99 0.006 85)",
+            "oklch(0.46 0.09 220)",
+            "oklch(0.62 0.14 45)",
+        ],
+    },
+    {
+        name: "terminal",
+        title: "Terminal",
+        description:
+            "Phosphor green on black: monospace, square corners, blocky separators.",
+        scheme: "dark",
+        swatch: [
+            "oklch(0.13 0.012 150)",
+            "oklch(0.16 0.016 150)",
+            "oklch(0.85 0.2 145)",
+            "oklch(0.8 0.16 75)",
         ],
     },
 ] as const;
