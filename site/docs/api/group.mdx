@@ -8,6 +8,8 @@ description: Splitter.Group lays out its panels side by side or stacked, creates
 (unless you pass a `model`); a group inside a `Splitter.Panel` joins them and nests in that
 panel. It renders a `div` with no role and no name: your markup decides what it is.
 
+<Framework name="react">
+
 ```tsx
 import { type Layout, Splitter } from "@fragiola/splitter-react";
 import { useState } from "react";
@@ -27,6 +29,32 @@ export function Controlled() {
 `Group` is also a named export (`import { Group } from "@fragiola/splitter-react"`), the same
 component.
 
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<script setup lang="ts">
+import { type Layout, Splitter } from "@fragiola/splitter-vue";
+import { ref } from "vue";
+
+const layout = ref<Readonly<Layout>>({ left: 30, right: 70 });
+</script>
+
+<template>
+    <Splitter.Group id="main" v-model:layout="layout" class="h-80">
+        <Splitter.Panel id="left">…</Splitter.Panel>
+        <Splitter.Separator aria-label="Resize left" class="w-1" />
+        <Splitter.Panel id="right">…</Splitter.Panel>
+    </Splitter.Group>
+</template>
+```
+
+In Vue, `layout` and `onLayoutChange` are `v-model:layout`; `@layout-change` and
+`@layout-commit` are the two callbacks as events. Every prop of the table below is the same,
+kebab-case in a template (`:default-layout`, `:splitter-ref`). [Vue](/docs/api/vue) maps the rest.
+
+</Framework>
 ## Props
 
 `GroupProps<T>` extends the [common primitive props](/docs/api/group#common-props) and every

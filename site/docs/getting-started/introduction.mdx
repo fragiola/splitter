@@ -4,8 +4,8 @@ description: What the package does for a split view (resizing, the keyboard, col
 ---
 
 A split view puts panels side by side, or stacks them, with a separator between each pair that
-the user drags to share the room. `@fragiola/splitter-react` gives you that behaviour as three
-headless primitives, `Splitter.Group`, `Splitter.Panel` and `Splitter.Separator`, over a
+the user drags to share the room. `@fragiola/splitter-react` and `@fragiola/splitter-vue` give you that
+behaviour as three headless primitives, `Splitter.Group`, `Splitter.Panel` and `Splitter.Separator`, over a
 framework-free core, `@fragiola/splitter`.
 
 What the package gives you:
@@ -26,6 +26,8 @@ It writes only the structural inline style (the flex sizing of the panels) and e
 as `data-*` attributes and ARIA, so Tailwind, plain CSS, CSS modules or CSS-in-JS all work.
 Accessible names come from you too: a separator has no label until you give it one.
 
+<Framework name="react">
+
 ```tsx title="editor-layout.tsx"
 import { Splitter } from "@fragiola/splitter-react";
 
@@ -42,12 +44,34 @@ export function EditorLayout() {
 }
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+```vue title="editor-layout.vue"
+<script setup lang="ts">
+import { Splitter } from "@fragiola/splitter-vue";
+</script>
+
+<template>
+    <Splitter.Group class="h-96">
+        <Splitter.Panel id="files" default-size="25%" min-size="10%">
+            Files
+        </Splitter.Panel>
+        <Splitter.Separator aria-label="Resize files" class="w-1 bg-gray-300" />
+        <Splitter.Panel id="editor">Editor</Splitter.Panel>
+    </Splitter.Group>
+</template>
+```
+
+</Framework>
+
 <Example id="basic-horizontal" />
 
 ## Where to go next
 
 <Cards>
-<Card title="Installation" href="/docs/getting-started/installation" description="One package for React, the core re-exported." />
+<Card title="Installation" href="/docs/getting-started/installation" description="One package for React or Vue, the core re-exported." />
 <Card title="Your first split view" href="/docs/getting-started/first-split-view" description="Panels, separators, sizes and orientation." />
 <Card title="Model and engine" href="/docs/concepts/model-and-engine" description="The two objects behind the primitives, and their five verbs." />
 <Card title="Limitations" href="/docs/limitations" description="What React Resizable Panels has that this package does not, and why." />

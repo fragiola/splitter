@@ -106,6 +106,12 @@
             ]
         },
         {
+            "label": "API: Vue (@fragiola/splitter-vue)",
+            "collapsible": true,
+            "defaultOpen": false,
+            "pages": [{ "label": "Vue components", "path": "api/vue" }]
+        },
+        {
             "label": "API: core (@fragiola/splitter)",
             "collapsible": true,
             "defaultOpen": false,

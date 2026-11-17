@@ -11,6 +11,8 @@ part of your own; `useSplitterRef` is on [External ref](/docs/api/external-ref).
 
 ## `useSplitter`
 
+<Framework name="react">
+
 ```tsx
 import { useSplitter } from "@fragiola/splitter-react";
 
@@ -23,6 +25,27 @@ function ResetButton() {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="reset-button.vue"
+<script setup lang="ts">
+import { useSplitter } from "@fragiola/splitter-vue";
+
+const { model, groupId } = useSplitter(); // inside a Splitter.Group
+</script>
+
+<template>
+    <button type="button" @click="model.run('group.reset', { groupId })">Reset</button>
+</template>
+```
+
+In Vue these are composables, called in `setup`: `useSplitter()` returns the plain value (it
+never changes for a mounted group), `useSplitter(splitterRef)` a computed ref of it.
+
+</Framework>
 
 - `useSplitter<T>()`: inside a `Splitter.Group`, its model and engine, and the enclosing group's
   id. It throws outside a group.
@@ -42,6 +65,8 @@ with [`useSplitterState`](#usesplitterstate), the parts' callbacks, or `model.su
 
 ## `useSplitterState`
 
+<Framework name="react">
+
 ```tsx
 import { useSplitterState } from "@fragiola/splitter-react";
 
@@ -52,6 +77,29 @@ function SidebarStatus() {
     return <p>{collapsed ? "Sidebar hidden" : "Sidebar shown"}</p>;
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="sidebar-status.vue"
+<script setup lang="ts">
+import { useSplitterState } from "@fragiola/splitter-vue";
+
+const collapsed = useSplitterState(({ model }) =>
+    model.is("panel-collapsed", { panelId: "sidebar" }),
+);
+</script>
+
+<template>
+    <p>{{ collapsed ? "Sidebar hidden" : "Sidebar shown" }}</p>
+</template>
+```
+
+In Vue the answer is a computed ref: it triggers its readers only when the answer changes, and
+the selector runs again when a reactive value it reads changes too.
+
+</Framework>
 
 `useSplitterState<T, S>(selector, options?)` answers `selector(splitter, state)` and re-renders
 the component only when that answer changes. `splitter` is what `useSplitter` returns (`model`,
@@ -75,6 +123,8 @@ answers (`dragging-separator-id`) are read in the engine's own events.
 (`UseGroupResult`). `Splitter.Group` creates or joins the model and registers the group; this
 hook only reads it, so it serves a component inside a group that wants the group's state:
 
+<Framework name="react">
+
 ```tsx
 import { useGroup } from "@fragiola/splitter-react";
 
@@ -83,6 +133,24 @@ function DragHint() {
     return state.dragging ? <p role="status">Release to apply the new size</p> : null;
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="drag-hint.vue"
+<script setup lang="ts">
+import { useGroup } from "@fragiola/splitter-vue";
+
+const { state } = useGroup();
+</script>
+
+<template>
+    <p v-if="state.dragging" role="status">Release to apply the new size</p>
+</template>
+```
+
+</Framework>
 
 | field | type | description |
 | --- | --- | --- |
@@ -111,6 +179,8 @@ A group nested inside an element of your own built on `usePanel` does not nest i
 `separator.update`) and returns its state and the props of its element (`UseSeparatorResult`).
 The options (`UseSeparatorOptions`) are `disabled` and `resetOnDoubleClick`.
 
+<Framework name="react">
+
 ```tsx
 import { useSeparator } from "@fragiola/splitter-react";
 
@@ -119,6 +189,28 @@ export function Rule({ label }: { label: string }) {
     return <hr {...props} aria-label={label} />;
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="rule.vue"
+<script setup lang="ts">
+import { useSeparator } from "@fragiola/splitter-vue";
+
+defineProps<{ label: string }>();
+const { props } = useSeparator();
+</script>
+
+<template>
+    <hr v-bind="props" :aria-label="label" />
+</template>
+```
+
+In Vue, `state` and `props` are computed refs, the options a value, a ref or a getter, and
+`props` holds `tabindex` (the DOM name) for `tabIndex`.
+
+</Framework>
 
 | field | type | description |
 | --- | --- | --- |

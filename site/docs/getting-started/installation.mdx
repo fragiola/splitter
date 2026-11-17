@@ -1,7 +1,9 @@
 ---
 title: Installation
-description: Install the React package, which re-exports the whole core, or the framework-free core alone for Node, tests or another framework.
+description: Install the React or the Vue package, each of which re-exports the whole core, or the framework-free core alone for Node, tests or another framework.
 ---
+
+<Framework name="react">
 
 The React package is the only one a React app installs: it re-exports everything the core
 exports, so the model, the types and the pure rules come from the same import.
@@ -44,6 +46,54 @@ import { createSplitterModel, Splitter, type SplitterJson } from "@fragiola/spli
 exports beside it. The components are client components: in a framework with server components,
 render them from a file that starts with `"use client"`. They still render on the server (see
 [Server rendering](/docs/guides/server-rendering)).
+
+</Framework>
+
+<Framework name="vue">
+
+A Vue app installs one package, `@fragiola/splitter-vue`: the components, the composables and
+the whole framework-free core, re-exported.
+
+<Tabs items={["pnpm", "npm", "yarn"]}>
+<Tab value="pnpm">
+
+```bash
+pnpm add @fragiola/splitter-vue
+```
+
+</Tab>
+<Tab value="npm">
+
+```bash
+npm install @fragiola/splitter-vue
+```
+
+</Tab>
+<Tab value="yarn">
+
+```bash
+yarn add @fragiola/splitter-vue
+```
+
+</Tab>
+</Tabs>
+
+It needs `vue` 3.5 as a peer. Nothing else: the package has no runtime dependency of its own and
+ships no stylesheet to import.
+
+## Importing
+
+```ts
+import { createSplitterModel, Splitter, type SplitterJson } from "@fragiola/splitter-vue";
+```
+
+`Splitter` is the namespace of the components (`<Splitter.Group>`, `<Splitter.Panel>`,
+`<Splitter.Separator>` in a template); the composables (`useSplitter`, `useSplitterRef`,
+`usePanel`, ...) are named exports beside it. They are the React package's primitives and hooks,
+written the Vue way: [Vue](/docs/api/vue) maps each React prop. They render on the server too
+(`vue/server-renderer`, then hydration).
+
+</Framework>
 
 ## The core alone
 

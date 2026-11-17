@@ -1,0 +1,160 @@
+---
+title: Vue components
+description: The same primitives and hooks for Vue 3.5, from @fragiola/splitter-vue, and how each React prop maps onto Vue props, events and slots.
+---
+
+`@fragiola/splitter-vue` has every primitive of the React package as a Vue 3.5 component, and
+every hook as a composable, over the same core (re-exported whole). The behaviour, the `data-*`
+attributes, the paths and the ARIA of every element are the same, so every page of these docs
+applies: this page says how the React API is written in Vue.
+
+```ts
+import {
+    createSplitterModel,
+    type Layout,
+    Splitter,
+    useSplitter,
+    useSplitterRef,
+    useSplitterState,
+} from "@fragiola/splitter-vue";
+```
+
+## A split view in a template
+
+```vue title="workbench.vue"
+<script setup lang="ts">
+import { type Layout, Splitter } from "@fragiola/splitter-vue";
+import { ref } from "vue";
+
+const layout = ref<Readonly<Layout>>({ files: 25, editor: 75 });
+</script>
+
+<template>
+    <Splitter.Group id="workbench" v-model:layout="layout" class="h-96">
+        <Splitter.Panel id="files" min-size="10rem" collapsible collapsed-size="3rem">
+            <nav aria-label="Files">…</nav>
+        </Splitter.Panel>
+        <Splitter.Separator aria-label="Resize files" class="w-1.5 data-dragging:bg-blue-500" />
+        <Splitter.Panel id="editor" min-size="30%" v-slot="{ state }">
+            <main :data-wide="(state.size ?? 0) > 60 ? '' : undefined">…</main>
+        </Splitter.Panel>
+    </Splitter.Group>
+</template>
+```
+
+`v-model:layout` gives you the layout on every change, drag steps included; a value you write
+to it is applied as a `group.set-layout`. A value that comes back from the group equals the
+model's layout and runs nothing, so a drag stays one step and a veto still holds.
+
+<Example id="basic-horizontal" />
+
+## How React's props map
+
+| React | Vue |
+| --- | --- |
+| the parts' props | the same props, kebab-case in a template (`:default-size`, `min-size="10rem"`, `group-resize-behavior`); a bare boolean attribute is `true` (`collapsible`, `disabled`) |
+| `layout` + `onLayoutChange` | `v-model:layout` (`update:layout`, on every change); `@layout-change` is the same event |
+| `onLayoutCommit` | `@layout-commit` |
+| `onResize(size, previous)`, `onCollapse`, `onExpand` | `@resize`, `@collapse`, `@expand` on `Splitter.Panel` |
+| `splitterRef`, `model`, `keyboardStep`, `resetOnDoubleClick` | the same props (`:splitter-ref`, `:model`, …) |
+| `render={<nav />}` | `as="nav"` (a tag or a component) |
+| `render={(props, state) => …}` | the `render` scoped slot, `#render="{ props, state, children }"`: bind `v-bind="props"` on your element and render `<component :is="children" />` inside it |
+| `className`, `style` | the `class` and `style` attributes, under the structural style |
+| `className={(state) => …}`, `style={(state) => …}` | no function form: a `data-*` selector (`data-dragging:bg-blue-500`, `in-data-collapsed:hidden`), or the `render` slot's `state` |
+| `onPointerDown`, `onKeyDown`, `onDoubleClick` on a separator | `@pointerdown`, `@keydown`, `@dblclick`: they run after the engine's, as in React |
+| `children` | the default slot, with `{ state }` |
+| `ref` on a part | a template `ref` is the component (`$el` is the element), as for any Vue component |
+| `<Splitter.Panel<Types> id="nav">` | `const Splitter = typedSplitter<Types>()`: the same components, the ids typed by the registry |
+
+## Components
+
+`Splitter.Group`, `Splitter.Panel` and `Splitter.Separator` take the props of their React pages
+([Group](/docs/api/group#props), [Panel](/docs/api/panel#props),
+[Separator](/docs/api/separator#props)) except `render`, `className`, `style` and `children`
+(see the table above). Their types are `GroupProps<T>`, `PanelProps<T>` and `SeparatorProps`;
+their slots `GroupSlots`, `PanelSlots` and `SeparatorSlots`. Each part is a
+`SplitterComponent<Props, Slots>`, and its props extend `PrimitiveProps`.
+
+| prop or event | of | description |
+| --- | --- | --- |
+| `as` | every part (`PrimitiveProps`) | the tag or component rendered instead of the `div` (`AsProp`) |
+| `v-model:layout` | `Splitter.Group` | `layout` and `update:layout`: the layout on every change, drag steps included |
+| `@layout-change` | `Splitter.Group` | the layout changed (the same event as `update:layout`) |
+| `@layout-commit` | `Splitter.Group` | a layout was committed: a drag released, a key pressed, a command run |
+| `@resize`, `@collapse`, `@expand` | `Splitter.Panel` | the panel's size changed `(size, previous)`, it collapsed, it expanded |
+
+| slot | of | receives |
+| --- | --- | --- |
+| `default` | every part | `{ state }`: the part's state (`GroupPartState`, `PanelPartState`, `SeparatorPartState`) |
+| `render` | every part (`RenderSlot`) | `RenderSlotProps`: `props`, `state` and `children`; it replaces the element |
+
+| field | of | description |
+| --- | --- | --- |
+| `props` | `RenderSlotProps` | what goes on your element (`v-bind="props"`): ARIA, `data-*`, listeners, the structural style merged over your `class` and `style`, and the template ref (`ElementRef`) |
+| `state` | `RenderSlotProps` | the part's state |
+| `children` | `RenderSlotProps` | the part's content, as one stable component: `<component :is="children" />` |
+
+A slot is a `SlotFunction<Scope>`. Another `id` or `model` on a group remounts it (its panels
+register again); another `id` on a panel moves it to the new id without remounting its content.
+
+## Composables
+
+The hooks have the same names and arguments. A composable is called in `setup`; what changes is a
+`ComputedRef`, and an option is a value, a ref or a getter.
+
+| React | Vue |
+| --- | --- |
+| `useSplitter()` | the plain `SplitterContextValue` (`model`, `engine`, `groupId`): it never changes for a mounted group |
+| `useSplitter(splitterRef)` | `ComputedRef<SplitterContextValue \| null>`, `null` while no root group holds the ref |
+| `useSplitterState(selector, options?)` | `ComputedRef<S>` (with a `splitterRef`, `ComputedRef<S \| undefined>`): recomputed once per model state, and when a reactive value the selector reads changes; `UseSplitterStateOptions` takes `splitterRef` and `isEqual` |
+| `useGroup()` | `UseGroupResult`: `state` and `props` as computed refs (`GroupPartState`, `GroupElementProps`) |
+| `usePanel(options)` | `UsePanelResult` (`PanelPartState`, `PanelElementProps`); `UsePanelOptions<T>` as a value, a ref or a getter |
+| `useSeparator(options)` | `UseSeparatorResult` (`SeparatorPartState`, `SeparatorElementProps`, with `tabindex`); `UseSeparatorOptions` as a value, a ref or a getter |
+| `useSplitterRef()` | the same `SplitterRef`, marked raw (`markRaw`): it stays the core's object in `ref()` or `reactive()` state |
+| `createSplitterRef()` | the same (the core's) |
+
+```vue title="sidebar-toggle.vue"
+<script setup lang="ts">
+import { type SplitterRef, useSplitter, useSplitterState } from "@fragiola/splitter-vue";
+
+const props = defineProps<{ splitterRef: SplitterRef }>();
+const splitter = useSplitter(props.splitterRef);
+const collapsed = useSplitterState(
+    ({ model }) => model.is("panel-collapsed", { panelId: "files" }),
+    { splitterRef: props.splitterRef },
+);
+
+function toggle() {
+    splitter.value?.model.run(collapsed.value ? "panel.expand" : "panel.collapse", {
+        panelId: "files",
+    });
+}
+</script>
+
+<template>
+    <button type="button" :aria-pressed="!collapsed" @click="toggle">Files</button>
+</template>
+```
+
+## Typed ids
+
+A template cannot pass a type argument, so `typedSplitter<T>()` returns the same components typed
+by your registry (`TypedSplitter<T>`): a panel id that is not one of `T`'s does not compile in a
+checked template (vue-tsc).
+
+```ts
+import { type SplitterTypes, typedSplitter } from "@fragiola/splitter-vue";
+
+interface Types extends SplitterTypes {
+    groupId: "workbench";
+    panelId: "files" | "editor";
+}
+
+export const Splitter = typedSplitter<Types>();
+```
+
+## Server rendering
+
+The components render on the server (`vue/server-renderer`) with the same structural style as
+the client, so hydration matches and the layout does not shift: see
+[Server rendering](/docs/guides/server-rendering).

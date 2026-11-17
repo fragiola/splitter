@@ -1,11 +1,11 @@
 ---
-title: Splitter — headless resizable panel groups for React
-description: Headless resizable panel groups for React, with drag, keyboard, collapse, nested groups and a saved JSON layout. It ships the behaviour; every pixel is yours.
+title: Splitter — headless resizable panel groups for React and Vue
+description: Headless resizable panel groups for React and Vue, with drag, keyboard, collapse, nested groups and a saved JSON layout. Every pixel is yours.
 layout: landing
 ---
 
 <Hero
-    eyebrow="@fragiola/splitter · React"
+    eyebrow="@fragiola/splitter · React · Vue"
     title="Resizable split views, without a single line of CSS from us."
     description="Panels side by side or stacked, resized by pointer, keyboard or code, collapsible and nested, with a typed model and a JSON layout. It ships the behaviour and the accessibility. Every pixel is yours."
     actions={[
@@ -54,6 +54,8 @@ CSS modules, CSS-in-JS. The examples use Fragiola UI and its palettes.
 
 <Section eyebrow="Start" title="Three primitives">
 
+<Framework name="react">
+
 ```tsx
 import { Splitter } from "@fragiola/splitter-react";
 
@@ -69,6 +71,28 @@ export function Editor() {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<script setup lang="ts">
+import { Splitter } from "@fragiola/splitter-vue";
+</script>
+
+<template>
+    <Splitter.Group class="h-96">
+        <Splitter.Panel id="files" default-size="25%" min-size="10%" collapsible>
+            …
+        </Splitter.Panel>
+        <Splitter.Separator aria-label="Resize files" class="w-1.5 bg-gray-200" />
+        <Splitter.Panel id="editor">…</Splitter.Panel>
+    </Splitter.Group>
+</template>
+```
+
+</Framework>
 
 <Cards>
 <Card title="Your first split view" href="/docs/getting-started/first-split-view" description="Panels, separators, sizes and orientation." />
