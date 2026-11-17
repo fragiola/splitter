@@ -72,6 +72,13 @@ and runs nothing, so a drag stays one step and a veto still holds.
 
 <Example id="basic-horizontal" />
 
+A panel and a separator find their group through Angular's injector, which follows the template
+an element is **declared** in, not where `<ng-content>` projects it. So a component cannot wrap
+`splitterGroup` around an `<ng-content>`: the panels you pass it are declared in your template,
+outside that group, and a `[splitterPanel]` outside a group throws ("must be used inside
+[splitterGroup]"). Write a group and its panels and separators in one template; a component can
+hold a whole group, or be a panel's content.
+
 ## How React's props map
 
 | React | Angular |

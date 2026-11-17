@@ -720,7 +720,9 @@ copyright line and the MIT licence, and the guard test lists it.
     now" with Angular's untested server rendering. `docs-reference.test.ts` checks the Angular
     reference (every export, every input on the Angular or the React page, every output and
     `PanelResizeEvent` field on the Angular page, the part states' fields, and an Angular block
-    wherever there is a Vue one). The Angular snippets were type-checked once with `ngc` (strict
+    wherever there is a Vue one). The page also says that `splitterGroup` cannot wrap an `<ng-content>`:
+    Angular resolves a panel's injection where it is declared, not where it is projected
+    (review). The Angular snippets were type-checked once with `ngc` (strict
     templates) in a scratch project outside the repo, as Issue #9's Vue snippets were.
   - **CI:** the e2e matrix lists every `examples/*/playwright.config.ts`, so the Angular job came
     with the app (only the header comment changed); Dockable's and Grid Layout's CI have nothing
