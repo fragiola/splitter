@@ -6,6 +6,7 @@ import {
     Splitter,
     type SplitterRef,
     useSplitter,
+    useSplitterState,
 } from "../../src";
 
 interface Types {
@@ -80,6 +81,25 @@ export function Hooks() {
     // @ts-expect-error: not a panel id of the registry
     model.run("panel.collapse", { panelId: "other" });
     return null;
+}
+
+export function State(props: { splitterRef: SplitterRef }) {
+    const collapsed: boolean = useSplitterState<Types, boolean>(({ model }) =>
+        model.is("panel-collapsed", { panelId: "nav" }),
+    );
+    const size = useSplitterState(
+        ({ model }) => model.get("panel-size-by", { panelId: "a" })?.percentage,
+        { splitterRef: props.splitterRef },
+    );
+    // @ts-expect-error: undefined while no group holds the ref
+    const sure: number = useSplitterState(() => 1, {
+        splitterRef: props.splitterRef,
+    });
+    useSplitterState<Types>(({ model }) =>
+        // @ts-expect-error: not a panel id of the registry
+        model.is("panel-collapsed", { panelId: "other" }),
+    );
+    return collapsed && size !== undefined && sure > 0 ? null : null;
 }
 
 export const props: GroupProps<Types> = {

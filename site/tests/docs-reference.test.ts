@@ -52,6 +52,7 @@ const MODULE_PAGES: Record<string, string> = {
     "./hooks/use-panel": "hooks",
     "./hooks/use-separator": "hooks",
     "./hooks/use-splitter": "hooks",
+    "./hooks/use-splitter-state": "hooks",
     "./hooks/use-splitter-ref": "external-ref",
     "./utils/use-render": "group",
 };

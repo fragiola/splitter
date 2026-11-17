@@ -1,10 +1,11 @@
 ---
 title: Hooks
-description: useSplitter reaches the model and engine; useGroup, usePanel and useSeparator are the layer under each part, returning its state and the props of its element.
+description: useSplitter reaches the model and engine, useSplitterState follows one of its answers; useGroup, usePanel and useSeparator are the layer under each part.
 ---
 
 The hooks are the lower layer of the primitives. `useSplitter` is the one an app calls most: it
-gives a component inside a group (or anywhere, with a ref) the model and the engine. `useGroup`,
+gives a component inside a group (or anywhere, with a ref) the model and the engine;
+`useSplitterState` re-renders it when an answer of the model changes. `useGroup`,
 `usePanel` and `useSeparator` return a part's state and the props of its element, to build a
 part of your own; `useSplitterRef` is on [External ref](/docs/api/external-ref).
 
@@ -36,8 +37,37 @@ It returns a `SplitterContextValue<T>`:
 | `engine` | `SplitterEngine` | the engine of its groups on screen (see [Engine](/docs/api/engine)) |
 | `groupId` | `GroupIdOf<T>` | the enclosing group (inside a group), or the root group (through a ref) |
 
-The hook returns stable objects: it does not re-render on every model change. Follow values with
-the parts' callbacks, or subscribe to the model.
+The hook returns stable objects: it does not re-render on every model change. Follow a value
+with [`useSplitterState`](#usesplitterstate), the parts' callbacks, or `model.subscribe`.
+
+## `useSplitterState`
+
+```tsx
+import { useSplitterState } from "@fragiola/splitter-react";
+
+function SidebarStatus() {
+    const collapsed = useSplitterState(({ model }) =>
+        model.is("panel-collapsed", { panelId: "sidebar" }),
+    );
+    return <p>{collapsed ? "Sidebar hidden" : "Sidebar shown"}</p>;
+}
+```
+
+`useSplitterState<T, S>(selector, options?)` answers `selector(splitter, state)` and re-renders
+the component only when that answer changes. `splitter` is what `useSplitter` returns (`model`,
+`engine`, `groupId`) and `state` the model's state. The selector runs once per model state (and
+again when it is a new function): keep it pure, and ask the model with `get` and `is`.
+
+| option | type | description |
+| --- | --- | --- |
+| `splitterRef` | `SplitterRef` | the splitter to read: the root group's that holds the ref, from anywhere. The hook answers `undefined` while none does. Default: the enclosing `Splitter.Group`'s (it throws outside one) |
+| `isEqual` | `(a: S, b: S) => boolean` | whether two answers are the same, so the component does not re-render (default `Object.is`) |
+
+An answer compared with `Object.is` should be a value or an object of the state (a
+`model.get("layout-by", …)` is the state's own object, kept while it does not change). A selector
+that builds an object or an array each time (`model.get("panel-size-by", …)`, a `.map`) needs an
+`isEqual`, or picks a value out of it (`?.percentage`). It follows the model only: the engine's
+answers (`dragging-separator-id`) are read in the engine's own events.
 
 ## `useGroup`
 
@@ -115,3 +145,4 @@ The hooks' types, field by field:
 | `onResize`, `onCollapse`, `onExpand` | `UsePanelOptions` | the panel's callbacks |
 | `resetOnDoubleClick` | `UseSeparatorOptions` | a double click resets its panel |
 | `model`, `engine`, `groupId` | `SplitterContextValue` | what `useSplitter` returns |
+| `splitterRef`, `isEqual` | `UseSplitterStateOptions` | the splitter `useSplitterState` reads, and when two answers are the same |

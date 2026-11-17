@@ -26,6 +26,10 @@ export {
     useSplitter,
 } from "./hooks/use-splitter";
 export { useSplitterRef } from "./hooks/use-splitter-ref";
+export {
+    type UseSplitterStateOptions,
+    useSplitterState,
+} from "./hooks/use-splitter-state";
 export * as Splitter from "./parts";
 export type {
     PrimitiveProps,
