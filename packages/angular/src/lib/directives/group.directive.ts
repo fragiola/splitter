@@ -193,6 +193,8 @@ export class SplitterGroup<T extends SplitterTypes = AnyTypes>
         | undefined;
     /** the panel the group sits in, as last sent */
     private parentPanelId: string | undefined;
+    /** a layout the app set that waits for the render to apply ({@link applyLayout}) */
+    private waiting: Layout | undefined;
     private heldRef: SplitterRef | undefined;
     private releaseRef: (() => void) | undefined;
 
@@ -364,36 +366,7 @@ export class SplitterGroup<T extends SplitterTypes = AnyTypes>
         });
         effect(() => {
             const layout = plainLayout(this.layout());
-            untracked(() => {
-                const runtime = this.runtime();
-                const sent = this.sent;
-                if (
-                    !runtime ||
-                    !sent ||
-                    !runtime.registry.registered() ||
-                    !layout
-                ) {
-                    return;
-                }
-                if (!shallowEqual(layout, sent.layout)) {
-                    const { model, groupId } = runtime;
-                    // a layout that comes back from layoutChange is the model's layout already:
-                    // setting it again would turn each transient drag step into a commit
-                    if (
-                        !shallowEqual(
-                            layout,
-                            model.get("layout-by", { groupId }),
-                        )
-                    ) {
-                        model.run(
-                            "group.set-layout",
-                            { groupId, layout },
-                            ADAPTER_RUN,
-                        );
-                    }
-                    sent.layout = layout;
-                }
-            });
+            untracked(() => this.applyLayout(layout, false));
         });
 
         onDestroy(() => this.unregister());
@@ -424,6 +397,54 @@ export class SplitterGroup<T extends SplitterTypes = AnyTypes>
         // after the first render, once the panels inside it (an `@for`, a child component) are
         // initialized and wait in the registry
         afterNextRender(() => this.register(), { injector: this.injector });
+    }
+
+    /**
+     * Sets a layout the app changed. A layout set in the same tick as an `@if` that shows or hides
+     * a panel names the panels of after the render: the destroyed panels go first, and a layout
+     * the model cannot take yet (a panel not created yet) waits for the render, then applies
+     * (`afterNextRender`, whether it applies then or not). Meanwhile the model's layout is not
+     * written back to the app's.
+     */
+    private applyLayout(layout: Layout | undefined, rendered: boolean): void {
+        const runtime = this.runtime();
+        const sent = this.sent;
+        if (!runtime || !sent || !runtime.registry.registered() || !layout) {
+            this.waiting = undefined;
+            return;
+        }
+        if (shallowEqual(layout, sent.layout)) {
+            this.waiting = undefined;
+            return;
+        }
+        const { model, groupId, registry } = runtime;
+        // the panels removed now do not write their layout back to the app's either
+        const scheduled = this.waiting !== undefined;
+        this.waiting = layout;
+        registry.flushRemovals();
+        // a layout that comes back from layoutChange is the model's layout already: setting it
+        // again would turn each transient drag step into a commit
+        if (!shallowEqual(layout, model.get("layout-by", { groupId }))) {
+            const payload = { groupId, layout };
+            if (!rendered && !model.can("group.set-layout", payload)) {
+                if (!scheduled) {
+                    afterNextRender(
+                        () => {
+                            const waiting = this.waiting;
+                            if (waiting) {
+                                this.applyLayout(waiting, true);
+                            }
+                        },
+                        { injector: this.injector },
+                    );
+                }
+                return;
+            }
+            this.waiting = undefined;
+            model.run("group.set-layout", payload, ADAPTER_RUN);
+        }
+        this.waiting = undefined;
+        sent.layout = layout;
     }
 
     private holdRef(): void {
@@ -473,7 +494,8 @@ export class SplitterGroup<T extends SplitterTypes = AnyTypes>
                     return;
                 }
                 const { layout } = group;
-                if (!shallowEqual(layout, changed)) {
+                // a layout the app set and that waits for the render stays the app's
+                if (!shallowEqual(layout, changed) && !this.waiting) {
                     changed = layout;
                     this.layout.set(layout);
                 }

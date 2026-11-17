@@ -621,6 +621,14 @@ copyright line and the MIT licence, and the guard test lists it.
     group destroyed meanwhile drops it and its `group.remove { keepLayout }` takes the panels with
     their layout (React and Vue tear the parent down first). A panel created again under the same
     id before that microtask removes the old one first.
+  - **A layout set with a panel shown or hidden** (review): `[layout]` / `[(layout)]` changed in
+    the same tick as an `@if` that hides or shows a panel names the panels of after the render,
+    as React and Vue apply it. The group's layout effect first removes the panels waiting for
+    their microtask (`GroupRegistry.flushRemovals`); a layout the model cannot take yet
+    (`model.can("group.set-layout")` false: a panel not created yet) waits for `afterNextRender`,
+    then runs whatever its result. While a layout waits, the model's layout is not written back
+    to the app's (`[(layout)]` would overwrite the app's signal). Tests: `props.test.ts`, "applies
+    a [(layout)] / [layout] set in the same tick as a panel hidden / naming a panel shown".
   - **A group's `id` and `model` are read once** (a directive cannot remount itself): a change is
     reported with `console.error`; the app creates the group again for another one
     (`@for (id of [groupId]; track id)`, tested). A new parent panel id moves a nested group in

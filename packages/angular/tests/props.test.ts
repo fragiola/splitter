@@ -76,6 +76,93 @@ describe("the group's layout", () => {
         expect(model.get("layout-by", { groupId: "g" })).not.toBe(next);
     });
 
+    // a layout changed in the same tick as an @if that hides or shows a panel names the panels of
+    // after the render: it applies once they are there, as React and Vue apply it, and the app's
+    // signal is never overwritten meanwhile
+    @Component({
+        selector: "test-layout-with-panel",
+        imports: [SPLITTER],
+        template: `
+            @if (twoWay()) {
+                <div splitterGroup id="g" [model]="model()" [(layout)]="layout">
+                    <div splitterPanel id="a"></div>
+                    @if (showB()) {
+                        <div splitterSeparator></div>
+                        <div splitterPanel id="b"></div>
+                    }
+                    <div splitterSeparator></div>
+                    <div splitterPanel id="c"></div>
+                </div>
+            } @else {
+                <div splitterGroup id="g" [model]="model()" [layout]="layout()">
+                    <div splitterPanel id="a"></div>
+                    @if (showB()) {
+                        <div splitterSeparator></div>
+                        <div splitterPanel id="b"></div>
+                    }
+                    <div splitterSeparator></div>
+                    <div splitterPanel id="c"></div>
+                </div>
+            }
+        `,
+    })
+    class LayoutWithPanel {
+        readonly model = input.required<SplitterModel>();
+        readonly twoWay = input(true);
+        readonly showB = signal(true);
+        readonly layout = signal<Readonly<Layout> | undefined>(undefined);
+    }
+
+    for (const twoWay of [true, false]) {
+        const binding = twoWay ? "[(layout)]" : "[layout]";
+
+        it(`applies a ${binding} set in the same tick as a panel hidden`, async () => {
+            const model = createSplitterModel();
+            const { app } = await render(LayoutWithPanel, (fixture) => {
+                fixture.componentRef.setInput("model", model);
+                fixture.componentRef.setInput("twoWay", twoWay);
+            });
+            const written: (Readonly<Layout> | undefined)[] = [];
+            model.subscribe(() => written.push(app.layout()));
+            app.showB.set(false);
+            app.layout.set({ a: 20, c: 80 });
+            await settle();
+            expect(model.get("layout-by", { groupId: "g" })).toEqual({
+                a: 20,
+                c: 80,
+            });
+            expect(app.layout()).toEqual({ a: 20, c: 80 });
+            for (const layout of written) {
+                expect(layout).toEqual({ a: 20, c: 80 });
+            }
+        });
+
+        it(`applies a ${binding} naming a panel shown in the same tick`, async () => {
+            const model = createSplitterModel();
+            const { app } = await render(LayoutWithPanel, (fixture) => {
+                fixture.componentRef.setInput("model", model);
+                fixture.componentRef.setInput("twoWay", twoWay);
+                fixture.componentInstance.showB.set(false);
+            });
+            // the app's signal after each command the group follows
+            const written: (Readonly<Layout> | undefined)[] = [];
+            model.subscribe(() => written.push(app.layout()));
+            app.showB.set(true);
+            app.layout.set({ a: 20, b: 30, c: 50 });
+            await settle();
+            expect(model.get("layout-by", { groupId: "g" })).toEqual({
+                a: 20,
+                b: 30,
+                c: 50,
+            });
+            expect(app.layout()).toEqual({ a: 20, b: 30, c: 50 });
+            // the app's signal is never overwritten by the layout the model passed through
+            for (const layout of written) {
+                expect(layout).toEqual({ a: 20, b: 30, c: 50 });
+            }
+        });
+    }
+
     @Component({
         selector: "test-default-layout",
         imports: [SPLITTER],

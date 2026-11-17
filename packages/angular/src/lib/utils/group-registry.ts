@@ -97,12 +97,20 @@ export class GroupRegistry {
         this.flushing = true;
         queueMicrotask(() => {
             this.flushing = false;
-            const removals = [...this.removals];
-            this.removals.clear();
-            for (const panelId of removals) {
-                this.removePanel(panelId);
-            }
+            this.flushRemovals();
         });
+    }
+
+    /**
+     * removes the destroyed panels now, before their microtask: a layout the app sets in the
+     * render that destroyed them names the panels left
+     */
+    flushRemovals(): void {
+        const removals = [...this.removals];
+        this.removals.clear();
+        for (const panelId of removals) {
+            this.removePanel(panelId);
+        }
     }
 
     /** forgets the removals still waiting: the group is about to go, with its panels */
