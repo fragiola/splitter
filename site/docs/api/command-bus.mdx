@@ -37,6 +37,21 @@ model.dispatch({ command: "group.reset", payload: { groupId: "main" } }, { meta:
 
 `DispatchOptions` has `meta` only: it comes from your code, never from the untrusted input.
 
+What the package runs carries a `meta` of its own. The adapter's commands for the markup (a
+group's registration `batch`, `panel.add` and `panel.remove` as panels mount and unmount,
+`group.update`, `panel.update` and `separator.update` when a prop changes, `group.set-layout` for a
+controlled `layout`, `group.remove` on unmount) and the engine's `syncOrder` batch carry
+`meta: { source: "adapter" }`. The engine marks the origin it puts back after a refused drag with
+`meta: { restore: true }`. A listener tells the user's steps and your code's commands (no `meta`,
+or yours) from them:
+
+```ts
+model.subscribe((event) => {
+    if (event.transient || event.meta?.source === "adapter") return; // a drag step, or the markup
+    console.log("a step:", event.command);
+});
+```
+
 The types: `CommandName` (every built-in command), `CommandMap<T>` (each one's payload and
 result), `PayloadOf<T, C>` and `ResultOf<T, C>`, `BatchEntry<T>` (one `{ command, payload }` of a
 `batch`), `Nullable<P>` (a payload whose fields may be `null` to clear them, as `panel.update`

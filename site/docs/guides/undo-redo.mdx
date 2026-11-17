@@ -14,8 +14,8 @@ immutable state before and after it, and `batch` to put every layout back in one
 
 - a drag sends **transient** `separator.move` steps, then one final non-transient commit: record
   the final one, measured from where the drag started (the last committed layouts);
-- registering panels (the `batch` a group runs when it mounts) is not a user step: record only
-  the commands that change a layout on purpose;
+- registering panels (the `batch` a group runs when it mounts) is not a user step: everything the
+  adapter runs for the markup carries `meta: { source: "adapter" }`, so skip it;
 - states are immutable, so keeping the layouts before and after costs nothing.
 
 ## A small history
@@ -24,8 +24,6 @@ immutable state before and after it, and `batch` to put every layout back in one
 import type { CommandEvent, Layout, SplitterModel } from "@fragiola/splitter-react";
 
 type Layouts = Record<string, Readonly<Layout>>;
-
-const STEPS = new Set(["separator.move", "panel.resize", "panel.collapse", "panel.expand", "group.set-layout", "group.reset"]);
 
 function layoutsOf(state: CommandEvent["after"]): Layouts {
     return Object.fromEntries(Object.entries(state.groups).map(([id, group]) => [id, group.layout]));
@@ -41,7 +39,7 @@ export function createHistory(model: SplitterModel) {
         if (restoring || event.transient) return; // our own restores, and drag steps
         const before = settled;
         settled = layoutsOf(event.after);
-        if (!STEPS.has(event.command)) return;
+        if (event.meta?.source === "adapter") return; // the markup's registration and props
         if (JSON.stringify(before) === JSON.stringify(settled)) return;
         done.push({ before, after: settled });
         undone.length = 0;

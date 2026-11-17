@@ -24,7 +24,11 @@ describe("the undo history", () => {
     it("ignores registration, and makes one step of a whole drag", () => {
         const m = model();
         const history = createUndoHistory(m);
-        m.run("panel.add", { id: "c", groupId: "main" });
+        m.run(
+            "panel.add",
+            { id: "c", groupId: "main" },
+            { meta: { source: "adapter" } },
+        );
         expect(history.getSnapshot().canUndo).toBe(false);
         const origin = layout(m);
         for (const delta of [2, 5, 9]) {
@@ -59,6 +63,28 @@ describe("the undo history", () => {
             undoSteps: ["separator.move", "panel.resize"],
             canRedo: false,
         });
+    });
+
+    it("makes a step of the app's own commands, and none of the adapter's", () => {
+        const m = model();
+        const history = createUndoHistory(m);
+        m.run("group.reset", { groupId: "main" });
+        // the default layout already: nothing changed, no step
+        expect(history.getSnapshot().canUndo).toBe(false);
+        m.run(
+            "group.set-layout",
+            { groupId: "main", layout: { a: 20, b: 80 } },
+            { meta: { source: "adapter" } },
+        );
+        expect(history.getSnapshot().canUndo).toBe(false);
+        m.run("group.set-layout", {
+            groupId: "main",
+            layout: { a: 40, b: 60 },
+        });
+        expect(history.getSnapshot().undoSteps).toEqual(["group.set-layout"]);
+        history.undo();
+        // back to the adapter's layout, the last one committed before the step
+        expect(layout(m)).toEqual({ a: 20, b: 80 });
     });
 
     it("reads Ctrl/Cmd+Z, Shift for redo, and leaves text fields alone", () => {

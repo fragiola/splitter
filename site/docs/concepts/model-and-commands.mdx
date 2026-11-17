@@ -131,6 +131,9 @@ const stop = model.subscribe((event) => {
 });
 ```
 
+What the adapter runs for the markup (a panel mounting, a prop changing) carries
+`meta: { source: "adapter" }` (see [Command bus](/docs/api/command-bus#running)).
+
 States are immutable: an untouched group keeps its object, so `before.groups.main ===
 after.groups.main` means that group did not change. This is all [undo and
 redo](/docs/guides/undo-redo) and [persistence](/docs/guides/persistence) need.

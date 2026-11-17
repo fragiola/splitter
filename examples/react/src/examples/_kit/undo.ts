@@ -14,12 +14,16 @@ export interface StateLike {
     readonly groups: Readonly<Record<string, { readonly layout: LayoutLike }>>;
 }
 
-/** What `model.subscribe` tells: the command, the state around it, and whether it was a step of a gesture. */
+/**
+ * What `model.subscribe` tells: the command, the state around it, whether it was a step of a
+ * gesture, and its `meta` (`source: "adapter"` on what the adapter runs for the markup).
+ */
 export interface CommandEventLike {
     readonly command: string;
     readonly before: StateLike;
     readonly after: StateLike;
     readonly transient: boolean;
+    readonly meta?: Readonly<Record<string, unknown>> | undefined;
 }
 
 /** The members of a splitter model the history uses (`useSplitter().model` fits). */
@@ -51,11 +55,6 @@ export interface UndoSnapshot {
 export interface UndoOptions {
     /** the steps kept, oldest dropped first (default 100) */
     readonly limit?: number;
-    /**
-     * the commands that make a step when they change a layout (default: a separator moved, a panel
-     * resized, collapsed or expanded, a layout set or reset). Registering a panel is not a step.
-     */
-    readonly steps?: readonly string[];
 }
 
 /** A history over one model: undo, redo, and a snapshot to render. */
@@ -80,15 +79,6 @@ interface Entry {
     readonly after: Layouts;
 }
 
-const STEPS = [
-    "separator.move",
-    "panel.resize",
-    "panel.collapse",
-    "panel.expand",
-    "group.set-layout",
-    "group.reset",
-];
-
 function layoutsOf(state: StateLike): Layouts {
     return Object.fromEntries(
         Object.entries(state.groups).map(([id, group]) => [id, group.layout]),
@@ -111,9 +101,10 @@ function sameLayouts(a: Layouts, b: Layouts) {
 }
 
 /**
- * Undo and redo for a splitter's model. Every committed command of `steps` that changes a layout
- * is one step: a whole drag (its steps are transient, and only its release is committed), a key
- * press, a collapse. Undo puts back the layouts from before the step, redo those after it, each in
+ * Undo and redo for a splitter's model. Every committed command that changes a layout is one
+ * step: a whole drag (its steps are transient, and only its release is committed), a key press, a
+ * collapse, a button's command. What the adapter runs for the markup (a group or a panel
+ * mounting, a prop that changed) carries `meta.source: "adapter"` and is not a step. Undo puts back the layouts from before the step, redo those after it, each in
  * one `batch` of `group.set-layout`; the history does not record its own restores.
  *
  * ```ts
@@ -127,7 +118,6 @@ export function createUndoHistory(
     options: UndoOptions = {},
 ): UndoHistory {
     const limit = options.limit ?? 100;
-    const steps = options.steps ?? STEPS;
     let done: Entry[] = [];
     let undone: Entry[] = [];
     /** the layouts as last committed: what a drag started from */
@@ -161,7 +151,8 @@ export function createUndoHistory(
             return;
         const before = settled;
         settled = after;
-        if (event.transient || !steps.includes(event.command)) return;
+        // a panel mounting or a prop changing is the markup's, not the user's
+        if (event.transient || event.meta?.source === "adapter") return;
         if (sameLayouts(before, after)) return;
         done = [...done, { command: event.command, before, after }].slice(
             limit > 0 ? -limit : Number.POSITIVE_INFINITY,
