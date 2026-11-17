@@ -464,3 +464,9 @@ copyright line and the MIT licence, and the guard test lists it.
     at load instead of frozen in percent. A registered pristine group whose saved entry is still
     pending is written as loaded. A `group.reset` group drops out of the document (with its restore
     sizes: they go with the layout the user changed).
+  - **Re-entrancy of dry runs.** A `run` or `dispatch` issued while a `can` or `check` runs (from
+    a middleware) is `refused` and never runs; during a `run` it is still `queued`. Queuing it
+    would make the dry run cause a side effect later. Dockable's bus has the same gap (its dry
+    runs do not count as in flight, so such a command commits at once); its docs only say that
+    dry runs must have no side effects, which this enforces. Proposed for Dockable, not changed
+    there.

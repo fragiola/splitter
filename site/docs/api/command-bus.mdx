@@ -76,7 +76,7 @@ listed with its command.
 | `unknown_command` | no command has this name (`dispatch`) |
 | `invalid_payload` | the payload does not match the command's schema |
 | `not_found` | a group, panel or separator the payload names does not exist |
-| `refused` | a rule of the splitter forbids it: a disabled separator, a panel that cannot collapse, a pixel size before the group is measured |
+| `refused` | a rule of the splitter forbids it: a disabled separator, a panel that cannot collapse, a pixel size before the group is measured, a command issued during a dry run |
 | `vetoed` | a middleware vetoed it |
 | `queued` | it was issued from a middleware and will run after the current command |
 | `middleware_error` | a middleware threw |
@@ -122,7 +122,9 @@ context has the fields of `CommandContextBase`:
 | `get` | `(key, payload)` | reads `"group-by"`, `"panel-by"` or `"layout-by"` as the command sees them (inside a batch: after its earlier commands); `CommandContextGetKey` and `CommandContextGetMap` type them |
 
 A command issued from inside a middleware does not run inside the current one: it is queued and
-returns `queued`, then runs after it.
+returns `queued`, then runs after it. During a dry run (`can`, `check`), `run` and `dispatch` are
+`refused` instead, and never run: a dry run has no side effect, now or later. `can` and `check`
+themselves run immediately from anywhere.
 
 ## Listeners
 

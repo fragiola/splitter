@@ -167,7 +167,10 @@ export type CommandErrorCode =
     | "invalid_payload"
     /** a group, panel or separator the payload names does not exist */
     | "not_found"
-    /** a rule of the splitter forbids it (a disabled separator, a panel that cannot collapse, …) */
+    /**
+     * a rule of the splitter forbids it (a disabled separator, a panel that cannot collapse, …),
+     * or it was issued from a middleware during a dry run (`can`, `check`)
+     */
     | "refused"
     /** a middleware vetoed it */
     | "vetoed"

@@ -227,6 +227,36 @@ describe("the command bus", () => {
         expect(sizes(model)).toEqual([50, 50]);
     });
 
+    it("refuses a command a middleware runs during a dry run: can and check commit nothing", () => {
+        const model = createSplitterModel();
+        const results: unknown[] = [];
+        model.use((ctx, next) => {
+            if (ctx.command === "group.add" && ctx.payload.id === "g") {
+                results.push(model.run("group.add", { id: "side" }));
+                results.push(
+                    model.dispatch({
+                        command: "group.add",
+                        payload: { id: "other" },
+                    }),
+                );
+            }
+            return next();
+        });
+        const listener = vi.fn();
+        model.subscribe(listener);
+        expect(model.can("group.add", { id: "g" })).toBe(true);
+        expect(model.check("group.add", { id: "g" }).ok).toBe(true);
+        expect(results).toHaveLength(4);
+        for (const result of results) {
+            expect(result).toMatchObject({
+                ok: false,
+                error: { code: "refused" },
+            });
+        }
+        expect(model.get("groups")).toEqual([]);
+        expect(listener).not.toHaveBeenCalled();
+    });
+
     it("dispatches untrusted JSON, validated first", () => {
         const model = group([{ id: "a" }, { id: "b" }]);
         expect(model.dispatch("x")).toMatchObject({

@@ -148,6 +148,8 @@ class Model<T extends SplitterTypes> implements SplitterModel<T> {
     private readonly middleware: Middleware<T>[] = [];
     private readonly listeners = new Set<CommandListener>();
     private inFlight = 0;
+    /** dry runs (`can`, `check`) under way: a command issued meanwhile is refused */
+    private dryRuns = 0;
     private readonly queue: (() => void)[] = [];
     private readonly events: CommandEvent[] = [];
     private delivering = false;
@@ -280,6 +282,14 @@ class Model<T extends SplitterTypes> implements SplitterModel<T> {
         options: RunOptions | undefined,
         prefix: string,
     ): CommandResult<unknown> {
+        if (this.dryRuns > 0) {
+            // issued from a middleware during `can` or `check`: a dry run has no side effect,
+            // now or later
+            return fail(
+                "refused",
+                `"${command}" was issued during a dry run (can or check), which commits nothing`,
+            );
+        }
         if (this.inFlight > 0) {
             // issued from a middleware: runs once the current command committed
             this.queue.push(() => {
@@ -321,7 +331,9 @@ class Model<T extends SplitterTypes> implements SplitterModel<T> {
             steps: [],
             thrown: undefined,
         };
-        if (!dryRun) {
+        if (dryRun) {
+            this.dryRuns++;
+        } else {
             this.inFlight++;
         }
         let ran: { result: CommandResult<unknown>; payload: unknown };
@@ -334,7 +346,9 @@ class Model<T extends SplitterTypes> implements SplitterModel<T> {
                 false,
             );
         } finally {
-            if (!dryRun) {
+            if (dryRun) {
+                this.dryRuns--;
+            } else {
                 this.inFlight--;
             }
         }
