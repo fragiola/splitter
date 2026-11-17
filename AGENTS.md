@@ -339,7 +339,8 @@ copyright line and the MIT licence, and the guard test lists it.
     `--sp-border`, `--sp-shadow`, `--sp-separator-size`, `--sp-separator-line`, `--sp-focus-width`,
     `--sp-title-weight`, `--sp-motion`, and per palette `--sp-canvas-bg`, `--sp-panel-line`,
     `--sp-separator-color`, `--sp-separator-hover`, `--sp-separator-active`, `--sp-focus-line`
-    (`tests/themes.test.ts` holds the list).
+    (`tests/themes.test.ts` holds the list). Five since Issue #18 (below), with the separator-shape
+    tokens `--sp-separator-grab`, `--sp-grip` and, per palette, `--sp-separator-bg`.
   - **Styling rules enforced by `examples/react/tests/examples.test.ts`:** no class string or
     `cn()` in a `.tsx`, `#/` and the listed packages only (`@/` refused), no fixed colour in a
     `styles.ts`, and every resize cursor behind a `data-` variant. State is styled with data
@@ -727,3 +728,29 @@ copyright line and the MIT licence, and the guard test lists it.
   - **CI:** the e2e matrix lists every `examples/*/playwright.config.ts`, so the Angular job came
     with the app (only the header comment changed); Dockable's and Grid Layout's CI have nothing
     else for Angular.
+- **Issue #18 (Epic #22, five example themes):**
+  - **Themes:** `light`, `dark`, `ide`, `paper`, `terminal`, in that switcher order. `THEMES` takes
+    Dockable's names, titles, schemes and swatches; the descriptions say what a theme does to a
+    split view (Dockable's mention tabs). `ide.css`, `paper.css` and `terminal.css` carry Grid
+    Layout's palettes (a "From Grid Layout" header) and their `--sp-*` values: `ide` dense, square,
+    no motion; `paper` serif, warm, spacious, rounded; `terminal` monospace, square, no motion.
+    `light` and `dark` only gained the new tokens, with values that draw what they drew before.
+    The playground's switcher and the site export already followed `THEMES`.
+  - **Separator shape** (imitating Dockable's `--dk-splitter-size`, `--dk-splitter-grab`,
+    `--dk-splitter-bg`, `--dk-grip`): the box is `--sp-separator-size` thick (the engine measures
+    it) and filled with `--sp-separator-bg` (per palette); `::before` is the grab area,
+    `--sp-separator-grab` thick and centred on the box (negative insets when it is wider), with
+    `--sp-separator-line` drawn in its middle (its padding and `background-clip: content-box`, so
+    the line and the hit area are one pseudo-element; a focus ring is
+    `max(line, --sp-focus-width)`); `::after` is the grip, shown by `--sp-grip` (`none` | `block`,
+    `[display:var(--sp-grip)]`). The separator is `relative z-10`, so its grab area wins over the
+    panels it overlaps. `ide`: a 1px hairline grabbed over 7px; `paper`: a 12px transparent gutter
+    showing the canvas, no line, a grip; `terminal`: a 6px filled bar grabbed over 10px. Dockable
+    draws its grip as a child element; here it is a pseudo-element, so the markup of the 15
+    examples (three frameworks) did not change: only their `styles.ts` (React's, copied unchanged).
+    `styling-showcase` keeps its own grip (always shown) on a box of `max(2 × size, grab)`.
+  - **Tests:** `themes.test.ts` lists the new tokens and checks that the grab area is at least
+    the box, the line and the focus width, and that `--sp-grip` is `none` or `block`.
+    `e2e/themes.spec.ts` checks on computed styles that an example's separator reads the tokens
+    and is drawn differently in `light`, `ide`, `paper` and `terminal`, and that a hairline takes
+    the pointer beside its line. The smoke and iframe specs run in the five themes.
