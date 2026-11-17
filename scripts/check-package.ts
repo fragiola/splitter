@@ -10,13 +10,14 @@
 //   is packed from that directory: its packed `exports` are the repo's without the source
 //   condition, relative to it (`./dist/x` is `./x`), and every target is a file of the tarball;
 // - publint (strict) and attw (`esm-only` profile) pass on the tarball;
-// - every adapter (`ADAPTERS`: each package under packages/ but the core; React today, Vue and
-//   Angular with their Epics) depends on the core at its exact version;
+// - every adapter (`ADAPTERS`: each package under packages/ but the core; React and Vue today,
+//   Angular with its Epic) depends on the core at its exact version;
 // - each adapter's smoke test: a scratch app outside the workspace installs that adapter's tarball
 //   (the core tarball comes as its dependency) and imports from it, typechecks with the repo's
 //   TypeScript, builds, and its dev server serves the entry with every import resolved. For
 //   React, a Vite + React app; for Vue, a Vite + Vue app with a single-file component, checked by
-//   vue-tsc on TypeScript 6 (vue-tsc does not run on TypeScript 7 yet). A consumer's dev server
+//   vue-tsc on TypeScript 6 (vue-tsc does not run on TypeScript 7 yet), each at the pins of its
+//   framework's examples app (examples/react, examples/vue). A consumer's dev server
 //   adds the `development` condition, which once pointed Dockable's published `exports` at
 //   sources that are not in the tarball.
 //
@@ -26,7 +27,6 @@
 // packed from the repo, as without the option.
 import { execFileSync, spawn } from "node:child_process";
 import {
-    existsSync,
     mkdirSync,
     mkdtempSync,
     readdirSync,
@@ -522,26 +522,11 @@ function save(): void {
 `;
 
 /**
- * The versions the Vue smoke app installs: examples/vue's pins, once that app exists (it comes
- * after the package); vue-tsc runs on TypeScript 6, which only these apps pin.
+ * A Vue smoke app's version of `name`: examples/vue's pin, as React's come from examples/react;
+ * vue-tsc runs on TypeScript 6, which only that app pins.
  */
-const VUE_SMOKE_VERSIONS: Readonly<Record<string, string>> = {
-    vue: "3.5.45",
-    "@vitejs/plugin-vue": "6.0.10",
-    typescript: "6.0.3",
-    vite: "8.3.1",
-    "vue-tsc": "3.3.14",
-};
-
-/** A Vue smoke app's version of `name`: examples/vue's pin when it exists, else the one above. */
 function vueVersion(name: string): string {
-    if (existsSync(join(root, "examples/vue/package.json"))) {
-        return examplesVersion("vue", name);
-    }
-    const version = VUE_SMOKE_VERSIONS[name];
-    if (version === undefined)
-        throw new Error(`no Vue smoke version of ${name}`);
-    return version;
+    return examplesVersion("vue", name);
 }
 
 /**
