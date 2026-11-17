@@ -33,7 +33,8 @@ test("drags up and down, and moves with Up and Down", async ({ page }) => {
     const value = await valueNow(separator);
     await separator.focus();
     await page.keyboard.press("ArrowDown");
-    expect(await valueNow(separator)).toBeCloseTo(value + 5, 5);
+    // polled: a framework may render after the key (Angular, zoneless)
+    await expect.poll(() => valueNow(separator)).toBeCloseTo(value + 5, 5);
     // the inline arrows do nothing on a vertical group
     await page.keyboard.press("ArrowRight");
     expect(await valueNow(separator)).toBeCloseTo(value + 5, 5);

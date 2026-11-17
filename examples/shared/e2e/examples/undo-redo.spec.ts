@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 import { openExample } from "../helpers";
 import { dragBy, valueNow } from "./helpers";
 
-// Undo and redo from `_kit/undo.ts`: a whole drag is one step, so is a key press.
+// Undo and redo from `_kit/undo.ts`: a whole drag is one step, so is a key press. A value read
+// after a click or a key is polled: a framework may render after the event (Angular, zoneless).
 
 test.beforeEach(async ({ page }) => {
     await openExample(page, "undo-redo");
@@ -27,19 +28,19 @@ test("undoes and redoes a drag and a key press, with the buttons and the shortcu
     await expect(history.getByRole("listitem")).toHaveCount(2);
 
     await undo.click();
-    expect(await valueNow(separator)).toBeCloseTo(dragged, 5);
+    await expect.poll(() => valueNow(separator)).toBeCloseTo(dragged, 5);
     await undo.click();
     await expect(separator).toHaveAttribute("aria-valuenow", "25");
     await expect(undo).toBeDisabled();
 
     await redo.click();
-    expect(await valueNow(separator)).toBeCloseTo(dragged, 5);
+    await expect.poll(() => valueNow(separator)).toBeCloseTo(dragged, 5);
 
     await page.locator("body").click({ position: { x: 2, y: 2 } });
     await page.keyboard.press("ControlOrMeta+z");
     await expect(separator).toHaveAttribute("aria-valuenow", "25");
     await page.keyboard.press("ControlOrMeta+Shift+z");
-    expect(await valueNow(separator)).toBeCloseTo(dragged, 5);
+    await expect.poll(() => valueNow(separator)).toBeCloseTo(dragged, 5);
 });
 
 test("a collapse is a step too", async ({ page }) => {
