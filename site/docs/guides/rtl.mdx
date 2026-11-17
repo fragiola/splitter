@@ -50,11 +50,15 @@ Write sides as start and end (`padding-inline-start`, `border-inline-start`; Tai
 
 ## Changing the direction at runtime
 
-The engine reads a group's direction when it binds and whenever it measures it.
-`engine.get("direction-by", { groupId })` returns it. After switching `dir` on a mounted page
-(a language picker), ask for a measure so the drags follow:
+Switching `dir` on a mounted page (a language picker) needs nothing more: the engine watches the
+`dir` attribute on each group and its ancestors, through the group's own window (so a group in
+an iframe or a popup works too), and reads the direction again when it changes. The drags and the
+keyboard follow at once; `engine.get("direction-by", { groupId })` returns it.
 
 ```ts
-document.documentElement.dir = "rtl";
-engine.run("measure", {});
+document.documentElement.dir = "rtl"; // every group under it is mirrored from now on
 ```
+
+A `dir` inside a panel's content (a paragraph in another language) is not the group's and changes
+nothing. A direction changed through CSS alone (a class that sets `direction`) is not an
+attribute: run `engine.run("measure", {})` after it.

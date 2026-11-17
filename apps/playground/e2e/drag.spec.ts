@@ -98,3 +98,15 @@ test("a click without movement commits nothing", async ({ page }) => {
     await page.waitForTimeout(100);
     expect(await commits(page)).toBe(before);
 });
+
+test("a dir switched at runtime mirrors the drag at once", async ({ page }) => {
+    await openFixture(page, "ltr");
+    await page.evaluate(() => {
+        document.documentElement.dir = "rtl";
+    });
+    // dragged toward the inline end of a right-to-left page: to the left
+    await drag(page, at(page, "/g0/s0"), "rtl", 10);
+    await expect
+        .poll(async () => rounded(await layoutOf(page)))
+        .toEqual({ a: 40, b: 40, c: 20 });
+});

@@ -35,8 +35,9 @@ or cosmetic, or another library's job), some not yet. Each comes with what to do
   React Resizable Panels' imperative API can. A middleware vetoes it if your app must not.
 - **Pixel units need a measure.** Until the engine measured a group (on the server, in Node), only
   percentages resolve, and `panel.resize` to a pixel size is `refused`.
-- **A direction set at runtime** is read when the engine measures: run `engine.run("measure", {})`
-  after switching `dir` (see [Right-to-left](/docs/guides/rtl#changing-the-direction-at-runtime)).
+- **A direction set through CSS alone** (a class that sets `direction`, no `dir` attribute) is read
+  when the engine measures: run `engine.run("measure", {})` after it. A `dir` attribute switched at
+  runtime is followed (see [Right-to-left](/docs/guides/rtl#changing-the-direction-at-runtime)).
 - **React only, for now.** Vue and Angular adapters are planned; the core is framework-free, so
   an adapter is only rendering and wiring.
 - **Separators are matched by order**, not by declaration: the n-th separator element of a group

@@ -373,6 +373,39 @@ describe("pointer drags", () => {
         expect(sizes()).toEqual([40, 60]);
     });
 
+    it("follows a dir switched at runtime on an ancestor, without a measure", async () => {
+        const { root, engine, separators, sizes } = render([
+            { id: "a" },
+            { id: "b" },
+        ]);
+        const views: EngineEvent[] = [];
+        engine.subscribe((event) => views.push(event));
+        expect(engine.get("direction-by", { groupId: "g" })).toBe("ltr");
+        // jsdom computes no direction from dir: the style gives it, the attribute triggers it
+        root.style.direction = "rtl";
+        document.body.setAttribute("dir", "rtl");
+        await Promise.resolve();
+        expect(engine.get("direction-by", { groupId: "g" })).toBe("rtl");
+        expect(views).toContainEqual({
+            type: "direction",
+            groupId: "g",
+            direction: "rtl",
+        });
+        const separator = element(separators, "a:b");
+        pointer(separator, "pointerdown", { clientX: 250 });
+        pointer(separator, "pointermove", { clientX: 300 });
+        pointer(separator, "pointerup", { clientX: 300 });
+        expect(sizes()).toEqual([40, 60]);
+        // a dir inside the group's content is not the group's
+        root.style.direction = "ltr";
+        const inner = document.createElement("p");
+        root.append(inner);
+        inner.setAttribute("dir", "ltr");
+        await Promise.resolve();
+        expect(engine.get("direction-by", { groupId: "g" })).toBe("rtl");
+        document.body.removeAttribute("dir");
+    });
+
     it("drags a vertical group along y", () => {
         const { separators, sizes } = render([{ id: "a" }, { id: "b" }], {
             orientation: "vertical",

@@ -52,31 +52,19 @@ test("the group remembers the sizes of each set of panels", async ({
     const resizeSidebar = page.getByRole("separator", {
         name: "Resize sidebar",
     });
-    await expect(resizeSidebar).toHaveAttribute(
-        "aria-valuenow",
-        /^25(\.0+\d*)?$/,
-    );
+    await expect(resizeSidebar).toHaveAttribute("aria-valuenow", "25");
     await resizeSidebar.focus();
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("ArrowRight");
-    await expect(resizeSidebar).toHaveAttribute(
-        "aria-valuenow",
-        /^(35(\.0+\d*)?|34\.9+\d*)$/,
-    );
+    await expect(resizeSidebar).toHaveAttribute("aria-valuenow", "35");
 
     // a set never seen: its default layout
     await inspector.click();
     await expect(part(page, "panel")).toHaveCount(2);
-    await expect(resizeSidebar).toHaveAttribute(
-        "aria-valuenow",
-        /^25(\.0+\d*)?$/,
-    );
+    await expect(resizeSidebar).toHaveAttribute("aria-valuenow", "25");
 
     // the set of three again: the sizes it had
     await inspector.click();
     await expect(part(page, "panel")).toHaveCount(3);
-    await expect(resizeSidebar).toHaveAttribute(
-        "aria-valuenow",
-        /^(35(\.0+\d*)?|34\.9+\d*)$/,
-    );
+    await expect(resizeSidebar).toHaveAttribute("aria-valuenow", "35");
 });

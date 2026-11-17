@@ -45,7 +45,8 @@ export interface SplitterEngineOptions {
 export interface SplitterEngineAdapter {
     /**
      * binds a group to its element: the engine measures it (with the element's window's
-     * `ResizeObserver`), reads its direction, and reports both
+     * `ResizeObserver`), reads its direction (again whenever a `dir` attribute changes on it or an
+     * ancestor, with the window's `MutationObserver`), and reports both
      */
     bindGroup(groupId: string, element: HTMLElement): () => void;
     /** binds a panel to its element: its size is part of its group's measure */
@@ -154,14 +155,28 @@ interface SizeObserver {
     disconnect(): void;
 }
 
-/** A window, as far as its size observer goes (absent in jsdom and old browsers). */
+/** The attribute observer of an element's own window: what `dir` changes. */
+interface AttributeObserver {
+    observe(
+        target: Node,
+        options: { attributeFilter: string[]; subtree: boolean },
+    ): void;
+    disconnect(): void;
+}
+
+/** A window, as far as its observers go (each absent in jsdom or old browsers). */
 interface ObservingView {
     readonly ResizeObserver?: new (callback: () => void) => SizeObserver;
+    readonly MutationObserver?: new (
+        callback: (records: readonly { readonly target: Node }[]) => void,
+    ) => AttributeObserver;
 }
 
 interface BoundGroup {
     readonly element: HTMLElement;
     readonly observer: SizeObserver | undefined;
+    /** watches `dir` on the group and its ancestors: a flip mirrors it without resizing it */
+    readonly dirObserver: AttributeObserver | undefined;
     direction: "ltr" | "rtl";
 }
 
@@ -512,9 +527,25 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
               })
             : undefined;
         observer?.observe(element);
+        // a `dir` set on the group or above it changes its direction without resizing it, so the
+        // size observer misses it (a `dir` inside a panel's content is not the group's)
+        const DirObserver = (view as ObservingView | undefined)
+            ?.MutationObserver;
+        const dirObserver = DirObserver
+            ? new DirObserver((records) => {
+                  if (records.some(({ target }) => target.contains(element))) {
+                      this.measure(groupId, false);
+                  }
+              })
+            : undefined;
+        dirObserver?.observe(element.ownerDocument, {
+            attributeFilter: ["dir"],
+            subtree: true,
+        });
         const bound: BoundGroup = {
             element,
             observer,
+            dirObserver,
             direction: directionOf(element),
         };
         this.groups.set(groupId, bound);
@@ -536,6 +567,7 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
         const bound = this.groups.get(groupId);
         if (bound) {
             bound.observer?.disconnect();
+            bound.dirObserver?.disconnect();
             this.groups.delete(groupId);
         }
         if (this.groups.size === 0) {
