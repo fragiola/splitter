@@ -109,17 +109,20 @@ export function groupJsonOf(
 }
 
 /**
- * The document of a state: each registered group's layout, which of its panels are collapsed and
- * their restore sizes, then the saved groups not registered yet, as loaded.
+ * The document of a state: what the user changed. Each registered group whose layout is not the
+ * default one (a default layout is derived again from the markup and the measure), with which of
+ * its panels are collapsed and their restore sizes; then the saved groups not applied yet, as
+ * loaded.
  */
 export function toSplitterJson(state: SplitterState): SplitterJson {
     const reader = readerOf(state);
-    const groups: GroupJson[] = Object.values(state.groups).map((group) =>
-        groupJsonOf(reader, group),
-    );
-    for (const [id, saved] of Object.entries(state.pending)) {
-        if (!Object.hasOwn(state.groups, id)) {
-            groups.push(structuredCopy(saved));
+    const groups: GroupJson[] = Object.values(state.groups)
+        .filter((group) => !group.pristine)
+        .map((group) => groupJsonOf(reader, group));
+    const saved = new Set(groups.map(({ id }) => id));
+    for (const [id, group] of Object.entries(state.pending)) {
+        if (!saved.has(id)) {
+            groups.push(structuredCopy(group));
         }
     }
     return { version: 1, groups };

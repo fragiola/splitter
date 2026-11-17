@@ -292,8 +292,8 @@ describe("registering groups and panels", () => {
         });
         expect(sizes(model, "outer")).toEqual([25, 75]);
         expect(sizes(model, "inner")).toEqual([90, 10]);
+        // the document holds what the user changed: the outer layout is still the default
         expect(model.get("splitter-json").groups.map(({ id }) => id)).toEqual([
-            "outer",
             "inner",
         ]);
         // removing the outer group leaves the nested one: it unregisters on its own

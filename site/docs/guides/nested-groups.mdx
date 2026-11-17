@@ -46,7 +46,7 @@ it a block like any other (see [Sizing the group](/docs/getting-started/sizing))
 ## What nesting shares
 
 - **One model.** `model.get("groups")` lists both groups, and `model.get("splitter-json")`
-  saves both layouts in one document. Ids are unique across the whole model, not per group.
+  saves both layouts in one document (each once it is not its default one). Ids are unique across the whole model, not per group.
 - **One engine.** It measures every group and runs every drag; each separator resizes its own
   group only.
 - **One root.** The outermost group owns the model, reads `keyboardStep` and

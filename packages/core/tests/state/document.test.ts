@@ -123,6 +123,47 @@ describe("the JSON document", () => {
         });
     });
 
+    it("leaves out a group the user did not change, so its default is derived again", () => {
+        const markup: PanelSpec[] = [
+            { id: "a", defaultSize: "200px" },
+            { id: "b" },
+        ];
+        const model = group(markup);
+        expect(model.get("splitter-json")).toEqual({ version: 1, groups: [] });
+        // saved before the measure, restored at another size: 200px of 1000px
+        const restored = group(markup, {
+            json: model.get("splitter-json"),
+            axisSize: 1000,
+        });
+        expect(sizes(restored)).toEqual([20, 80]);
+        expect(restored.get("group-by", { id: "g" })?.pristine).toBe(true);
+        // a reset makes it the default again
+        restored.run("panel.resize", { panelId: "a", size: "50%" });
+        expect(restored.get("splitter-json").groups).toHaveLength(1);
+        restored.run("group.reset", { groupId: "g" });
+        expect(restored.get("splitter-json")).toEqual({
+            version: 1,
+            groups: [],
+        });
+    });
+
+    it("keeps a saved group whose panels have not all registered", () => {
+        const json: SplitterJson = {
+            version: 1,
+            groups: [
+                {
+                    id: "g",
+                    panels: [
+                        { id: "a", size: 30 },
+                        { id: "b", size: 70 },
+                    ],
+                },
+            ],
+        };
+        const model = group([{ id: "a" }], { json });
+        expect(model.get("splitter-json")).toEqual(json);
+    });
+
     it("round-trips: a new model with the same markup restores the same layout", () => {
         const model = group(MARKUP, { axisSize: 1000 });
         model.run("panel.resize", { panelId: "aside", size: "35%" });

@@ -100,7 +100,8 @@ The example's `_kit/persistence.ts` is the same code as small helpers (`load`, `
 
 ## Panels that are not in the document
 
-A declared panel the document does not name takes its `defaultSize`. A saved group whose panels
+A declared panel the document does not name takes its `defaultSize`, and a group the user never
+changed is not in the document at all: it starts from its defaults again. A saved group whose panels
 have not all registered yet waits: its layout applies once the group holds exactly its saved
 panels. Until then `splitter-json` writes it back as it was loaded, so saving a page that does
 not render every group does not lose the others' layouts.

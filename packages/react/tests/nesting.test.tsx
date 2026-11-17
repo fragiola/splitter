@@ -70,6 +70,18 @@ describe("nested groups", () => {
         expect(model?.get("group-by", { id: "inner" })?.parentPanelId).toBe(
             "b",
         );
+        // nothing changed yet: the document saves no group
+        expect(model?.get("splitter-json").groups).toHaveLength(0);
+        act(() => {
+            model?.run("group.set-layout", {
+                groupId: "inner",
+                layout: { x: 30, y: 70 },
+            });
+            model?.run("group.set-layout", {
+                groupId: "outer",
+                layout: { a: 40, b: 60 },
+            });
+        });
         expect(model?.get("splitter-json").groups).toHaveLength(2);
     });
 
@@ -160,13 +172,6 @@ describe("the external ref", () => {
         );
         const held = outside as SplitterContextValue | null;
         expect(held?.groupId).toBe("outer");
-        // the whole nested layout, in one model
-        expect(
-            held?.model
-                .get("splitter-json")
-                .groups.map(({ id }) => id)
-                .sort(),
-        ).toEqual(["inner", "outer"]);
         act(() => {
             held?.model.run("panel.resize", { panelId: "nav", size: "30%" });
         });
@@ -174,6 +179,10 @@ describe("the external ref", () => {
             nav: 30,
             main: 70,
         });
+        // the whole nested layout, in one model
+        expect(
+            held?.model.get("splitter-json").groups.map(({ id }) => id),
+        ).toEqual(["outer"]);
         rerender(
             <StrictMode>
                 <App mounted={false} />

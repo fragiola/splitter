@@ -232,8 +232,8 @@ copyright line and the MIT licence, and the guard test lists it.
     (`pristine`); a pristine layout is derived again when constraints or the measure change.
   - **Document v1:** `{ version: 1, groups: [{ id, panels: [{ id, size, collapsed?, restoreSize? }] }] }`,
     ids required (they must match the markup, so none is generated at load). A loaded group is
-    pending until its panels register; `splitter-json` writes registered groups, then pending ones
-    as loaded (stable round trip). A collapsed saved panel comes back at its current collapsed size.
+    pending until its panels register; `splitter-json` writes registered groups (not pristine
+    ones, see the review fixes), then pending ones as loaded (stable round trip). A collapsed saved panel comes back at its current collapsed size.
     `__proto__` is refused as an id.
   - **Units:** a percentage resolves with no measure; px, em, rem, vh and vw need `group.measure`
     (axis size = sum of the panels' layout sizes, the group's font size for `em`, the root's for
@@ -454,3 +454,8 @@ copyright line and the MIT licence, and the guard test lists it.
     Resizable Panels records none for a drag). Keeping `pristine` through transient steps was
     tried and dropped: the engine measures the group again mid-drag (the panels resize), and a
     pristine layout is derived again on a measure, which reset the drag.
+  - **The document leaves out pristine groups** (D4, "what the user changed"): a group with a
+    default layout comes back from the markup, so a `px`/`em`/`rem` `defaultSize` is derived again
+    at load instead of frozen in percent. A registered pristine group whose saved entry is still
+    pending is written as loaded. A `group.reset` group drops out of the document (with its restore
+    sizes: they go with the layout the user changed).

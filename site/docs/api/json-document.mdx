@@ -6,7 +6,9 @@ description: The saved layout as JSON, version 1, with every group's panel sizes
 The JSON document is what the user changed: each group's layout by explicit ids, which panels
 are collapsed, and the size each returns to on expand. `model.get("splitter-json")` writes it,
 `createSplitterModel(json)` restores it, and a round trip is stable. Constraints are not part of
-it: they come back with the markup.
+it: they come back with the markup. A group whose layout is still its default one (nobody resized
+it, or `group.reset` put it back) is left out: its default comes back from the markup, so a
+`defaultSize` in `px`, `em` or `rem` is derived again from the group's size on screen.
 
 ```json
 {
@@ -35,7 +37,7 @@ it: they come back with the markup.
 | field | type | description |
 | --- | --- | --- |
 | `version` | `1` | the document's version |
-| `groups` | `GroupJson[]` | the saved groups |
+| `groups` | `GroupJson[]` | the saved groups: those whose layout is not the default one |
 
 ## `GroupJson`
 
