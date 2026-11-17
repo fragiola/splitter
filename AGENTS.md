@@ -786,3 +786,39 @@ copyright line and the MIT licence, and the guard test lists it.
   - **Specs** (`e2e/examples/separator-*.spec.ts`) read computed styles and boxes and poll
     (`expect.poll`), never a fixed wait: the sash's delay is read as `transitionDelay` and its
     width polled until 4px.
+- **Issue #20 (Epic #22, email client and markdown editor):**
+  - **Two apps** in `apps` (orders 2 and 3, after `ide-layout`, height 560), in React, Vue and
+    Angular with React's `styles.ts` and plain-TS siblings byte for byte (`email-client/messages.ts`,
+    `markdown-editor/render.ts` and `sample.ts`); the second component is a kebab-case sibling in
+    Vue and Angular (`email-client/toolbar.vue|ts`, `markdown-editor/view-modes.vue|ts`). Both use
+    the theme's separator (the shared `separator` class), so they take each theme's shape.
+  - **`email-client`:** one group `mail` given both the restored `model` (`_kit/persistence.ts`,
+    key `fragiola-splitter:email-client`, validated with `validateSplitter`, as
+    `persistent-layout`) and an external ref for the toolbar's "Folders" toggle (`aria-pressed`
+    from `useSplitterState`). Folders: `defaultSize="13rem"`, `minSize="10rem"`, `maxSize="30%"`,
+    `collapsible`, `collapsedSize="3.25rem"`; their buttons keep an `aria-label` while the labels
+    and unread counts hide (`in-data-collapsed:hidden`). Message list: `defaultSize={320}`,
+    `minSize={240}`, `maxSize={440}`. Folders and list are `preserve-pixel-size`, so the reader
+    (`minSize="30%"`) takes a window resize. Selected and unread messages are `data-active` /
+    `data-unread` (`aria-current` for the open one and the open folder).
+  - **`markdown-editor`:** the mode is read from the model (`useSplitterState`: a collapsed editor is
+    Preview, a collapsed preview is Editor, else Split), so a drag that collapses a pane presses its
+    button. A button runs one `batch`: `panel.expand` of what the mode shows, then
+    `panel.collapse` of what it hides; Split expands back to the size the pane had (its restore
+    size), not to the defaults (`group.reset` would lose the user's split). The segmented control is
+    a `<fieldset aria-label="Mode">` (Biome's `useSemanticElements` refuses `role="group"`); the
+    "Stacked" switch sets the group's `orientation`, and the layout, in percent, is kept.
+  - **The preview is HTML from `render.ts`** (headings, paragraphs, lists, fenced code, inline code,
+    bold, italic; no library): it escapes every piece of the source before adding its own tags,
+    which carry no attribute, so the string is safe by construction. React sets it with
+    `dangerouslySetInnerHTML` (a `biome-ignore` names the reason), Vue with `v-html`, Angular with
+    `[innerHTML]` (its sanitizer keeps those tags as they are): the same output in the three
+    frameworks, simpler than a node tree rendered three times. `examples/react/tests/
+    markdown-render.test.ts` checks the escaping (only the renderer's tags, no attribute, in every
+    construct) and the rendering.
+  - **Specs:** `email-client` waits for the list's default 320px before a drag (the px/rem layout
+    exists once the group is measured; under load in Vue a drag started earlier missed the
+    separator), then reads boxes with `expect.poll`; the viewport resize is
+    `page.setViewportSize`. `markdown-editor` checks the modes, the orientation (group
+    `data-orientation`, separator `aria-orientation`, `aria-valuenow` kept, stacked boxes) and that
+    typed HTML shows as text with no element or handler. No gap needed a workaround.
