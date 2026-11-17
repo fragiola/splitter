@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { atPath, openExample } from "../helpers";
-import { dragBy, extentOf, near, valueNow } from "./helpers";
+import { dragBy, extentOf, near, rendered, valueNow } from "./helpers";
 
 // A vertical group: its separator is horizontal, drags along the block axis and answers Up and
 // Down.
@@ -37,5 +37,6 @@ test("drags up and down, and moves with Up and Down", async ({ page }) => {
     await expect.poll(() => valueNow(separator)).toBeCloseTo(value + 5, 5);
     // the inline arrows do nothing on a vertical group
     await page.keyboard.press("ArrowRight");
+    await rendered(page);
     expect(await valueNow(separator)).toBeCloseTo(value + 5, 5);
 });

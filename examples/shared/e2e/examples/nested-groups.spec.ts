@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { atPath, openExample } from "../helpers";
-import { dragBy, extentOf, near, valueNow } from "./helpers";
+import { dragBy, extentOf, near, rendered, valueNow } from "./helpers";
 
 // A group nested in a panel: its path starts with the panel's, and each separator resizes its own
 // group only.
@@ -26,12 +26,14 @@ test("each separator resizes its own group", async ({ page }) => {
     const innerValue = await valueNow(inner);
     const sidebarWidth = await extentOf(sidebar);
     await dragBy(page, outer, 80, 0);
+    await rendered(page);
     near(await extentOf(sidebar), sidebarWidth + 80, 2);
     expect(await valueNow(inner)).toBe(innerValue);
 
     const outerValue = await valueNow(outer);
     const editorHeight = await extentOf(editor, "height");
     await dragBy(page, inner, 0, -50);
+    await rendered(page);
     near(await extentOf(editor, "height"), editorHeight - 50, 2);
     expect(await valueNow(outer)).toBe(outerValue);
 });

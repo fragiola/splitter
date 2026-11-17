@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openExample } from "../helpers";
-import { dragBy, valueNow } from "./helpers";
+import { dragBy, rendered, valueNow } from "./helpers";
 
 // A disabled panel, a disabled separator and a disabled group: none of them moves.
 
@@ -14,6 +14,7 @@ test("a disabled panel is not moved by the separator beside it", async ({
     const separator = page.getByRole("separator", { name: "Resize toolbox" });
     const value = await valueNow(separator);
     await dragBy(page, separator, 80, 0);
+    await rendered(page);
     expect(await valueNow(separator)).toBe(value);
 });
 
@@ -26,6 +27,7 @@ test("a disabled separator says so, leaves the tab order and ignores the pointer
     await expect(separator).not.toHaveAttribute("tabindex");
     const value = await valueNow(separator);
     await dragBy(page, separator, -80, 0);
+    await rendered(page);
     expect(await valueNow(separator)).toBe(value);
 });
 
@@ -41,5 +43,6 @@ test("locking the group disables every separator", async ({ page }) => {
     }
     const locked = await valueNow(canvas);
     await dragBy(page, canvas, -60, 0);
+    await rendered(page);
     expect(await valueNow(canvas)).toBe(locked);
 });

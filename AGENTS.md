@@ -702,6 +702,10 @@ copyright line and the MIT licence, and the guard test lists it.
     poll (`expect.poll`): `undo-redo` (after Undo / Redo and the shortcuts), `keyboard` (after
     Home) and `vertical` (after ArrowDown). React and Vue pass them as before; no other spec
     changed, and no library change was needed.
+    A read that must find nothing changed cannot poll (it would pass at once): it first waits for
+    two animation frames (`rendered(page)` in `e2e/examples/helpers.ts`), so a change that was
+    going to render has rendered (review): `vertical` (ArrowRight), `disabled-panels` (the three
+    drags that must not move) and `nested-groups` (each drag, before the other group's value).
   - **Ports:** the Angular embed's dev server is 5186 (React 5184, Vue 5185); its e2e server 4342
     (4340 + its index in `FRAMEWORKS`).
   - **Site:** `project.json` `frameworks` is `["react", "vue", "angular"]`; the keywords stay at the
