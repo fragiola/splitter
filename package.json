@@ -23,7 +23,9 @@
         "check:fix": "biome check --write",
         "typecheck": "pnpm -r typecheck",
         "test": "vitest run",
-        "build": "pnpm -r build && node scripts/check-dts.ts"
+        "build": "pnpm -r build && node scripts/check-dts.ts",
+        "e2e": "pnpm --workspace-concurrency=1 --filter playground --filter \"./examples/*\" e2e",
+        "dev": "pnpm --filter playground dev"
     },
     "devDependencies": {
         "@biomejs/biome": "2.5.14",

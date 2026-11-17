@@ -2,9 +2,16 @@
 #
 #   Checks   Biome and the source layout check, TypeScript, the unit tests and the build (with the
 #            .d.ts check), on every pull request and every push to main.
+#   E2E      the Playwright suites, in parallel jobs: the playground (Chromium and Firefox: the
+#            shell, the scenarios and the unstyled fixtures), and one job per framework's examples
+#            app (every `examples/<framework>` with a playwright.config.ts, found by the Examples
+#            apps job), each running the shared specs of examples/shared/e2e against its own embed.
+#            The playground's dev server serves the packages from source, so its job builds
+#            nothing; an examples suite builds its embed against the packages' dist, so its job
+#            builds the packages.
 #
-# The jobs that need what later Issues add join as it lands: the Playwright suites (playground and
-# each examples app), the site export, the package check, the changeset check and the www trigger.
+# The jobs that need what later Issues add join as it lands: the site export, the package check,
+# the changeset check and the www trigger.
 
 name: CI
 
@@ -45,3 +52,88 @@ jobs:
       - run: pnpm test
 
       - run: pnpm build
+
+  e2e:
+    name: E2E (playground)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: apps/playground
+        run: pnpm exec playwright install --with-deps chromium firefox
+
+      - name: Run Playwright
+        run: pnpm --filter playground run e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-playground
+          path: apps/playground/playwright-report/
+          retention-days: 14
+
+  # The frameworks that have an examples app: every examples/<framework> with a playwright.config.ts
+  # (examples/shared, the specs every framework runs, has none). Adding an app adds its job.
+  examples-apps:
+    name: Examples apps
+    runs-on: ubuntu-latest
+    outputs:
+      frameworks: ${{ steps.list.outputs.frameworks }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: list
+        run: |
+          frameworks=$(ls examples/*/playwright.config.ts | cut -d/ -f2 | jq -Rnc '[inputs]')
+          echo "frameworks=$frameworks" >> "$GITHUB_OUTPUT"
+          echo "examples apps: $frameworks"
+
+  e2e-examples:
+    name: E2E (examples ${{ matrix.framework }})
+    needs: examples-apps
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        framework: ${{ fromJson(needs.examples-apps.outputs.frameworks) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The examples suite builds the embed against the packages' dist (examplesE2eConfig).
+      - name: Build the packages
+        run: pnpm --filter "./packages/*" build
+
+      - name: Install Playwright Chromium
+        working-directory: examples/${{ matrix.framework }}
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Playwright
+        run: pnpm --filter examples-${{ matrix.framework }} run e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-examples-${{ matrix.framework }}
+          path: examples/${{ matrix.framework }}/playwright-report/
+          retention-days: 14
