@@ -184,6 +184,49 @@ describe("prop changes become commands", () => {
             true,
         );
     });
+
+    it("a separator's prop back to undefined sends its default", () => {
+        const model = createSplitterModel();
+        function App(props: { disabled?: boolean; reset?: boolean }) {
+            return (
+                <Splitter.Group id="g" model={model}>
+                    <Splitter.Panel id="a" />
+                    <Splitter.Separator
+                        disabled={props.disabled}
+                        resetOnDoubleClick={props.reset}
+                    />
+                    <Splitter.Panel id="b" />
+                </Splitter.Group>
+            );
+        }
+        const { container, rerender } = render(<App disabled reset={false} />);
+        expect(model.is("separator-disabled", { separatorId: "a:b" })).toBe(
+            true,
+        );
+        const sent = commandsOf(model);
+        rerender(<App reset={false} />);
+        expect(sent()).toEqual([
+            {
+                command: "separator.update",
+                payload: { separatorId: "a:b", disabled: false },
+            },
+        ]);
+        expect(model.is("separator-disabled", { separatorId: "a:b" })).toBe(
+            false,
+        );
+        expect(at(container, "/g0/s0").hasAttribute("data-disabled")).toBe(
+            false,
+        );
+        rerender(<App />);
+        expect(sent()).toEqual([
+            {
+                command: "separator.update",
+                payload: { separatorId: "a:b", resetOnDoubleClick: true },
+            },
+        ]);
+        rerender(<App />);
+        expect(sent()).toEqual([]);
+    });
 });
 
 describe("the adapter's commands", () => {
@@ -199,7 +242,7 @@ describe("the adapter's commands", () => {
             return (
                 <Splitter.Group id="g" model={model} layout={props.layout}>
                     <Splitter.Panel id="a" minSize={props.min} />
-                    <Splitter.Separator disabled={props.third === true} />
+                    <Splitter.Separator disabled={props.third} />
                     <Splitter.Panel id="b" />
                     {props.third && (
                         <>

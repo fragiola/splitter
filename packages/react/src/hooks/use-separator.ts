@@ -72,21 +72,47 @@ export function useSeparator(
     );
 
     const { disabled, resetOnDoubleClick } = options;
+    // what was sent for the current separator id: only the changes are sent, and a prop going
+    // back to undefined sends its default
+    const sent = React.useRef<{
+        separatorId: string | undefined;
+        disabled?: boolean;
+        resetOnDoubleClick?: boolean;
+    }>({ separatorId: undefined });
     React.useLayoutEffect(() => {
+        if (sent.current.separatorId !== separatorId) {
+            sent.current = { separatorId };
+        }
+        if (separatorId === undefined) {
+            return;
+        }
+        const previous = sent.current;
+        const nextDisabled =
+            disabled ?? (previous.disabled === undefined ? undefined : false);
+        const nextReset =
+            resetOnDoubleClick ??
+            (previous.resetOnDoubleClick === undefined ? undefined : true);
         if (
-            separatorId === undefined ||
-            (disabled === undefined && resetOnDoubleClick === undefined)
+            nextDisabled === previous.disabled &&
+            nextReset === previous.resetOnDoubleClick
         ) {
             return;
         }
+        sent.current = {
+            separatorId,
+            ...(disabled === undefined ? {} : { disabled }),
+            ...(resetOnDoubleClick === undefined ? {} : { resetOnDoubleClick }),
+        };
         model.run(
             "separator.update",
             {
                 separatorId,
-                ...(disabled === undefined ? {} : { disabled }),
-                ...(resetOnDoubleClick === undefined
+                ...(nextDisabled === previous.disabled
                     ? {}
-                    : { resetOnDoubleClick }),
+                    : { disabled: nextDisabled }),
+                ...(nextReset === previous.resetOnDoubleClick
+                    ? {}
+                    : { resetOnDoubleClick: nextReset }),
             },
             ADAPTER_RUN,
         );
