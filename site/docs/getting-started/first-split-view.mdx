@@ -85,7 +85,7 @@ vertical group needs a height.
 
 `onLayoutChange` receives the layout (each panel's size in percent, by panel id) on every
 change, drag steps included; `onLayoutCommit` only when a change is final: a drag released, a key
-pressed, a command run.
+pressed, a command run (not the layout the group registers with).
 
 ```tsx
 import { type Layout, Splitter } from "@fragiola/splitter-react";

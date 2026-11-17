@@ -1,6 +1,6 @@
 import { act, render } from "@testing-library/react";
 import { StrictMode } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
     createSplitterModel,
     createSplitterRef,
@@ -201,5 +201,54 @@ describe("the external ref", () => {
         ).toEqual({ editor: 75, terminal: 25 });
         unmount();
         expect(splitterRef.current).toBeNull();
+    });
+});
+
+describe("onLayoutCommit in nested groups", () => {
+    it("fires for a commit of its own group only", () => {
+        const outer = vi.fn();
+        const inner = vi.fn();
+        const model = createSplitterModel();
+        render(
+            <Splitter.Group id="g" model={model} onLayoutCommit={outer}>
+                <Splitter.Panel id="a" />
+                <Splitter.Separator />
+                <Splitter.Panel id="b">
+                    <Splitter.Group id="h" onLayoutCommit={inner}>
+                        <Splitter.Panel id="c" />
+                        <Splitter.Separator />
+                        <Splitter.Panel id="d" />
+                    </Splitter.Group>
+                </Splitter.Panel>
+            </Splitter.Group>,
+        );
+        // registering is not a commit
+        expect(outer).not.toHaveBeenCalled();
+        expect(inner).not.toHaveBeenCalled();
+        // a drag step of the outer group, then a commit of the inner one
+        act(() => {
+            model.run(
+                "separator.move",
+                { separatorId: "a:b", delta: 10 },
+                { transient: true },
+            );
+        });
+        act(() => {
+            model.run("group.set-layout", {
+                groupId: "h",
+                layout: { c: 10, d: 90 },
+            });
+        });
+        expect(outer).not.toHaveBeenCalled();
+        expect(inner.mock.calls).toEqual([[{ c: 10, d: 90 }]]);
+        // the outer group's own commit, at the layout its step reached
+        act(() => {
+            model.run("separator.move", {
+                separatorId: "a:b",
+                delta: 10,
+                origin: { a: 50, b: 50 },
+            });
+        });
+        expect(outer.mock.calls).toEqual([[{ a: 60, b: 40 }]]);
     });
 });

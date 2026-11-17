@@ -41,7 +41,7 @@ component.
 | `layout` | `Layout` | none | the layout (each panel's size in percent, by panel id), applied when the group registers and whenever its values change to other than the model's layout (`group.set-layout`); pair it with `onLayoutChange` |
 | `defaultLayout` | `Layout` | none | the layout it starts with, unless the model has a saved one for it |
 | `onLayoutChange` | `(layout: Readonly<Layout>) => void` | none | the layout changed: on every commit, drag steps and the registration included |
-| `onLayoutCommit` | `(layout: Readonly<Layout>) => void` | none | a layout was committed: a drag released, a key pressed, a command run (never a drag step) |
+| `onLayoutCommit` | `(layout: Readonly<Layout>) => void` | none | this group's layout was committed: a drag released, a key pressed, a command run (never a drag step, another group's commit, nor what the markup runs: registering, a controlled `layout`) |
 | `splitterRef` | `SplitterRef` | none | gives code outside the group its model and engine (a root group only); see [External ref](/docs/api/external-ref) |
 | `keyboardStep` | `number` | `5` | how far an arrow key moves a separator, in percent (a root group only, read once) |
 | `resetOnDoubleClick` | `boolean` | `true` | a double click on a separator resets its panel (a root group only, read once) |

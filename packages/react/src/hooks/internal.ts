@@ -1,8 +1,10 @@
 import {
     attachSplitterRef,
     type BatchEntry,
+    type CommandEvent,
     createSplitterEngine,
     createSplitterModel,
+    type GroupState,
     type Layout,
     type Orientation,
     type SplitterEngine,
@@ -88,6 +90,41 @@ export interface GroupRootOptions {
     resetOnDoubleClick?: boolean | undefined;
 }
 
+/**
+ * Whether a commit is about this group: it changed the group's layout, or it names the group, one
+ * of its panels or one of its separators (a drag's release may land on the layout its last step
+ * already reached).
+ */
+function commitsGroup(event: CommandEvent, group: GroupState): boolean {
+    const before = Object.hasOwn(event.before.groups, group.id)
+        ? event.before.groups[group.id]
+        : undefined;
+    if (!before || !shallowEqual(before.layout, group.layout)) {
+        return true;
+    }
+    const separatorIds = group.panelIds
+        .slice(1)
+        .map((panelId, i) => `${group.panelIds[i]}:${panelId}`);
+    const payloads = event.commands
+        ? event.commands.map(({ payload }) => payload)
+        : [event.payload];
+    return payloads.some((payload) => {
+        if (typeof payload !== "object" || payload === null) {
+            return false;
+        }
+        const { groupId, panelId, separatorId } = payload as Record<
+            string,
+            unknown
+        >;
+        return (
+            groupId === group.id ||
+            (typeof panelId === "string" && group.panelIds.includes(panelId)) ||
+            (typeof separatorId === "string" &&
+                separatorIds.includes(separatorId))
+        );
+    });
+}
+
 function hasPending(model: SplitterModel, groupId: string): boolean {
     return Object.hasOwn(model.get("state").pending, groupId);
 }
@@ -147,15 +184,19 @@ export function useGroupRoot(options: GroupRootOptions): GroupContextValue {
     );
 
     // onLayoutChange on every commit that changes the layout (drag steps included), onLayoutCommit
-    // on every non-transient commit that leaves another layout than the last one committed
+    // on every non-transient commit of the user or the app that settles this group's layout on
+    // another one than the last committed (the markup's commands, registration included, only
+    // move that baseline)
     React.useLayoutEffect(() => {
         let changed: Readonly<Layout> | undefined;
         let committed: Readonly<Layout> | undefined;
-        return model.subscribe(({ after, transient }) => {
+        return model.subscribe((event) => {
+            const { after, transient } = event;
             const group = Object.hasOwn(after.groups, groupId)
                 ? after.groups[groupId]
                 : undefined;
             if (!group) {
+                committed = undefined;
                 return;
             }
             const { layout } = group;
@@ -163,7 +204,17 @@ export function useGroupRoot(options: GroupRootOptions): GroupContextValue {
                 changed = layout;
                 latest.current.onLayoutChange?.(layout);
             }
-            if (!transient && !shallowEqual(layout, committed)) {
+            if (transient) {
+                return;
+            }
+            if (event.meta?.source === "adapter") {
+                committed = layout;
+                return;
+            }
+            if (
+                !shallowEqual(layout, committed) &&
+                commitsGroup(event, group)
+            ) {
                 committed = layout;
                 latest.current.onLayoutCommit?.(layout);
             }

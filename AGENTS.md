@@ -296,8 +296,10 @@ copyright line and the MIT licence, and the guard test lists it.
     drag steps stay transient and a veto's restore holds); the adapter does not snap the model back when the parent ignores `onLayoutChange`
     (that would fight a drag mid-gesture). A middleware vetoes changes the app refuses.
     `onLayoutChange` fires on every commit that changes the layout (drag steps and the registration
-    included), `onLayoutCommit` on every non-transient commit that leaves a layout other than the
-    last one committed.
+    included), `onLayoutCommit` on every non-transient commit that is about the group (it changes
+    its layout, or names the group, one of its panels or separators) and leaves a layout other
+    than the last one committed; the markup's commands (`meta.source: "adapter"`: registration, a
+    controlled `layout`) only move that baseline, so mounting fires no commit.
   - **Structural style:** group `display: flex`, `flex-direction`, `flex-wrap: nowrap`; panel
     `flex: <size> 1 0`, `overflow: hidden`; separator `flex-grow: 0`, `flex-shrink: 0`,
     `touch-action: none` (pointer drags on touch screens need it). Before a panel's size is known

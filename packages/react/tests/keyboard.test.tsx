@@ -96,9 +96,9 @@ describe("the keyboard", () => {
                 onLayoutCommit={onLayoutCommit}
             />,
         );
-        // the layout it registered with
+        // the layout it registered with is a change, not a commit
         expect(onLayoutChange).toHaveBeenLastCalledWith({ a: 50, b: 50 });
-        expect(onLayoutCommit).toHaveBeenLastCalledWith({ a: 50, b: 50 });
+        expect(onLayoutCommit).not.toHaveBeenCalled();
         act(() => press(at(container, "/g0/s0"), "ArrowRight"));
         expect(onLayoutChange).toHaveBeenLastCalledWith({ a: 55, b: 45 });
         expect(onLayoutCommit).toHaveBeenLastCalledWith({ a: 55, b: 45 });
