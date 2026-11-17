@@ -403,4 +403,14 @@ describe("the command bus", () => {
             expect(info.resultSchema.type).toBe("object");
         }
     });
+
+    it("describes the layout a panel set change leads to (S1)", () => {
+        const commands = createSplitterModel().get("commands");
+        for (const name of ["panel.add", "panel.remove"]) {
+            const description =
+                commands.find((info) => info.name === name)?.description ?? "";
+            expect(description).toMatch(/last had with (these|its) panels/);
+            expect(description).toMatch(/default layout/);
+        }
+    });
 });

@@ -101,7 +101,7 @@ function resolvedOf(draft: Draft, group: GroupState, panelId: string) {
 export const panelAdd = defineCommand({
     name: "panel.add",
     description:
-        "Registers a panel in a group, with its constraints as declared (sizes: a number is px; a string carries its unit, %, px, em, rem, vh or vw; a string without one is %). Panels sort by order (their document position), so a panel rendered conditionally lands in its place. The group's layout becomes its default layout, or the saved one once the group holds exactly its saved panels.",
+        "Registers a panel in a group, with its constraints as declared (sizes: a number is px; a string carries its unit, %, px, em, rem, vh or vw; a string without one is %). Panels sort by order (their document position), so a panel rendered conditionally lands in its place. The group's layout becomes the saved one once the group holds exactly its saved panels, else the layout the group last had with its panels (the one it leaves is remembered for the panel set it had), else its default layout.",
     transient: false,
     payloadSchema: {
         type: "object",
@@ -208,7 +208,7 @@ export const panelUpdate = defineCommand({
 export const panelRemove = defineCommand({
     name: "panel.remove",
     description:
-        "Unregisters a panel. Its group's layout becomes the default layout of the panels left.",
+        "Unregisters a panel. Its group's layout becomes the saved one when the group now holds exactly its saved panels, else the layout the group last had with these panels (the one it leaves is remembered for the panel set it had, so the panel comes back to it), else the default layout of the panels left.",
     transient: false,
     payloadSchema: {
         type: "object",
