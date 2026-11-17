@@ -328,7 +328,7 @@ copyright line and the MIT licence, and the guard test lists it.
     `["react"]` only, so a Vue or Angular app may ship a subset while it is written (a spec for an
     example it lacks is skipped); each joins the list when it has every example (Vue did with
     Issue #9).
-  - **Examples (15):** `basic-horizontal`, `vertical` (getting started); `nested-groups`,
+  - **Examples (15; 25 since Epic #22, Issues #19 to #21):** `basic-horizontal`, `vertical` (getting started); `nested-groups`,
     `conditional-panels` (layouts); `size-constraints`, `fixed-size-panels`, `disabled-panels`
     (constraints); `collapsible-sidebar` (collapsing); `keyboard`; `rtl-layout`,
     `styling-showcase` (styling); `controlled-from-code`, `persistent-layout`, `undo-redo`
@@ -554,7 +554,7 @@ copyright line and the MIT licence, and the guard test lists it.
     with the React kit's classes; Reka's switch also writes Base UI's `data-checked`), and the
     tests (`examples`, `kit`, `vendored`). Versions are Grid Layout's pins (`@lucide/vue` 1.70.0,
     `reka-ui` 2.11.0, `@vitejs/plugin-vue` 6.0.10, `vue-tsc` 3.3.14) and this repo's for the rest.
-  - **Every example, same ids (15/15).** Each is `index.vue` (`<script setup>`) plus kebab-case
+  - **Every example, same ids (15/15; 25/25 since Epic #22).** Each is `index.vue` (`<script setup>`) plus kebab-case
     sibling components where React has a second component in the file (`toolbar.vue`,
     `panel-toggle.vue`) and `undo-redo/use-undo-history.ts` (Grid Layout's composable). The
     markup keeps React's paths, roles, accessible names and test ids, so the shared suite passes
@@ -687,7 +687,7 @@ copyright line and the MIT licence, and the guard test lists it.
     TestBed, `vendored`). The kit needs no Angular CDK: the examples have no popup (no
     `floating.ts`). Versions are Grid Layout's pins (`@lucide/angular` 1.70.0) and
     `packages/angular`'s for Angular.
-  - **Every example, same ids (15/15).** Each is `index.ts`, a default-exported standalone
+  - **Every example, same ids (15/15; 25/25 since Epic #22).** Each is `index.ts`, a default-exported standalone
     component (`host: { class: "contents" }`) with an inline template, plus kebab-case sibling
     components where React has a second component (`toolbar.ts`, `panel-toggle.ts`). The
     directives sit on the same elements React's primitives render (`<div splitterPanel>`), so the
@@ -822,3 +822,52 @@ copyright line and the MIT licence, and the guard test lists it.
     `page.setViewportSize`. `markdown-editor` checks the modes, the orientation (group
     `data-orientation`, separator `aria-orientation`, `aria-valuenow` kept, stacked boxes) and that
     typed HTML shows as text with no element or handler. No gap needed a workaround.
+- **Issue #21 (Epic #22, chat with threads and database console):**
+  - **Two apps** in `apps` (orders 4 and 5, height 560), in React, Vue and Angular with React's
+    `styles.ts` and plain-TS siblings byte for byte (`chat-thread/data.ts`,
+    `database-console/sample.ts`); the header of `chat-thread` is a kebab-case sibling in Vue and
+    Angular (`header.vue|ts`), `database-console` has one component. Both use the theme's
+    separator (the shared `separator` class). The examples number **25**: Epic #7's 15, six
+    separator styles (Issue #19) and the apps `email-client`, `markdown-editor`, `chat-thread`
+    and `database-console` beside `ide-layout`.
+  - **`chat-thread`:** one group `chat` with an external ref for the header's "Members" toggle
+    (`aria-pressed` from `useSplitterState`). Channels: `defaultSize="14rem"`, `minSize="10rem"`,
+    `maxSize="20rem"`; conversation `minSize="25%"`; members `defaultSize="13rem"`,
+    `minSize="10rem"`, `maxSize="18rem"`, `collapsible` (to 0). The thread's separator and panel
+    (`id="thread"`, `defaultSize="30%"`, `minSize="20%"`, `maxSize="45%"`) are rendered while a
+    thread is open (`{thread && …}`, `v-if`, `@if`), between the conversation and the members; any
+    message's thread uses the same panel, so it comes back at the size the user gave it (S1's
+    layout memory). No `preserve-pixel-size` there: the separator that comes with the thread
+    shrinks the panels' axis by its width, and preserve-pixel-size panels then kept pixels
+    computed from the restored percentages, which moved the thread by about 2px. In React's dev
+    build (StrictMode mounts the thread panel twice) the channels and members can come back a
+    few pixels off; the production embeds, Vue and Angular restore the remembered layout exactly.
+    Sending a message or a reply appends it locally (an uncontrolled `<form>` read with
+    `FormData`), no network. Opening a thread while the members are collapsed expands them (a new
+    panel set takes its default layout): gap S13, no workaround.
+  - **`database-console`:** a root group `console` (schema `defaultSize="16rem"`,
+    `minSize="12rem"`, `maxSize="40%"`, `preserve-pixel-size`; workspace `minSize="40%"`) and a
+    vertical group `query` nested in the workspace (editor `minSize={120}` px; results
+    `defaultSize="40%"`, `minSize="7rem"`, `collapsible`, `collapsedSize="2rem"`, the height of
+    their title bar), one model. The toolbar reads the external ref from the component that
+    renders the group (`useSplitter(splitterRef)`, `useSplitterState`). "Results" toggles them,
+    "Run" (and Ctrl/⌘+Enter in the editor) expands them when collapsed and shows a static table
+    over `RESULT`'s rows, "Reset layout" runs one `batch` of `group.reset` for both groups. The
+    editor is a `<textarea wrap="off">` with as many `rows` as lines (`field-sizing: content`
+    where supported) beside a line-number gutter, in one scroll container.
+  - **Workaround S12** (`docs/docs-examples-gaps.md`): the engine's Enter toggles the panel
+    *before* a separator (React Resizable Panels' primary pane); the results are after theirs, so
+    the separator's own `keydown` listener (React `onKeyDown`, Vue `@keydown`, Angular `(keydown)`,
+    all after the engine's) toggles them on Enter.
+  - **`tests/vendored.test.ts`** (Vue and Angular) now compares every `.ts` file of React's
+    examples (React's components are `.tsx`, so these are the kit, the `styles.ts` and the data
+    and helper siblings) with this app's copy, except `ide-layout/files.ts`, which shows a file of
+    the framework (listed in `DIFFERENT`, checked to exist). This app's entry and components
+    (`index.vue|ts`, `toolbar.*`, `header.*`, …) have no counterpart there.
+  - **Specs:** `chat-thread` waits for the channels' default 14rem before a drag, then checks the
+    paths (`/g0/p2` is the thread between the conversation and the members, `aria-controls` of
+    both separators), the thread's width after a drag, a close and another thread opened (polled,
+    within 1.5px), the members' toggle, the channels' rem limits and sending. `database-console`
+    waits for the schema's 16rem, then checks the editor/results drag and the editor's 120px
+    minimum, `data-collapsed` from the button and from Enter, Run (expanded, eight rows) and
+    Reset (both separators' `aria-valuenow` back to their defaults).
