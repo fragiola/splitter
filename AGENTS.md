@@ -611,6 +611,12 @@ copyright line and the MIT licence, and the guard test lists it.
     the structural style is written by an effect (`bindStructuralStyle`, Dockable's): Angular's
     styling precedence puts the app's static `style` above a directive's host style binding, so a
     host binding could not win over it, as the structural style must.
+    The app's style bindings (`[style.overflow]`, `[style]`) are written by Angular whenever they
+    change, after the effect: every render ends by writing the structural keys back where a binding
+    replaced them (`afterEveryRender`, `write` phase, a comparison per key), so the structural
+    style wins consistently, not only until the next resize (review; `contract.test.ts`, "never
+    let a style binding override the structural style, even when it changes"). A key the part
+    stops setting gets the value the app's binding last wrote.
   - **Lifecycle.** A group makes its model, engine and registry in its `ngOnInit` (its inputs are
     set; its parts' `ngOnInit` run after it) and registers in `afterNextRender`, once the panels
     of the first render (in an `@for`, in a child component) wait in its registry: one `batch`, as

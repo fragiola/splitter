@@ -88,6 +88,43 @@ describe("the app's elements", () => {
         expect(at(container, "/g0/s0").style.flexShrink).toBe("0");
     });
 
+    it("never let a style binding override the structural style, even when it changes", async () => {
+        @Component({
+            selector: "test-bound-override",
+            imports: [SPLITTER],
+            template: `
+                <div splitterGroup id="g" [style.display]="display()">
+                    <div splitterPanel id="a" [style.overflow]="overflow()" [style]="rest()"></div>
+                    <div splitterSeparator></div>
+                    <div splitterPanel id="b"></div>
+                </div>
+            `,
+        })
+        class BoundOverride {
+            readonly display = signal("grid");
+            readonly overflow = signal("auto");
+            readonly rest = signal<Record<string, string>>({ color: "red" });
+        }
+        const { container, app } = await render(BoundOverride);
+        const group = at(container, "/g0");
+        const panel = at(container, "/g0/p0");
+        expect(group.style.display).toBe("flex");
+        expect(panel.style.overflow).toBe("hidden");
+        app.display.set("block");
+        app.overflow.set("scroll");
+        app.rest.set({ color: "blue", overflow: "visible" });
+        await settle();
+        expect(group.style.display).toBe("flex");
+        expect(panel.style.overflow).toBe("hidden");
+        expect(panel.style.flexGrow).toBe("50");
+        // the other keys stay the app's
+        expect(panel.style.color).toBe("blue");
+        app.rest.set({});
+        await settle();
+        expect(panel.style.overflow).toBe("hidden");
+        expect(panel.style.color).toBe("");
+    });
+
     it("run their own listeners after the engine's, through Angular's error handler", async () => {
         const handleError = vi.fn();
         TestBed.configureTestingModule({

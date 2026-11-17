@@ -3,6 +3,7 @@
 // bindings, and the structural style written onto the host.
 
 import {
+    afterEveryRender,
     DestroyRef,
     ElementRef,
     effect,
@@ -61,15 +62,38 @@ const kebab = (key: string) =>
 /**
  * Applies a part's structural style to its element, and keeps it applied as it changes: the keys
  * it sets win over the consumer's static `style` (the directive writes them after the element is
- * created; a host style binding would lose to it); a key it stops setting gets the consumer's
- * value back. Every other key of the consumer's style is untouched.
+ * created; a host style binding would lose to it) and over the consumer's style bindings
+ * (`[style.overflow]`, `[style]`), which Angular writes when they change: every render ends by
+ * writing the structural keys back where a binding replaced them. A key it stops setting gets
+ * the consumer's value back (the last one a binding wrote). Every other key of the consumer's
+ * style is untouched.
  */
 export function bindStructuralStyle(
     element: HTMLElement,
     style: () => StructuralStyle,
 ): void {
-    /** the keys set now, with the consumer's value they replaced */
-    const owned = new Map<string, string>();
+    /**
+     * the keys set now: their value, as written and as the element reads it back (`0` reads
+     * `0px`), and the consumer's value they replaced
+     */
+    const owned = new Map<
+        string,
+        { value: string; written: string; previous: string }
+    >();
+    const write = (name: string, entry: { value: string; written: string }) => {
+        element.style.setProperty(name, entry.value);
+        entry.written = element.style.getPropertyValue(name);
+    };
+    /** writes the structural keys back where the consumer's style replaced them */
+    const assert = () => {
+        for (const [name, entry] of owned) {
+            const current = element.style.getPropertyValue(name);
+            if (current !== entry.written) {
+                entry.previous = current;
+                write(name, entry);
+            }
+        }
+    };
     effect(() => {
         const next = new Map<string, string>();
         for (const [key, value] of Object.entries(style())) {
@@ -78,7 +102,8 @@ export function bindStructuralStyle(
             }
         }
         untracked(() => {
-            for (const [name, previous] of owned) {
+            assert();
+            for (const [name, { previous }] of owned) {
                 if (!next.has(name)) {
                     if (previous === "") {
                         element.style.removeProperty(name);
@@ -89,13 +114,18 @@ export function bindStructuralStyle(
                 }
             }
             for (const [name, value] of next) {
-                if (!owned.has(name)) {
-                    owned.set(name, element.style.getPropertyValue(name));
-                }
-                if (element.style.getPropertyValue(name) !== value) {
-                    element.style.setProperty(name, value);
+                const entry = owned.get(name);
+                if (!entry) {
+                    const previous = element.style.getPropertyValue(name);
+                    const created = { value, written: "", previous };
+                    owned.set(name, created);
+                    write(name, created);
+                } else if (entry.value !== value) {
+                    entry.value = value;
+                    write(name, entry);
                 }
             }
         });
     });
+    afterEveryRender({ write: assert });
 }
