@@ -1,6 +1,6 @@
 {
     "name": "@fragiola/splitter-angular",
-    "version": "0.0.0",
+    "version": "0.1.0",
     "description": "Composable, unstyled Angular directives for @fragiola/splitter: resizable panel groups styled entirely by you.",
     "keywords": [
         "angular",
