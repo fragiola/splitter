@@ -15,9 +15,6 @@ from an AI assistant.
 Documentation, guides and live examples: **<https://fragiola.com/splitter>**
 ([getting started](https://fragiola.com/splitter/docs/getting-started/introduction)).
 
-> Not on npm yet: the first release (`0.1.0`) is ready and waits for the maintainer's steps in
-> [docs/releasing.md](docs/releasing.md).
-
 | package | what it is |
 |---|---|
 | [`@fragiola/splitter`](packages/core) | framework-free core: layout rules and units, typed model and commands, the JSON document, the engine |

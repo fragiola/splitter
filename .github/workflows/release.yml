@@ -5,11 +5,6 @@
 # steps (the first publish, the `npm` environment, `npm trust`, the repository setting) are in
 # docs/releasing.md.
 #
-# Not published yet: until the maintainer follows docs/releasing.md ("Status"), nothing can reach
-# npm. The pending changesets only open the Version Packages PR; the publish mode runs only once
-# that PR is merged, and even then no npm token exists anywhere and npm accepts this workflow's
-# OIDC token only after `npm trust` named this repository, this file and the `npm` environment.
-#
 # Do not rename this file, nor the publish job's `npm` environment: npm trusts the packages'
 # publisher by this repository, this filename and that environment.
 #

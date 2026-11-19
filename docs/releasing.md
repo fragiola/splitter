@@ -1,22 +1,5 @@
 # Releasing
 
-## Status: not published yet
-
-**The maintainer's npm account is suspended, so nothing of Splitter is on npm.** Everything in the
-repository is ready: the changesets of the first release (`.changeset/splitter-core.md`,
-`.changeset/splitter-react.md`, `.changeset/splitter-vue.md`, `.changeset/splitter-angular.md`, a
-`minor` each: `0.0.0` to `0.1.0`), the release workflow, the
-package check and the CI jobs. Until the steps below are done, nothing can publish:
-
-- the pending changesets only make the release workflow open (or update) the **Version Packages**
-  PR; the publish runs only once that PR is merged;
-- there is no npm token anywhere, and npm accepts the workflow's OIDC token only after
-  `npm trust` names this repository, `release.yml` and the `npm` environment (step 5).
-
-**Do not merge the Version Packages PR before step 5.** When the account is back, do the steps of
-[The first release](#the-first-release-010) in order, 1 to 9. Nothing else is needed: no file of
-the repository changes.
-
 ## How a release works
 
 Releasing is a merge. [Changesets](https://changesets.dev) versions every package under
@@ -120,8 +103,7 @@ before that.
 
 9. **Lock it down.** On npm, for each package, *Settings → Publishing access*: **Require
    two-factor authentication and disallow tokens**. From now on only the workflow publishes (and
-   you, interactively with 2FA, if ever needed). Then remove the *Status* section at the top of
-   this page.
+   you, interactively with 2FA, if ever needed).
 
 ## Later releases
 
