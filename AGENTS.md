@@ -431,11 +431,12 @@ copyright line and the MIT licence, and the guard test lists it.
     trust`, no `npm` environment, no secret. `docs/releasing.md` opens with a *Status* section and
     the steps 1 to 9 the maintainer takes when the account is back; the packages stay at `0.0.0`
     and the two pending changesets (`minor` each) make the first release `0.1.0`. One changeset
-    per package (`.changeset/splitter-core.md`, `splitter-react.md`).
+    per package (`.changeset/splitter-core.md`, `splitter-react.md`). The account came back on
+    2026-11-19: the *Status* section, the README's "Not on npm yet" line and `release.yml`'s note
+    were removed, and the `npm` environment was created (runbook step 3).
   - **Copies of Dockable's**, names changed: `.changeset/config.json` (its `changedFilePatterns`
     kept whole, `ng-package.json` and `scripts/publish-manifest.ts` included, so the Angular
-    adapter needs no edit), `release.yml` (only the repository guard differs, plus a header note
-    on why nothing publishes yet), the CI Changesets, Package and trigger jobs, and
+    adapter needs no edit), `release.yml` (only the repository guard differs), the CI Changesets, Package and trigger jobs, and
     `scripts/check-package.ts` with React only in `ADAPTERS` (the Vue and Angular smoke apps come
     with their Epics from Dockable's) but the `publishConfig.directory` support kept for Angular.
     Its tests are `site/tests/check-package.test.ts`. `scripts/exported-names.ts` was not copied:
