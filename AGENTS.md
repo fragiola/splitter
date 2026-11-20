@@ -148,6 +148,22 @@ breaks one is a decision for the maintainer, not an implementation detail.
 | `pnpm check:package` | builds the packages, packs each with pnpm and checks the tarballs (`scripts/check-package.ts`, from Dockable): the packed `exports` are the repo's without the source condition (`types`/`import`/`default`, `dist` targets), publint (strict), attw (`esm-only`), each adapter of `ADAPTERS` pins the core exactly, and its smoke app (outside the workspace, that adapter's tarball only: React, Vite + React checked by `tsc`; Vue, Vite + Vue with a single-file component checked by vue-tsc on TypeScript 6; Angular, Vite + `@analogjs/vite-plugin-angular` with a standalone component checked by `ngc` on TypeScript 6, packed from its `dist`) typechecks, builds and loads its dev server. `--tarballs <dir>` checks given tarballs (the release workflow's) |
 | `pnpm changeset` / `release:version` | Changesets: add a changeset / bump the versions (the release workflow runs the latter); core and adapters are one `fixed` group (`@fragiola/*`). Releasing: `docs/releasing.md` |
 
+## CI
+
+`.github/workflows/ci.yml` (its comment header describes every job) runs Checks, Package
+(`pnpm check:package`), Changesets (a PR that changes what a package ships needs a changeset;
+skipped for the Version Packages PR), Site export and, on a push to main, the www trigger. The E2E
+suites run only on pull requests and on a manual run (Epic #26, from fragiola/data-grid). A
+`Changes` job picks the suites a pull request can affect (`scripts/e2e-suites.ts`, a `git diff`
+against the base, tested by `site/tests/e2e-suites.test.ts`): none for docs only (`site/docs/**`,
+`*.md`, `AGENTS.md`); `packages/react` or `examples/react`: the playground and examples react;
+`packages/vue` or `examples/vue`: examples vue; `packages/angular` or `examples/angular`: examples
+angular; any other path, and a manual run: every suite. Only those may skip: a new rule names what
+it skips, never what it runs. The E2E jobs run in `mcr.microsoft.com/playwright:v<version>-noble`
+(`--user 1001`), its tag the version of `@playwright/test` (`site/tests/ci-workflow.test.ts`):
+upgrading Playwright changes both. No shards: add `--shard` only for a suite whose test step takes
+more than about 3 minutes.
+
 ## Repository layout
 
 ```
@@ -163,7 +179,7 @@ examples/angular/   examples-angular          src/examples/<slug>/ (index.ts def
 site/               export.ts, dev.ts, dev-proxy.ts, sources.ts, contract.ts, project.json; docs/ (config.json, index.mdx, getting-started/, concepts/, guides/, api/, limitations.mdx); tests/ (contract, docs-reference, dev-proxy, the repository checks)
 site/docs/api/      commands.mdx              generated from the command registry (do not edit)
 docs/               docs-examples-gaps.md     what the docs and examples work around, with the proposed API; releasing.md (the release runbook)
-scripts/                                      check-layout.ts, check-dts.ts, check-package.ts, source-condition.ts
+scripts/                                      check-layout.ts, check-dts.ts, check-package.ts, source-condition.ts, e2e-suites.ts
 .changeset/         config.json               one fixed group @fragiola/*, changedFilePatterns; the pending changesets
 .github/workflows/  ci.yml                    check, typecheck, test, build; package; changesets; the playground's e2e; one e2e job per examples app; site export; the www trigger
                     release.yml               Version Packages PR, then pack, check --tarballs and publish over OIDC from the `npm` environment
