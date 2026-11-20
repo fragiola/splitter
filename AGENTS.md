@@ -344,7 +344,7 @@ copyright line and the MIT licence, and the guard test lists it.
     `["react"]` only, so a Vue or Angular app may ship a subset while it is written (a spec for an
     example it lacks is skipped); each joins the list when it has every example (Vue did with
     Issue #9).
-  - **Examples (15; 25 since Epic #22, Issues #19 to #21):** `basic-horizontal`, `vertical` (getting started); `nested-groups`,
+  - **Examples (15; 25 since Epic #22, Issues #19 to #21; 26 since Epic #30):** `basic-horizontal`, `vertical` (getting started); `nested-groups`,
     `conditional-panels` (layouts); `size-constraints`, `fixed-size-panels`, `disabled-panels`
     (constraints); `collapsible-sidebar` (collapsing); `keyboard`; `rtl-layout`,
     `styling-showcase` (styling); `controlled-from-code`, `persistent-layout`, `undo-redo`
@@ -404,7 +404,7 @@ copyright line and the MIT licence, and the guard test lists it.
     primitives (5: `group`, `panel`, `separator`, `hooks`, `external-ref`), API core (5: `model`,
     `command-bus`, `commands` (generated), `json-document`, `engine`), More (`limitations` and the
     external "Found a problem?" link). The common primitive props live on `api/group#common-props`.
-    The landing's showcase is `ide-layout`.
+    The landing's showcase was `ide-layout`; since Epic #30 it is `observability-console`.
   - **Example docs links** now name these pages (`/docs/getting-started/first-split-view`,
     `/docs/guides/collapsible-panels`, `/docs/guides/size-constraints`, …); `disabled-panels`
     links `/docs/guides/size-constraints#disabled-panels-and-separators`. `ide-layout` has none.
@@ -571,7 +571,7 @@ copyright line and the MIT licence, and the guard test lists it.
     with the React kit's classes; Reka's switch also writes Base UI's `data-checked`), and the
     tests (`examples`, `kit`, `vendored`). Versions are Grid Layout's pins (`@lucide/vue` 1.70.0,
     `reka-ui` 2.11.0, `@vitejs/plugin-vue` 6.0.10, `vue-tsc` 3.3.14) and this repo's for the rest.
-  - **Every example, same ids (15/15; 25/25 since Epic #22).** Each is `index.vue` (`<script setup>`) plus kebab-case
+  - **Every example, same ids (15/15; 25/25 since Epic #22; 26/26 since Epic #30).** Each is `index.vue` (`<script setup>`) plus kebab-case
     sibling components where React has a second component in the file (`toolbar.vue`,
     `panel-toggle.vue`) and `undo-redo/use-undo-history.ts` (Grid Layout's composable). The
     markup keeps React's paths, roles, accessible names and test ids, so the shared suite passes
@@ -704,7 +704,7 @@ copyright line and the MIT licence, and the guard test lists it.
     TestBed, `vendored`). The kit needs no Angular CDK: the examples have no popup (no
     `floating.ts`). Versions are Grid Layout's pins (`@lucide/angular` 1.70.0) and
     `packages/angular`'s for Angular.
-  - **Every example, same ids (15/15; 25/25 since Epic #22).** Each is `index.ts`, a default-exported standalone
+  - **Every example, same ids (15/15; 25/25 since Epic #22; 26/26 since Epic #30).** Each is `index.ts`, a default-exported standalone
     component (`host: { class: "contents" }`) with an inline template, plus kebab-case sibling
     components where React has a second component (`toolbar.ts`, `panel-toggle.ts`). The
     directives sit on the same elements React's primitives render (`<div splitterPanel>`), so the
@@ -888,3 +888,47 @@ copyright line and the MIT licence, and the guard test lists it.
     waits for the schema's 16rem, then checks the editor/results drag and the editor's 120px
     minimum, `data-collapsed` from the button and from Enter, Run (expanded, eight rows) and
     Reset (both separators' `aria-valuenow` back to their defaults).
+- **Epic #30 (Issues #28 and #29, a live observability console as the landing's showcase):**
+  - **`observability-console`** (`apps`, order 6, `layout: "fill"`, height 600, docs
+    `/docs/guides/nested-groups`), in React, Vue and Angular with React's `styles.ts` and plain-TS
+    siblings byte for byte (`charts.ts`, `tail.ts`, `_kit/telemetry.ts`); the chart is a sibling
+    component (`chart.tsx|vue|ts`). Three groups of one model: `console` (services
+    `defaultSize="15rem"`, `minSize="11rem"`, `maxSize="30%"`, `collapsible`,
+    `collapsedSize="2.75rem"`; center `minSize="30%"`; inspector `defaultSize="17rem"`,
+    `minSize="13rem"`, `maxSize="35%"`, `collapsible` to 0), `stream` (vertical, in the center:
+    charts `minSize={120}` px; logs `defaultSize="50%"`, `minSize="5rem"`, `collapsible`,
+    `collapsedSize="2rem"`) and `metrics` (in the charts: latency | errors, `minSize="25%"` each).
+    The layout is saved on every commit of each group (`_kit/persistence.ts`, key
+    `fragiola-splitter:observability-console`, validated with `validateSplitter`), "Reset layout"
+    runs one `batch` of `group.reset` for the three groups, the toolbar's "Services" and
+    "Inspector" toggles collapse their panels (`aria-pressed` from the model), and Enter on the
+    charts/logs separator toggles the logs (workaround S12, as `database-console`).
+  - **Live data:** `_kit/telemetry.ts` is a seeded simulation (mulberry32, as data-grid's
+    `_kit/market.ts`; seed 7): six fictional services whose p95 latency and error rate walk
+    around a profile, incidents, log lines and traces with spans, on the feed's own clock (each
+    tick `TICK_MS` = 500ms later, times printed in UTC). It starts warmed up (60 points of
+    history). The feed ticks on `setInterval` only while it plays and the document is visible
+    (it follows `visibilitychange` while playing); the example starts it paused under
+    `prefers-reduced-motion: reduce`, with a Pause/Play button. Nothing is fetched and no
+    dependency was added.
+  - **Charts are hand-drawn SVG** (`charts.ts`): a fixed viewBox stretched to the panel
+    (`preserveAspectRatio="none"`, `vector-effect="non-scaling-stroke"`), so a resize redraws them
+    with no measuring and the drawing is the same in the three frameworks; the figures are HTML.
+    A selected service filters the charts, logs and traces ("All services" shows the mean).
+  - **The log tail** (`role="log"`, `aria-live="off"`, focusable) follows the newest line while it
+    is at the bottom and holds when the reader scrolls up ("Jump to latest" brings it back).
+    `tail.ts` ignores the scroll the browser makes when the tail's height changes, so dragging a
+    separator never stops it following (an e2e failure in Vue before it).
+  - **Gap S14** (`docs/docs-examples-gaps.md`): a restored layout's `preserve-pixel-size` panels
+    come back a fraction of a percent off (the first measure of a root group counts its
+    separators). The console's side panels therefore keep the default `preserve-relative-size`.
+  - **Spec** (`e2e/examples/observability-console.spec.ts`) uses Playwright's `page.clock`
+    (installed before the page loads) and moves time with `runFor` instead of waiting; values
+    are compared only after Pause; reduced motion is `page.emulateMedia`. It covers the feed,
+    the drags (both nested groups, logs still streaming), Enter on the separator, the inspector's
+    collapse and size, the rail and the service filter, the tail's follow and hold, and the saved
+    layout and Reset. `examples/react/tests/telemetry.test.ts` checks the kit (seeding, play,
+    pause, visibility, bounds), `charts.ts` and `tail.ts`.
+  - **Landing:** the showcase is `observability-console` (height 600, label "Live data, the
+    same markup in five themes:"). The front matter's description and the Hero's eyebrow no
+    longer name frameworks: the adapters row above the showcase does.
