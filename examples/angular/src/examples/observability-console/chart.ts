@@ -16,9 +16,9 @@ import * as styles from "./styles";
     selector: "example-observability-console-chart",
     host: { class: "contents" },
     template: `
-        <section [attr.aria-label]="title()" [class]="styles.chart">
+        <section [attr.aria-label]="heading()" [class]="styles.chart">
             <div [class]="styles.bar">
-                <h2 [class]="styles.tab">{{ title() }}</h2>
+                <h2 [class]="styles.tab">{{ heading() }}</h2>
                 <span [class]="styles.scope">{{ scope() }}</span>
                 <span [attr.data-testid]="tone() + '-now'" [class]="styles.value[tone()]">
                     {{ value() }}
@@ -64,7 +64,8 @@ import * as styles from "./styles";
 export class Chart {
     /** which chart: its palette */
     readonly tone = input.required<"latency" | "errors">();
-    readonly title = input.required<string>();
+    /** its name (not `title`: that would also be the host element's tooltip) */
+    readonly heading = input.required<string>();
     /** what the series covers: a service, or every one */
     readonly scope = input.required<string>();
     /** the latest value, formatted */

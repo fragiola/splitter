@@ -227,7 +227,7 @@ function restore() {
                                 <div splitterPanel id="latency" minSize="25%">
                                     <example-observability-console-chart
                                         tone="latency"
-                                        title="p95 latency"
+                                        heading="p95 latency"
                                         [scope]="scope()"
                                         [value]="formatMs(latest(series().latency))"
                                         [maxLabel]="formatMs(latencyMax())"
@@ -243,7 +243,7 @@ function restore() {
                                 <div splitterPanel id="errors" minSize="25%">
                                     <example-observability-console-chart
                                         tone="errors"
-                                        title="Error rate"
+                                        heading="Error rate"
                                         [scope]="scope()"
                                         [value]="formatPercent(latest(series().errors))"
                                         [maxLabel]="formatPercent(errorsMax())"
