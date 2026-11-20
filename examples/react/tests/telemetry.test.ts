@@ -17,6 +17,7 @@ import {
     VIEW_WIDTH,
     waterfallOf,
 } from "../src/examples/observability-console/charts.ts";
+import { createTailFollower } from "../src/examples/observability-console/tail.ts";
 
 // `_kit/telemetry.ts` is the observability console's live data: seeded (the same seed, the same
 // telemetry, so the specs and the three frameworks see the same scene), ticking on a timer only
@@ -177,5 +178,31 @@ describe("the console's charts", () => {
         for (const bar of bars) {
             expect(bar.x + bar.width).toBeLessThanOrEqual(100.5);
         }
+    });
+});
+
+describe("the log tail's follower", () => {
+    const element = (scrollTop: number, clientHeight = 100) =>
+        ({ scrollHeight: 500, scrollTop, clientHeight }) as HTMLElement;
+
+    it("follows at the bottom, holds when the reader scrolls up", () => {
+        const follower = createTailFollower();
+        const tail = element(0);
+        follower.rendered(tail, true);
+        expect(tail.scrollTop).toBe(500);
+        expect(follower.scrolled(element(398), true)).toBe(true);
+        expect(follower.scrolled(element(300), true)).toBe(false);
+        expect(follower.scrolled(element(399), false)).toBe(true);
+        const held = element(120);
+        follower.rendered(held, false);
+        expect(held.scrollTop).toBe(120);
+    });
+
+    it("keeps following when the browser scrolls because the tail resized", () => {
+        const follower = createTailFollower();
+        follower.rendered(element(400), true);
+        // the panel shrank: the browser moved the scroll, the reader did not
+        expect(follower.scrolled(element(300, 60), true)).toBe(true);
+        expect(follower.scrolled(element(300, 60), true)).toBe(false);
     });
 });

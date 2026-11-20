@@ -50,14 +50,12 @@ import {
     waterfallOf,
 } from "./charts";
 import * as styles from "./styles";
+import { createTailFollower } from "./tail";
 
 const KEY = "fragiola-splitter:observability-console";
 
 /** How many of the latest traces the inspector lists. */
 const TRACES = 5;
-
-/** How close to the bottom the log tail still counts as followed, in pixels. */
-const FOLLOW = 8;
 
 /** The model of the saved layout: a document that is missing or invalid starts from the defaults. */
 function restore() {
@@ -120,16 +118,16 @@ export default function ObservabilityConsole() {
     }
 
     // the tail follows the newest line while it is scrolled to the bottom, and holds otherwise
+    // (`tail.ts`: a resize of its panel never stops it)
     const tail = useRef<HTMLDivElement>(null);
+    const [follower] = useState(createTailFollower);
     const [following, setFollowing] = useState(true);
     // biome-ignore lint/correctness/useExhaustiveDependencies: runs again for every batch of lines
     useLayoutEffect(() => {
-        const element = tail.current;
-        if (element && following) element.scrollTop = element.scrollHeight;
-    }, [lines, following]);
+        if (tail.current) follower.rendered(tail.current, following);
+    }, [follower, lines, following]);
     function onTailScroll(event: UIEvent<HTMLDivElement>) {
-        const { scrollHeight, scrollTop, clientHeight } = event.currentTarget;
-        setFollowing(scrollHeight - scrollTop - clientHeight < FOLLOW);
+        setFollowing(follower.scrolled(event.currentTarget, following));
     }
 
     function toggle(panelId: "services" | "inspector", collapsed: boolean) {
