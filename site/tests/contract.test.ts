@@ -217,6 +217,32 @@ describe("the contract checks", () => {
         expect(problemsOf("[x](#nope)").join()).toContain("no heading #nope");
     });
 
+    it("accept the reserved /ai link of v1.7, and nothing below it", () => {
+        expect(
+            problemsOf("[a](/ai) [b](/ai#set-it-up-in-your-client)"),
+        ).toEqual([]);
+        expect(problemsOf("[x](/ai/x)").join()).toContain(
+            "linked as /ai (optionally /ai#anchor), nothing below it",
+        );
+        expect(problemsOf("[x](/ai/docs/mcp)").join()).toContain(
+            "nothing below it",
+        );
+        const landing = [
+            LANDING,
+            '<Hero title="t" actions={[',
+            '    { label: "Browse {examples} examples", href: "/examples", variant: "primary", icon: "arrow" },',
+            '    { label: "Use with your AI agent", href: "/ai", variant: "secondary" },',
+            '    { label: "Read the docs", href: "/docs/limitations", variant: "ghost" },',
+            "]} />",
+        ].join("\n\n");
+        expect(validateSite(withPage("index", landing))).toEqual([]);
+        expect(
+            validateSite(
+                withPage("index", landing.replace('"/ai"', '"/ai/x"')),
+            ).join(),
+        ).toContain("nothing below it");
+    });
+
     it("reject a code block without a language, and ESM", () => {
         expect(problemsOf("```\nx\n```").join()).toContain("takes a language");
         expect(problemsOf('import x from "y";').join()).toContain(
