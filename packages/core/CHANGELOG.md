@@ -1,5 +1,11 @@
 # @fragiola/splitter
 
+## 0.2.0
+
+### Minor Changes
+
+- [#39](https://github.com/fragiola/splitter/pull/39) [`cc0f99b`](https://github.com/fragiola/splitter/commit/cc0f99b36e03f37704af58846fc4fdb025968752) Thanks [@maurodesouza](https://github.com/maurodesouza)! - Enter on a focused separator now toggles the panel after it when the panel before it is not collapsible: a results pane below an editor or logs below charts collapse and expand from the keyboard with no code in the app. When the panel before is collapsible, Enter still toggles it, as before (also when both are). If your app handled Enter on such a separator itself, remove that listener, or the panel toggles twice; a listener that runs first and calls `preventDefault()` keeps control.
+
 ## 0.1.0
 
 ### Minor Changes

@@ -1,6 +1,6 @@
 {
     "name": "@fragiola/splitter",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Headless resizable panel groups core: layout rules, a typed model with commands, and the engine that binds a split view to the DOM.",
     "keywords": [
         "splitter",

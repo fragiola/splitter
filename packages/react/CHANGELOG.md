@@ -1,5 +1,12 @@
 # @fragiola/splitter-react
 
+## 0.2.0
+
+### Patch Changes
+
+- Updated dependencies [[`cc0f99b`](https://github.com/fragiola/splitter/commit/cc0f99b36e03f37704af58846fc4fdb025968752)]:
+  - @fragiola/splitter@0.2.0
+
 ## 0.1.0
 
 ### Minor Changes
