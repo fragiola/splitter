@@ -973,14 +973,25 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
                 return;
             case "toggle": {
                 // the panel before collapses, or expands to its restore size (else its minimum,
-                // 1% when that is 0), by moving this separator only: a keyboard move, so
-                // disabled panels and the panels behind other separators keep their sizes
-                const [panelId] = separator.panelIds;
-                const item = this.model.get("panel-constraints-by", {
-                    panelId,
-                });
-                const size = group.layout[panelId];
-                if (!item?.collapsible || size === undefined) {
+                // 1% when that is 0); when it cannot collapse, the panel after it does. Only this
+                // separator moves: a keyboard move, so disabled panels and the panels behind
+                // other separators keep their sizes
+                const [beforeId, afterId] = separator.panelIds;
+                const collapsible = (panelId: string) =>
+                    this.model.get("panel-constraints-by", { panelId })
+                        ?.collapsible === true;
+                const panelId = collapsible(beforeId)
+                    ? beforeId
+                    : collapsible(afterId)
+                      ? afterId
+                      : undefined;
+                const item =
+                    panelId !== undefined
+                        ? this.model.get("panel-constraints-by", { panelId })
+                        : undefined;
+                const size =
+                    panelId !== undefined ? group.layout[panelId] : undefined;
+                if (panelId === undefined || !item || size === undefined) {
                     return;
                 }
                 const restore =
@@ -994,9 +1005,10 @@ class Engine<T extends SplitterTypes> implements SplitterEngine {
                 if (target === size) {
                     return;
                 }
+                // a positive delta grows the panel before the separator
                 this.model.run("separator.move", {
                     separatorId,
-                    delta: target - size,
+                    delta: panelId === beforeId ? target - size : size - target,
                     source: "keyboard",
                 });
                 return;
