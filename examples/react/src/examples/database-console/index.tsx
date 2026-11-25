@@ -66,11 +66,6 @@ export default function DatabaseConsole() {
             run();
         }
     }
-    // Enter toggles the panel before a separator (the editor, which does not collapse): the
-    // results are after it, so the app toggles them itself (docs/docs-examples-gaps.md, S12)
-    function onSeparatorKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-        if (event.key === "Enter") toggleResults();
-    }
     return (
         <div className={styles.frame}>
             <div role="toolbar" aria-label="Query" className={styles.toolbar}>
@@ -226,7 +221,6 @@ export default function DatabaseConsole() {
                         </Splitter.Panel>
                         <Splitter.Separator
                             aria-label="Resize results"
-                            onKeyDown={onSeparatorKeyDown}
                             className={styles.separator}
                         />
                         <Splitter.Panel

@@ -404,7 +404,7 @@ describe("the command bus", () => {
         }
     });
 
-    it("describes the layout a panel set change leads to (S1)", () => {
+    it("describes the layout a panel set change leads to", () => {
         const commands = createSplitterModel().get("commands");
         for (const name of ["panel.add", "panel.remove"]) {
             const description =

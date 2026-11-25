@@ -72,8 +72,7 @@ function restore() {
 // stretched to its panel) and the logs while they stream. The rail collapses to its health dots,
 // the inspector away, the logs to their title bar (a drag, or Enter on their separator); the
 // layout is saved on every commit and Reset layout puts the three groups back. The side panels keep
-// their percentage when the window resizes: with `preserve-pixel-size` a restored layout comes
-// back a fraction of a percent off (docs/docs-examples-gaps.md, S14).
+// their percentage when the window resizes (`preserve-relative-size`, the default).
 @Component({
     selector: "example-observability-console",
     imports: [
@@ -257,7 +256,6 @@ function restore() {
                             splitterSeparator
                             aria-label="Resize charts and logs"
                             [class]="styles.separator"
-                            (keydown)="onLogsSeparatorKeydown($event)"
                         ></div>
                         <div
                             splitterPanel
@@ -516,18 +514,6 @@ export default class ObservabilityConsole {
                 { command: "group.reset", payload: { groupId: "stream" } },
                 { command: "group.reset", payload: { groupId: "metrics" } },
             ],
-        });
-    }
-
-    // Enter toggles the panel before a separator (the charts, which do not collapse): the logs
-    // are after it, so the app toggles them itself (docs/docs-examples-gaps.md, S12)
-    protected onLogsSeparatorKeydown(event: KeyboardEvent) {
-        if (event.key !== "Enter") return;
-        const collapsed = this.model.is("panel-collapsed", {
-            panelId: "logs",
-        });
-        this.model.run(collapsed ? "panel.expand" : "panel.collapse", {
-            panelId: "logs",
         });
     }
 }

@@ -147,7 +147,6 @@ const OPEN = ["customers", "orders"];
                             splitterSeparator
                             aria-label="Resize results"
                             [class]="styles.separator"
-                            (keydown)="onSeparatorKeydown($event)"
                         ></div>
                         <div
                             splitterPanel
@@ -261,11 +260,5 @@ export default class DatabaseConsole {
             event.preventDefault();
             this.run();
         }
-    }
-
-    // Enter toggles the panel before a separator (the editor, which does not collapse): the
-    // results are after it, so the app toggles them itself (docs/docs-examples-gaps.md, S12)
-    protected onSeparatorKeydown(event: KeyboardEvent) {
-        if (event.key === "Enter") this.toggleResults();
     }
 }

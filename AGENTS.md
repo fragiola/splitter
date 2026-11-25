@@ -176,7 +176,7 @@ examples/shared/    examples-shared           src/meta/<slug>.ts, src/themes/, s
 examples/react/     examples-react            src/examples/<slug>/ (index.tsx, styles.ts), src/examples/_kit/ (persistence.ts, undo.ts), src/embed/, vendored Fragiola UI (src/components, lib, styles), scripts/vendor-fragiola.ts, tests/
 examples/vue/       examples-vue              src/examples/<slug>/ (index.vue, kebab-case .vue siblings, styles.ts and _kit/ copied from React), src/embed/, the kit over Reka UI (src/components), src/lib and src/styles copied from React, tests/ (examples, kit, vendored)
 examples/angular/   examples-angular          src/examples/<slug>/ (index.ts default-exporting a standalone component with an inline template, kebab-case .ts siblings, styles.ts and _kit/ copied from React), src/embed/, the kit's directives (src/components: clickable, switch), src/lib and src/styles copied from React, tests/ (examples, kit, vendored)
-site/               export.ts, dev.ts, dev-proxy.ts, sources.ts, contract.ts, project.json; docs/ (config.json, index.mdx, getting-started/, concepts/, guides/, api/, limitations.mdx); tests/ (contract, docs-reference, dev-proxy, the repository checks)
+site/               export.ts, dev.ts, dev-proxy.ts, sources.ts, contract.ts, project.json; docs/ (config.json, index.mdx, getting-started/, concepts/, guides/, api/); tests/ (contract, docs-reference, dev-proxy, the repository checks)
 site/docs/api/      commands.mdx              generated from the command registry (do not edit)
 docs/               docs-examples-gaps.md     what the docs and examples work around, with the proposed API; releasing.md (the release runbook)
 scripts/                                      check-layout.ts, check-dts.ts, check-package.ts, source-condition.ts, e2e-suites.ts
@@ -251,7 +251,7 @@ copyright line and the MIT licence, and the guard test lists it.
     recorded but not checked, and `group.remove` does not cascade to nested groups.
   - **Layout on structural change** (panel added or removed): the saved layout once the group
     holds exactly the saved panels, else the layout the group last had with the new panel set
-    (`layoutMemory`, see the S1 decision), else the default layout of the new set. A group remembers whether its layout is still the default
+    (`layoutMemory`, see *Layout memory* below), else the default layout of the new set. A group remembers whether its layout is still the default
     (`pristine`); a pristine layout is derived again when constraints or the measure change.
   - **Document v1:** `{ version: 1, groups: [{ id, panels: [{ id, size, collapsed?, restoreSize? }] }] }`,
     ids required (they must match the markup, so none is generated at load). A loaded group is
@@ -275,7 +275,8 @@ copyright line and the MIT licence, and the guard test lists it.
     `pointercancel` / `lostpointercapture` commit the last step, as RRP does. Keyboard step 5% by
     default; only handled keys are `preventDefault`ed; Enter runs a keyboard `separator.move` on
     that separator by the distance from the panel before it to its collapsed size (or, collapsed,
-    to its restore size, else its minimum, 1% when 0), as React Resizable Panels'
+    to its restore size, else its minimum, 1% when 0), or from the panel after it when only that
+    one is collapsible (Epic #38), as React Resizable Panels'
     `adjustLayoutForSeparator`, so disabled panels keep their sizes (it used to run
     `panel.collapse` / `panel.expand`, code semantics); F6 cycles focus. A double click resizes the panel before the
     separator (else after) that declares a `defaultSize` back to it, unless a panel beside the
@@ -400,10 +401,11 @@ copyright line and the MIT licence, and the guard test lists it.
   - **`examples.json` is generated**, not committed: `sources.ts` builds it from
     `examples/shared` (`CATEGORIES` as the levels, `THEMES` with their CSS), as grid-layout and
     Dockable do, so the levels and themes can never drift from the examples.
-  - **Pages (37 plus the landing):** Getting started (5), Concepts (8), Guides (13), API
+  - **Pages (36 plus the landing):** Getting started (5), Concepts (8), Guides (13), API
     primitives (5: `group`, `panel`, `separator`, `hooks`, `external-ref`), API core (5: `model`,
-    `command-bus`, `commands` (generated), `json-document`, `engine`), More (`limitations` and the
-    external "Found a problem?" link). The common primitive props live on `api/group#common-props`.
+    `command-bus`, `commands` (generated), `json-document`, `engine`), More (the external "Found a
+    problem?" link). Each behaviour is described on the page of the part it concerns, facts true
+    by design included (Epic #38). The common primitive props live on `api/group#common-props`.
     The landing's showcase was `ide-layout`; since Epic #30 it is `observability-console`.
   - **Example docs links** now name these pages (`/docs/getting-started/first-split-view`,
     `/docs/guides/collapsible-panels`, `/docs/guides/size-constraints`, …); `disabled-panels`
@@ -413,9 +415,9 @@ copyright line and the MIT licence, and the guard test lists it.
     permanent snippet check: it would need a compiler run per test.
   - The export is not run inside `pnpm test` (it builds every package and the embed); its
     validation is the same `validateSite` the contract test runs on the sources.
-  - `docs/docs-examples-gaps.md` lists the workarounds (S1 to S10) with a proposed API each.
-- **Package gaps S1, S2, S6 and S8** (`docs/docs-examples-gaps.md`, *Closed gaps*):
-  - **S1, layout memory.** `GroupState.layoutMemory` maps the JSON of a panel set's sorted ids
+  - `docs/docs-examples-gaps.md` lists the workarounds, each with a proposed API.
+- **Package gaps closed after Issue #5** (`docs/docs-examples-gaps.md`, *Closed gaps*):
+  - **Layout memory.** `GroupState.layoutMemory` maps the JSON of a panel set's sorted ids
     (safe for any id) to the last layout the user gave the group with that set. It is written when
     the set changes, only for a non-pristine layout (a default one is derived again anyway), and
     read when the group enters a set it had: the remembered layout validated against the current
@@ -423,19 +425,19 @@ copyright line and the MIT licence, and the guard test lists it.
     keeps one layout per group), and is lost with the group (`group.remove`, a remount): React
     Resizable Panels' memory is in-memory per mounted group too. No new key: it is a state field
     (`group-by`).
-  - **S2, `useSplitterState(selector, { splitterRef?, isEqual? })`.** Dockable's `useModelState`
+  - **`useSplitterState(selector, { splitterRef?, isEqual? })`.** Dockable's `useModelState`
     shape over `useSyncExternalStore`: the selector gets `(splitter, state)` (`splitter` being what
     `useSplitter` returns), runs once per model state or new selector, and an `isEqual` answer keeps
     the previous one. With a `splitterRef` it answers `undefined` while no group holds the ref (the
     overloads type it `S | undefined`); without one it throws outside a group, as `useSplitter`. It
     follows the model only, not the engine's view state. The undo guide and example keep their
     history's own store: its steps are app state, not a model answer.
-  - **S6, `dir` at runtime.** Each bound group has a `MutationObserver` from its element's
+  - **`dir` at runtime.** Each bound group has a `MutationObserver` from its element's
     `defaultView` on its `ownerDocument` (`attributeFilter: ["dir"]`, subtree), measuring the group
     again when a mutated element contains it (one observer per group, the smallest change; a `dir`
     inside its content is ignored). A direction set through CSS alone still needs
     `engine.run("measure", {})`, documented.
-  - **S8, `meta: { source: "adapter" }`.** There was no core convention besides the engine's
+  - **`meta: { source: "adapter" }`.** There was no core convention besides the engine's
     `meta.restore`, so the adapter's commands for the markup (registration batch, `panel.add` /
     `panel.remove`, `group.update`, `panel.update`, `separator.update`, a controlled `layout`'s
     `group.set-layout`, `group.remove`) and the engine's `syncOrder` batch carry it; the React
@@ -734,8 +736,8 @@ copyright line and the MIT licence, and the guard test lists it.
   - **Docs:** an `<Framework name="angular">` block after every Vue one (the landing,
     introduction, installation, first split view, Group's controlled layout, hooks, external ref,
     composition); `api/angular.mdx` (the React-to-Angular mapping, the inputs and outputs, the
-    injection functions) in its own sidebar section; `limitations.mdx` replaces "React and Vue, for
-    now" with Angular's untested server rendering. `docs-reference.test.ts` checks the Angular
+    injection functions) in its own sidebar section; *Server rendering* says that an Angular group
+    registers after its first render in the browser. `docs-reference.test.ts` checks the Angular
     reference (every export, every input on the Angular or the React page, every output and
     `PanelResizeEvent` field on the Angular page, the part states' fields, and an Angular block
     wherever there is a Vue one). The page also says that `splitterGroup` cannot wrap an `<ng-content>`:
@@ -797,7 +799,7 @@ copyright line and the MIT licence, and the guard test lists it.
     fails without them (checked once by removing them). A real double click on the button cannot
     be asserted (its second press lands where the moved button no longer is), so the spec
     dispatches `dblclick` on the button, then on the separator, which still resets.
-  - **Workaround S11** (`docs/docs-examples-gaps.md`): a separator carries none of its panels'
+  - **Workaround** (`docs/docs-examples-gaps.md`, *Separator styled by its panels*): a separator carries none of its panels'
     state, so the button's icon reads the panel before it with `[[data-collapsed]+*_&]:` (the
     panel is the separator's previous sibling in every framework's markup).
   - **Specs** (`e2e/examples/separator-*.spec.ts`) read computed styles and boxes and poll
@@ -853,7 +855,7 @@ copyright line and the MIT licence, and the guard test lists it.
     `minSize="10rem"`, `maxSize="18rem"`, `collapsible` (to 0). The thread's separator and panel
     (`id="thread"`, `defaultSize="30%"`, `minSize="20%"`, `maxSize="45%"`) are rendered while a
     thread is open (`{thread && …}`, `v-if`, `@if`), between the conversation and the members; any
-    message's thread uses the same panel, so it comes back at the size the user gave it (S1's
+    message's thread uses the same panel, so it comes back at the size the user gave it (the group's
     layout memory). No `preserve-pixel-size` there: the separator that comes with the thread
     shrinks the panels' axis by its width, and preserve-pixel-size panels then kept pixels
     computed from the restored percentages, which moved the thread by about 2px. In React's dev
@@ -861,7 +863,8 @@ copyright line and the MIT licence, and the guard test lists it.
     few pixels off; the production embeds, Vue and Angular restore the remembered layout exactly.
     Sending a message or a reply appends it locally (an uncontrolled `<form>` read with
     `FormData`), no network. Opening a thread while the members are collapsed expands them (a new
-    panel set takes its default layout): gap S13, no workaround.
+    panel set takes its default layout): a gap (`docs/docs-examples-gaps.md`, *Collapsed panel in a
+    new set*), no workaround.
   - **`database-console`:** a root group `console` (schema `defaultSize="16rem"`,
     `minSize="12rem"`, `maxSize="40%"`, `preserve-pixel-size`; workspace `minSize="40%"`) and a
     vertical group `query` nested in the workspace (editor `minSize={120}` px; results
@@ -872,10 +875,9 @@ copyright line and the MIT licence, and the guard test lists it.
     over `RESULT`'s rows, "Reset layout" runs one `batch` of `group.reset` for both groups. The
     editor is a `<textarea wrap="off">` with as many `rows` as lines (`field-sizing: content`
     where supported) beside a line-number gutter, in one scroll container.
-  - **Workaround S12** (`docs/docs-examples-gaps.md`): the engine's Enter toggles the panel
-    *before* a separator (React Resizable Panels' primary pane); the results are after theirs, so
-    the separator's own `keydown` listener (React `onKeyDown`, Vue `@keydown`, Angular `(keydown)`,
-    all after the engine's) toggles them on Enter.
+  - **Enter on the results' separator** toggles them: the editor before it does not collapse, so
+    the engine toggles the panel after it (Epic #38; the example had its own `keydown` listener
+    until then).
   - **`tests/vendored.test.ts`** (Vue and Angular) now compares every `.ts` file of React's
     examples (React's components are `.tsx`, so these are the kit, the `styles.ts` and the data
     and helper siblings) with this app's copy, except `ide-layout/files.ts`, which shows a file of
@@ -902,7 +904,7 @@ copyright line and the MIT licence, and the guard test lists it.
     `fragiola-splitter:observability-console`, validated with `validateSplitter`), "Reset layout"
     runs one `batch` of `group.reset` for the three groups, the toolbar's "Services" and
     "Inspector" toggles collapse their panels (`aria-pressed` from the model), and Enter on the
-    charts/logs separator toggles the logs (workaround S12, as `database-console`).
+    charts/logs separator toggles the logs (the engine's rule, as `database-console`).
   - **Live data:** `_kit/telemetry.ts` is a seeded simulation (mulberry32, as data-grid's
     `_kit/market.ts`; seed 7): six fictional services whose p95 latency and error rate walk
     around a profile, incidents, log lines and traces with spans, on the feed's own clock (each
@@ -919,9 +921,10 @@ copyright line and the MIT licence, and the guard test lists it.
     is at the bottom and holds when the reader scrolls up ("Jump to latest" brings it back).
     `tail.ts` ignores the scroll the browser makes when the tail's height changes, so dragging a
     separator never stops it following (an e2e failure in Vue before it).
-  - **Gap S14** (`docs/docs-examples-gaps.md`): a restored layout's `preserve-pixel-size` panels
-    come back a fraction of a percent off (the first measure of a root group counts its
-    separators). The console's side panels therefore keep the default `preserve-relative-size`.
+  - **A gap** (`docs/docs-examples-gaps.md`, *Restored pixel-preserved panels*): a restored
+    layout's `preserve-pixel-size` panels come back a fraction of a percent off (the first measure
+    of a root group counts its separators). The console's side panels therefore keep the default
+    `preserve-relative-size`.
   - **Spec** (`e2e/examples/observability-console.spec.ts`) uses Playwright's `page.clock`
     (installed before the page loads) and moves time with `runFor` instead of waiting; values
     are compared only after Pause; reduced motion is `page.emulateMedia`. It covers the feed,
@@ -932,3 +935,26 @@ copyright line and the MIT licence, and the guard test lists it.
   - **Landing:** the showcase is `observability-console` (height 600, label "Live data, the
     same markup in five themes:"). The front matter's description and the Hero's eyebrow no
     longer name frameworks: the adapters row above the showcase does.
+- **Epic #38 (Issues #35 to #37):**
+  - **Enter's target.** Enter toggles the panel before the separator when it is collapsible (as
+    React Resizable Panels, also when both are), else the panel after it when that one is, else
+    nothing, with the same keyboard `separator.move` of that separator only. It extends React
+    Resizable Panels where it did nothing and never changes what it does. `database-console` and
+    `observability-console` dropped their own `keydown` listener in the three frameworks; their
+    specs press Enter as before. A minor changeset says that an app which handled Enter itself on
+    such a separator removes its listener (or prevents the event first).
+  - **The restored pixel-preserved panels' drift is not fixed** (the Epic's stop condition). A
+    separator has no `data-orientation` until the engine bound it and the adapter rendered again,
+    so the examples' separators are 0px wide at the engine's first measure, and the next measure
+    looks like a group that shrank by their width. Deferring the bind-time measure to the size
+    observer leaves px constraints unresolved after binding, and a measure when the last separator
+    binds still runs before the adapter's next render; telling the separators' change from a group
+    resize needs their (or the group's) size in `group.measure`, or the adapters rendering a
+    separator's orientation before it registers. Both are larger than the Epic allowed, so the
+    examples and `email-client`'s spec stay as they were.
+  - **The docs describe the library as it is**, each behaviour on its part's page: `em` and the
+    group's font size on *Size constraints and units*, pixel units on the server and Angular's
+    registration on *Server rendering*, commands as the imperative API and what `model.subscribe`
+    tells on *The model and commands*, grids and tabsets in the introduction. `site/tests/
+    contract.test.ts` writes its fixtures into `guides/testing`. Gaps and workarounds are named,
+    not numbered, in `docs/docs-examples-gaps.md`, this file, the examples and the tests.

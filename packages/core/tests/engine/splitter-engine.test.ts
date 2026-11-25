@@ -543,9 +543,60 @@ describe("the keyboard (Window Splitter)", () => {
         expect(after.sizes()).toEqual([50, 50]);
     });
 
-    it("does nothing on Enter when the panel before is not collapsible", () => {
+    it("toggles the panel after the separator on Enter when the one before cannot collapse", () => {
+        const { model, separators, sizes, events } = render([
+            { id: "a", minSize: "20%" },
+            { id: "b", collapsible: true, minSize: "10%", collapsedSize: "5%" },
+        ]);
+        model.run("group.set-layout", {
+            groupId: "g",
+            layout: { a: 70, b: 30 },
+        });
+        events.length = 0;
+        const separator = element(separators, "a:b");
+        key(separator, "Enter");
+        expect(sizes()).toEqual([95, 5]);
+        expect(model.is("panel-collapsed", { panelId: "b" })).toBe(true);
+        expect(
+            events.map(({ command, payload }) => [command, payload]),
+        ).toEqual([
+            [
+                "separator.move",
+                { separatorId: "a:b", delta: 25, source: "keyboard" },
+            ],
+        ]);
+        // it expands back to its restore size
+        key(separator, "Enter");
+        expect(sizes()).toEqual([70, 30]);
+        expect(model.is("panel-collapsed", { panelId: "b" })).toBe(false);
+    });
+
+    it("toggles the panel before the separator on Enter when both can collapse", () => {
+        const { model, separators, sizes } = render([
+            { id: "a", collapsible: true, minSize: "20%" },
+            { id: "b", collapsible: true, minSize: "20%" },
+        ]);
+        key(element(separators, "a:b"), "Enter");
+        expect(sizes()).toEqual([0, 100]);
+        expect(model.is("panel-collapsed", { panelId: "a" })).toBe(true);
+        expect(model.is("panel-collapsed", { panelId: "b" })).toBe(false);
+    });
+
+    it("does nothing on Enter when neither panel beside the separator is collapsible", () => {
         const { separators, events } = render([{ id: "a" }, { id: "b" }]);
         key(element(separators, "a:b"), "Enter");
+        expect(events).toEqual([]);
+    });
+
+    it("does nothing on Enter on a disabled separator", () => {
+        const { model, separators, sizes, events } = render([
+            { id: "a" },
+            { id: "b", collapsible: true, minSize: "20%" },
+        ]);
+        model.run("separator.update", { separatorId: "a:b", disabled: true });
+        events.length = 0;
+        key(element(separators, "a:b"), "Enter");
+        expect(sizes()).toEqual([50, 50]);
         expect(events).toEqual([]);
     });
 

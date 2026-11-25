@@ -21,6 +21,12 @@ if (result.ok) {
 }
 ```
 
+Commands are the imperative API: there is no panel or group handle with `collapse()` or
+`setLayout()` methods. `model.run("panel.collapse", { panelId })`,
+`model.get("panel-size-by", { panelId })` and `model.run("group.set-layout", …)` do that, and
+middleware sees each of them. Reach the model with `useSplitter()` inside a group, or an
+[external ref](/docs/api/external-ref) outside it.
+
 `model.can` says whether `run` would succeed, `model.check` returns what it would return, and
 neither commits anything. Use them to enable a button:
 
@@ -131,8 +137,10 @@ const stop = model.subscribe((event) => {
 });
 ```
 
-What the adapter runs for the markup (a panel mounting, a prop changing) carries
-`meta: { source: "adapter" }` (see [Command bus](/docs/api/command-bus#running)).
+The event tells which command committed: a drag or a key is `separator.move` (its payload's
+`source` is `"pointer"` or `"keyboard"`), a button runs what you called, and what the adapter runs
+for the markup (a panel mounting, a prop changing) carries `meta: { source: "adapter" }` (see
+[Command bus](/docs/api/command-bus#running)).
 
 States are immutable: an untouched group keeps its object, so `before.groups.main ===
 after.groups.main` means that group did not change. This is all [undo and

@@ -97,9 +97,12 @@ export class EditorLayout {}
 <Card title="Installation" href="/docs/getting-started/installation" description="One package for React, Vue or Angular, the core re-exported." />
 <Card title="Your first split view" href="/docs/getting-started/first-split-view" description="Panels, separators, sizes and orientation." />
 <Card title="Model and engine" href="/docs/concepts/model-and-engine" description="The two objects behind the primitives, and their five verbs." />
-<Card title="Limitations" href="/docs/limitations" description="What React Resizable Panels has that this package does not, and why." />
+<Card title="Collapsible panels" href="/docs/guides/collapsible-panels" description="Collapse a panel by a drag, the Enter key, a button or code." />
 </Cards>
 
 The behaviour follows [React Resizable Panels](https://github.com/bvaughn/react-resizable-panels)
 (its flex groups): the same constraints, units, collapse thresholds and restore sizes. The model,
 the commands and the primitives are Fragiola's, shared with every library of the ecosystem.
+Groups are flex rows or columns: two-dimensional grids are
+[Grid Layout](https://fragiola.com/grid-layout)'s, tabsets and docking
+[Dockable](https://fragiola.com/dockable)'s.

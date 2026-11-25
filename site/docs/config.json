@@ -132,7 +132,6 @@
         {
             "label": "More",
             "pages": [
-                { "label": "Limitations", "path": "limitations" },
                 {
                     "label": "Found a problem?",
                     "href": "https://github.com/fragiola/splitter/issues",
