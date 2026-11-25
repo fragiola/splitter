@@ -73,11 +73,6 @@ function onEditorKeydown(event: KeyboardEvent) {
     }
 }
 
-// Enter toggles the panel before a separator (the editor, which does not collapse): the
-// results are after it, so the app toggles them itself (docs/docs-examples-gaps.md, S12)
-function onSeparatorKeydown(event: KeyboardEvent) {
-    if (event.key === "Enter") toggleResults();
-}
 </script>
 
 <template>
@@ -183,7 +178,6 @@ function onSeparatorKeydown(event: KeyboardEvent) {
                     <Splitter.Separator
                         aria-label="Resize results"
                         :class="styles.separator"
-                        @keydown="onSeparatorKeydown"
                     />
                     <Splitter.Panel
                         id="results"

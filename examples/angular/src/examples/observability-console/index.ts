@@ -257,7 +257,6 @@ function restore() {
                             splitterSeparator
                             aria-label="Resize charts and logs"
                             [class]="styles.separator"
-                            (keydown)="onLogsSeparatorKeydown($event)"
                         ></div>
                         <div
                             splitterPanel
@@ -516,18 +515,6 @@ export default class ObservabilityConsole {
                 { command: "group.reset", payload: { groupId: "stream" } },
                 { command: "group.reset", payload: { groupId: "metrics" } },
             ],
-        });
-    }
-
-    // Enter toggles the panel before a separator (the charts, which do not collapse): the logs
-    // are after it, so the app toggles them itself (docs/docs-examples-gaps.md, S12)
-    protected onLogsSeparatorKeydown(event: KeyboardEvent) {
-        if (event.key !== "Enter") return;
-        const collapsed = this.model.is("panel-collapsed", {
-            panelId: "logs",
-        });
-        this.model.run(collapsed ? "panel.expand" : "panel.collapse", {
-            panelId: "logs",
         });
     }
 }

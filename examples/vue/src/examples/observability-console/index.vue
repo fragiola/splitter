@@ -161,15 +161,6 @@ function reset() {
         ],
     });
 }
-// Enter toggles the panel before a separator (the charts, which do not collapse): the logs
-// are after it, so the app toggles them itself (docs/docs-examples-gaps.md, S12)
-function onLogsSeparatorKeydown(event: KeyboardEvent) {
-    if (event.key !== "Enter") return;
-    const collapsed = model.is("panel-collapsed", { panelId: "logs" });
-    model.run(collapsed ? "panel.expand" : "panel.collapse", {
-        panelId: "logs",
-    });
-}
 </script>
 
 <template>
@@ -325,7 +316,6 @@ function onLogsSeparatorKeydown(event: KeyboardEvent) {
                     <Splitter.Separator
                         aria-label="Resize charts and logs"
                         :class="styles.separator"
-                        @keydown="onLogsSeparatorKeydown"
                     />
                     <Splitter.Panel
                         id="logs"
