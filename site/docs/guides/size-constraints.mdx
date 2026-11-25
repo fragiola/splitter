@@ -31,6 +31,9 @@ numbers are yours; the clamping is the package's.
 - `minSize` (default 0) and `maxSize` (default 100%): the limits of an expanded panel.
 - A number is **pixels**; a string carries its unit; a string without one (`"30"`) is a
   **percentage**. Units: `%`, `px`, `em` (the group's font size), `rem`, `vh`, `vw`.
+- `em` resolves against the **group** element's font size, which the engine measures once per
+  group, not against the panel's own: to size a panel by its own text, use `rem` or set the font
+  size on the group.
 
 <Example id="size-constraints" />
 

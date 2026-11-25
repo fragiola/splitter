@@ -15,8 +15,8 @@ comes from is yours.
   its own unit and the others share the rest: the default layout, before any measure.
 - **Ids.** Groups and panels without an `id` get one from `useId`, the same on the server and the
   client.
-- **Not yet:** paths (`data-splitter-path`) and the separators' ARIA values. A part registers in
-  the browser before the first paint, and then has them.
+- **No paths and no separator ARIA values.** `data-splitter-path` and the separators' ARIA
+  values come when a part registers, in the browser, before the first paint.
 
 The components are client components: render them from a module that starts with `"use client"`
 in a framework with server components. They are still rendered on the server.
@@ -86,4 +86,11 @@ render agree, and the user never sees the default layout first.
 Nothing is measured on the server, so only percentages resolve there. A layout saved in the
 document is in percent, so it renders exactly. A `defaultSize` in pixels or rems is written as
 the flex basis in its own unit and is exact too; `minSize` and `maxSize` in those units apply
-once the engine measures the group in the browser, before the first paint.
+once the engine measures the group in the browser, before the first paint. Until then,
+`panel.resize` to a pixel size is `refused`: run it in the browser, or give the size in percent.
+
+## Angular
+
+An Angular group registers after its first render in the browser (`afterNextRender`), which
+never runs on the server. The server HTML has the structural style, so nothing shifts, and the
+paths and ARIA values come when the browser takes over, as in React and Vue.
