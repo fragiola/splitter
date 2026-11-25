@@ -96,7 +96,9 @@ action ran.
 `separatorKeyIntent(input)` is what a key does on a focused separator, the rule the engine
 applies: a `SeparatorKeyInput` (`{ key, shiftKey?, orientation, direction, step }`) in, a
 `SeparatorKeyIntent` out (`{ type: "move", delta }`, `{ type: "toggle" }`,
-`{ type: "cycle", backwards }`), or undefined for a key it ignores.
+`{ type: "cycle", backwards }`), or undefined for a key it ignores. On `toggle`, the engine
+collapses or expands the panel before the separator when it is collapsible, else the panel after
+it when that one is, else nothing, by a keyboard `separator.move` of that separator only.
 
 ## The adapter
 

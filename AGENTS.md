@@ -275,7 +275,8 @@ copyright line and the MIT licence, and the guard test lists it.
     `pointercancel` / `lostpointercapture` commit the last step, as RRP does. Keyboard step 5% by
     default; only handled keys are `preventDefault`ed; Enter runs a keyboard `separator.move` on
     that separator by the distance from the panel before it to its collapsed size (or, collapsed,
-    to its restore size, else its minimum, 1% when 0), as React Resizable Panels'
+    to its restore size, else its minimum, 1% when 0), or from the panel after it when only that
+    one is collapsible (Epic #38), as React Resizable Panels'
     `adjustLayoutForSeparator`, so disabled panels keep their sizes (it used to run
     `panel.collapse` / `panel.expand`, code semantics); F6 cycles focus. A double click resizes the panel before the
     separator (else after) that declares a `defaultSize` back to it, unless a panel beside the
@@ -872,10 +873,9 @@ copyright line and the MIT licence, and the guard test lists it.
     over `RESULT`'s rows, "Reset layout" runs one `batch` of `group.reset` for both groups. The
     editor is a `<textarea wrap="off">` with as many `rows` as lines (`field-sizing: content`
     where supported) beside a line-number gutter, in one scroll container.
-  - **Workaround S12** (`docs/docs-examples-gaps.md`): the engine's Enter toggles the panel
-    *before* a separator (React Resizable Panels' primary pane); the results are after theirs, so
-    the separator's own `keydown` listener (React `onKeyDown`, Vue `@keydown`, Angular `(keydown)`,
-    all after the engine's) toggles them on Enter.
+  - **Enter on the results' separator** toggles them: the editor before it does not collapse, so
+    the engine toggles the panel after it (Epic #38; the example had its own `keydown` listener
+    until then).
   - **`tests/vendored.test.ts`** (Vue and Angular) now compares every `.ts` file of React's
     examples (React's components are `.tsx`, so these are the kit, the `styles.ts` and the data
     and helper siblings) with this app's copy, except `ide-layout/files.ts`, which shows a file of
@@ -902,7 +902,7 @@ copyright line and the MIT licence, and the guard test lists it.
     `fragiola-splitter:observability-console`, validated with `validateSplitter`), "Reset layout"
     runs one `batch` of `group.reset` for the three groups, the toolbar's "Services" and
     "Inspector" toggles collapse their panels (`aria-pressed` from the model), and Enter on the
-    charts/logs separator toggles the logs (workaround S12, as `database-console`).
+    charts/logs separator toggles the logs (the engine's rule, as `database-console`).
   - **Live data:** `_kit/telemetry.ts` is a seeded simulation (mulberry32, as data-grid's
     `_kit/market.ts`; seed 7): six fictional services whose p95 latency and error rate walk
     around a profile, incidents, log lines and traces with spans, on the feed's own clock (each

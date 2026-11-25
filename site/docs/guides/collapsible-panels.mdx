@@ -42,14 +42,15 @@ answers `true`: a component follows it with
 | --- | --- |
 | dragging the separator past the threshold | `separator.move`: the panel snaps to its collapsed size |
 | dragging it back past the threshold | `separator.move`: the panel snaps to its minimum, then follows the pointer |
-| **Enter** on the separator after it | `separator.move` (`source: "keyboard"`) to its collapsed size, or back to its restore size when it is collapsed |
+| **Enter** on a separator beside it | `separator.move` (`source: "keyboard"`) to its collapsed size, or back to its restore size when it is collapsed |
 | **Home** on that separator | moves to the smallest size: collapsed, for a collapsible panel |
 | code | `model.run("panel.collapse", { panelId })` / `model.run("panel.expand", { panelId })` |
 
-Enter acts on the panel **before** the separator, and moves that separator only, as the arrows
-do: a disabled panel keeps its size, and when the panels on the other side cannot take the space,
-the panel does not collapse (`panel.collapse` from code may still). For a panel at the end of a
-group (a terminal under an editor), drag it or use code.
+Enter acts on the panel **before** the separator when it is collapsible, else on the panel
+**after** it (results under an editor, logs under charts), and moves that separator only, as the
+arrows do: a disabled panel keeps its size, and when the panels on the other side cannot take the
+space, the panel does not collapse (`panel.collapse` from code may still). When both panels are
+collapsible, Enter toggles the one before; reach the other with a drag, a button or code.
 
 ## A toggle button
 
