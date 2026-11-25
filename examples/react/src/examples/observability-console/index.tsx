@@ -70,8 +70,7 @@ function restore() {
 // stretched to its panel) and the logs while they stream. The rail collapses to its health dots,
 // the inspector away, the logs to their title bar (a drag, or Enter on their separator); the
 // layout is saved on every commit and Reset layout puts the three groups back. The side panels keep
-// their percentage when the window resizes: with `preserve-pixel-size` a restored layout comes
-// back a fraction of a percent off (docs/docs-examples-gaps.md, S14).
+// their percentage when the window resizes (`preserve-relative-size`, the default).
 export default function ObservabilityConsole() {
     const [model] = useState(restore);
     const splitterRef = useSplitterRef();
